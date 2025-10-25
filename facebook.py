@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import aiohttp
 import logging
 import json
@@ -31,6 +32,13 @@ def save_html_to_file(html_content: str, filename: str = "fetched_page.html"):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(html_content)
     logger.info(f"Fetched HTML saved to {filename}")
+
+
+def save_apartments_to_json(apartments: List[Dict[str, Any]], filename: str = "apartments.json"):
+    """Saves the list of apartments to a JSON file."""
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(apartments, f, ensure_ascii=False, indent=2)
+    logger.info(f"Extracted apartments saved to {filename}")
 
 
 def extract_json_script_content(html_content: str) -> List[str]:
@@ -129,9 +137,21 @@ def parse_rental_info(edge: Dict[str, Any]) -> Dict[str, Any]:
     latitude = location.get('latitude', 'N/A')
     longitude = location.get('longitude', 'N/A')
 
-    list_price = for_sale_item.get('list_price', {})
-    price_amount = list_price.get('amount', 'N/A')
-    price_currency = list_price.get('currency', 'N/A')
+    # Extract formatted_price text
+    formatted_price_data = for_sale_item.get('formatted_price', {})
+    formatted_price_text = formatted_price_data.get('text', 'N/A')
+
+    # Extract share_uri
+    share_uri = for_sale_item.get('share_uri', 'N/A')
+
+    # Extract listing photos URLs
+    listing_photos_data = for_sale_item.get('listing_photos', [])
+    listing_photos_urls = []
+    for photo_obj in listing_photos_data:
+        image_data = photo_obj.get('image', {})
+        uri = image_data.get('uri', None)
+        if uri:
+            listing_photos_urls.append(uri)
 
     seller_id = for_sale_item.get('seller', {}).get(
         'id', 'N/A') if for_sale_item.get('seller') else 'N/A'
@@ -149,8 +169,9 @@ def parse_rental_info(edge: Dict[str, Any]) -> Dict[str, Any]:
         "id": id,
         "latitude": latitude,
         "longitude": longitude,
-        "price_amount": price_amount,
-        "price_currency": price_currency,
+        "formatted_price": formatted_price_text,
+        "share_uri": share_uri,
+        "listing_photos_urls": listing_photos_urls,
         "seller_id": seller_id,
         "seller_name": seller_name,
         "title": title,
@@ -232,7 +253,7 @@ def process_json_scripts(json_script_strs: List[str]) -> List[Dict[str, Any]]:
 
 
 async def main():
-    url = "https://www.facebook.com/marketplace/telaviv/propertyrentals?maxPrice=10000&minBedrooms=2&exact=false&latitude=32.0778&longitude=34.7677&radius=3"
+    url = "https://www.facebook.com/marketplace/telaviv/propertyrentals?minPrice=2&maxPrice=10000&minBedrooms=3&exact=false&latitude=32.0778&longitude=34.7677&radius=3"
 
     timeout = aiohttp.ClientTimeout(total=20)
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -259,6 +280,9 @@ async def main():
             print(f"\n--- Apartment {i+1} ---")
             for key, value in apt.items():
                 print(f"  {key}: {value}")
+
+        # Save the extracted apartments to a JSON file
+        save_apartments_to_json(apartments)
 
 
 if __name__ == "__main__":
