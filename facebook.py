@@ -3,12 +3,55 @@ import datetime
 import aiohttp
 import logging
 import json
-from typing import List, Dict, Any
+import random
+from typing import List, Dict, Any, Optional, Union
+from pathlib import Path
 from bs4 import BeautifulSoup
+import threading
 
-logging.basicConfig(level=logging.DEBUG)
+# --- Constants ---
+# --- Logging ---
+LOG_FILE = "scraper.log"
+LOG_LEVEL = logging.DEBUG
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# Ensure output directory exists
+Path("out").mkdir(exist_ok=True)
+
+# --- URLs and Endpoints ---
+MARKETPLACE_BASE_URL = "https://www.facebook.com/marketplace/"
+DEFAULT_LISTINGS_URL = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice=2&maxPrice=10000&minBedrooms=3&exact=false&latitude=32.0778&longitude=34.7677&radius=3"
+
+# --- File Names ---
+HTML_OUTPUT_FILE = "fetched_page.html"
+JSON_OUTPUT_FILE_WITH_DETAILS = "apartments_with_details.json"
+
+# --- HTTP Configuration ---
+CONNECT_TIMEOUT = 20
+SOCK_READ_TIMEOUT = 60
+TOTAL_TIMEOUT = CONNECT_TIMEOUT + SOCK_READ_TIMEOUT + 100
+
+# --- Batch and Delay Configuration ---
+BATCH_SIZE = 2
+MIN_DELAY_BETWEEN_REQUESTS = 2.0
+MAX_DELAY_BETWEEN_REQUESTS = 5.0
+
+# --- JSON Script Tag Attributes ---
+JSON_SCRIPT_TAG_ATTR_NAME = 'data-sjs'
+
+# --- JSON Key Prefixes ---
+JSON_KEY_PREFIX_LISTINGS = "adp_CometMarketplaceRealEstateMapStoryQueryRelayPreloader_"
+JSON_KEY_PREFIX_DETAILS = "adp_MarketplacePDPContainerQueryRelayPreloader_"
+
+# --- HTTP Headers ---
 HEADERS = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
     'accept-encoding': 'gzip, deflate, br',
@@ -26,25 +69,25 @@ HEADERS = {
     'upgrade-insecure-requests': '1',
 }
 
+# --- End Constants ---
 
-def save_html_to_file(html_content: str, filename: str = "fetched_page.html"):
-    """Saves the fetched HTML content to a file."""
+
+def save_html_to_file(html_content: str, filename: str = HTML_OUTPUT_FILE):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(html_content)
     logger.info(f"Fetched HTML saved to {filename}")
 
 
-def save_apartments_to_json(apartments: List[Dict[str, Any]], filename: str = "apartments.json"):
-    """Saves the list of apartments to a JSON file."""
+def save_apartments_to_json(apartments: List[Dict[str, Any]], filename: str = JSON_OUTPUT_FILE_WITH_DETAILS):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(apartments, f, ensure_ascii=False, indent=2)
     logger.info(f"Extracted apartments saved to {filename}")
 
 
 def extract_json_script_content(html_content: str) -> List[str]:
-    """Extracts ALL JSON strings from script tags with data-sjs attribute using BeautifulSoup."""
     soup = BeautifulSoup(html_content, 'html.parser')
-    script_tags = soup.find_all('script', attrs={'data-sjs': True})
+    script_tags = soup.find_all(
+        'script', attrs={JSON_SCRIPT_TAG_ATTR_NAME: True})
 
     json_strings = []
     for tag in script_tags:
@@ -58,77 +101,40 @@ def extract_json_script_content(html_content: str) -> List[str]:
         return json_strings
     else:
         logger.error(
-            "No script tags with data-sjs attribute found in HTML using BeautifulSoup.")
-        return []
+            f"No script tags with {JSON_SCRIPT_TAG_ATTR_NAME} attribute found.")
+        raise ValueError(
+            f"No script tags with {JSON_SCRIPT_TAG_ATTR_NAME} attribute found.")
 
 
 def find_rental_data_in_blob(parsed_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Navigates a SINGLE parsed JSON blob to find the list of rental listings."""
-    logger.debug("Starting to navigate JSON blob...")
+    logger.debug("Starting to navigate JSON blob for rental listings...")
     for item in parsed_json.get('require', []):
-        logger.debug(
-            f"Processing outer require item: {type(item)}, {len(item) if isinstance(item, list) else 'N/A'}")
-        # Check outer require item structure: [str, str, null, [dict]]
         if isinstance(item, list) and len(item) >= 4 and isinstance(item[3], list) and len(item[3]) > 0:
-            data_block = item[3][0]  # This is the first dict inside the list
-            logger.debug(f"Found data_block: {type(data_block)}")
-
-            # Check if data_block has __bbox -> require
+            data_block = item[3][0]
             if (isinstance(data_block, dict) and '__bbox' in data_block and
                     isinstance(data_block['__bbox'], dict) and 'require' in data_block['__bbox']):
-
-                logger.debug("Found inner require structure via __bbox.")
-                # Navigate to the inner require list
                 inner_require_list = data_block['__bbox']['require']
-
                 for inner_item in inner_require_list:
-                    logger.debug(
-                        f"Processing inner require item: {type(inner_item)}, {len(inner_item) if isinstance(inner_item, list) else 'N/A'}")
-                    # Check inner require item structure: [str, str, [], [str, dict]] or similar
-                    # The key part is that inner_item[3] should be a list containing the adp_... key and its data object
                     if (isinstance(inner_item, list) and len(inner_item) >= 4 and
                             isinstance(inner_item[3], list) and len(inner_item[3]) >= 2):
-
-                        # The first element of the list is the key string
                         potential_key = inner_item[3][0]
-                        # The second element of the list is the data object
                         potential_data_obj = inner_item[3][1]
-
-                        logger.debug(
-                            f"Checking potential key: {potential_key} (type: {type(potential_key)})")
-                        # Check if the key string matches the pattern
-                        if isinstance(potential_key, str) and potential_key.startswith("adp_CometMarketplaceRealEstateMapStoryQueryRelayPreloader_"):
-                            logger.info(
-                                f"Checking data block under key: {potential_key}")
-                            # The *value* associated with the key (potential_data_obj) contains the __bbox structure
-                            logger.debug(
-                                f"Data object for {potential_key}: {type(potential_data_obj)}")
+                        if isinstance(potential_key, str) and potential_key.startswith(JSON_KEY_PREFIX_LISTINGS):
                             nested_bbox = potential_data_obj.get("__bbox", {})
-                            logger.debug(f"Nested __bbox: {type(nested_bbox)}")
                             result = nested_bbox.get("result", {})
-                            logger.debug(
-                                f"Result: {type(result)}")
                             data_viewer = result.get(
                                 "data", {}).get("viewer", {})
-                            logger.debug(f"Data viewer: {type(data_viewer)}")
                             stories_data = data_viewer.get(
                                 "marketplace_rentals_map_view_stories", {})
-
                             if stories_data:
                                 logger.info(
-                                    f"Found 'marketplace_rentals_map_view_stories' in blob under key {potential_key}.")
+                                    f"Found 'marketplace_rentals_map_view_stories' under key {potential_key}.")
                                 edges = stories_data.get("edges", [])
-                                logger.debug(f"Found {len(edges)} edges.")
                                 return edges
-                            else:
-                                logger.debug(
-                                    f"Key {potential_key} did not contain 'marketplace_rentals_map_view_stories'.")
-    logger.debug("Did not find rental data in this blob.")
     return []
 
 
 def parse_rental_info(edge: Dict[str, Any]) -> Dict[str, Any]:
-    """Parses a single rental listing edge into a simplified dictionary."""
     node = edge.get('node', {})
     for_sale_item = node.get('for_sale_item', {})
 
@@ -136,34 +142,17 @@ def parse_rental_info(edge: Dict[str, Any]) -> Dict[str, Any]:
     location = for_sale_item.get('location', {})
     latitude = location.get('latitude', 'N/A')
     longitude = location.get('longitude', 'N/A')
-
-    # Extract formatted_price text
-    formatted_price_data = for_sale_item.get('formatted_price', {})
-    formatted_price_text = formatted_price_data.get('text', 'N/A')
-
-    # Extract share_uri
+    formatted_price_text = for_sale_item.get(
+        'formatted_price', {}).get('text', 'N/A')
     share_uri = for_sale_item.get('share_uri', 'N/A')
 
-    # Extract listing photos URLs
-    listing_photos_data = for_sale_item.get('listing_photos', [])
     listing_photos_urls = []
-    for photo_obj in listing_photos_data:
-        image_data = photo_obj.get('image', {})
-        uri = image_data.get('uri', None)
+    for photo_obj in for_sale_item.get('listing_photos', []):
+        uri = photo_obj.get('image', {}).get('uri')
         if uri:
             listing_photos_urls.append(uri)
 
-    seller_id = for_sale_item.get('seller', {}).get(
-        'id', 'N/A') if for_sale_item.get('seller') else 'N/A'
-    seller_name = for_sale_item.get('seller', {}).get(
-        'name', 'N/A') if for_sale_item.get('seller') else 'N/A'
     title = for_sale_item.get('name', 'N/A')
-    url = for_sale_item.get('url', 'N/A')
-    image_url = for_sale_item.get('cover_photo', {}).get('image', {}).get(
-        'uri', 'N/A') if for_sale_item.get('cover_photo') else 'N/A'
-    bedrooms = for_sale_item.get('num_bedrooms', 'N/A')
-    bathrooms = for_sale_item.get('num_bathrooms', 'N/A')
-    is_sold = for_sale_item.get('is_sold', 'N/A')
 
     return {
         "id": id,
@@ -172,19 +161,11 @@ def parse_rental_info(edge: Dict[str, Any]) -> Dict[str, Any]:
         "formatted_price": formatted_price_text,
         "share_uri": share_uri,
         "listing_photos_urls": listing_photos_urls,
-        "seller_id": seller_id,
-        "seller_name": seller_name,
         "title": title,
-        "url": url,
-        "image_url": image_url,
-        "bedrooms": bedrooms,
-        "bathrooms": bathrooms,
-        "is_sold": is_sold
     }
 
 
 async def fetch_html(session: aiohttp.ClientSession, url: str) -> str:
-    """Asynchronously fetches the HTML content of the given URL."""
     logger.info(f"Fetching URL: {url}")
     async with session.get(url, headers=HEADERS) as response:
         logger.info(f"Response Status: {response.status}")
@@ -192,11 +173,13 @@ async def fetch_html(session: aiohttp.ClientSession, url: str) -> str:
         if response.status == 200:
             html_content = await response.text()
             return html_content
-        elif response.status == 403 or response.status == 401:
+        elif response.status in (403, 401):
             logger.error(
-                f"Access denied (Status {response.status}). This page likely requires login or has strong anti-bot measures.")
+                f"Access denied (Status {response.status}). Likely requires login or blocked by anti-bot.")
             error_content = await response.text()
-            print(f"Error Page (Status {response.status}):\n{error_content}")
+            logger.error(
+                f"Error page content (truncated to 2000 chars):\n{error_content[:2000]}")
+            save_html_to_file(error_content, "error_page_login_required.html")
             raise aiohttp.ClientResponseError(
                 request_info=response.request_info,
                 history=response.history,
@@ -204,18 +187,19 @@ async def fetch_html(session: aiohttp.ClientSession, url: str) -> str:
                 message=f"Access denied: {response.status}"
             )
         elif response.status == 429:
-            logger.error(
-                f"Rate limited (Status 429). Slow down requests or use a proxy.")
+            logger.error(f"Rate limited (Status 429).")
             raise aiohttp.ClientResponseError(
                 request_info=response.request_info,
                 history=response.history,
                 status=response.status,
-                message=f"Rate limited: {response.status}"
+                message="Rate limited"
             )
         else:
-            logger.warning(f"Received non-200 status: {response.status}")
+            logger.warning(f"Non-200 status: {response.status}")
             content = await response.text()
-            print(f"Non-200 Response (Status {response.status}):\n{content}")
+            logger.error(
+                f"Non-200 Response (Status {response.status}, truncated):\n{content[:2000]}")
+            save_html_to_file(content, f"error_page_{response.status}.html")
             raise aiohttp.ClientResponseError(
                 request_info=response.request_info,
                 history=response.history,
@@ -224,14 +208,223 @@ async def fetch_html(session: aiohttp.ClientSession, url: str) -> str:
             )
 
 
+async def fetch_html_from_share_uri(session: aiohttp.ClientSession, share_uri: str) -> str:
+    logger.info(f"Fetching Share URI: {share_uri}")
+    async with session.get(share_uri, headers=HEADERS) as response:
+        logger.info(f"Response Status for Share URI: {response.status}")
+
+        if response.status == 200:
+            html_content = await response.text()
+            return html_content
+        elif response.status in (403, 401):
+            logger.error(
+                f"Access denied for Share URI (Status {response.status}).")
+            error_content = await response.text()
+            logger.error(
+                f"Error page (Share URI, truncated):\n{error_content[:2000]}")
+            raise aiohttp.ClientResponseError(
+                request_info=response.request_info,
+                history=response.history,
+                status=response.status,
+                message=f"Access denied: {response.status}"
+            )
+        elif response.status == 429:
+            logger.error(f"Rate limited (Status 429) for Share URI.")
+            raise aiohttp.ClientResponseError(
+                request_info=response.request_info,
+                history=response.history,
+                status=response.status,
+                message="Rate limited on share URI"
+            )
+        else:
+            logger.warning(f"Non-200 status for Share URI: {response.status}")
+            content = await response.text()
+            logger.error(
+                f"Non-200 Response (Share URI, truncated):\n{content[:2000]}")
+            raise aiohttp.ClientResponseError(
+                request_info=response.request_info,
+                history=response.history,
+                status=response.status,
+                message=f"Unexpected status on share URI: {response.status}"
+            )
+
+
+async def fetch_html_from_share_uri_with_retry(session: aiohttp.ClientSession, share_uri: str, max_retries: int = 2) -> str:
+    for attempt in range(max_retries + 1):
+        try:
+            return await fetch_html_from_share_uri(session, share_uri)
+        except asyncio.TimeoutError:
+            if attempt < max_retries:
+                backoff = (2 ** attempt) + random.uniform(0, 1)
+                logger.warning(
+                    f"Timeout on {share_uri}, retry {attempt + 1}/{max_retries} after {backoff:.2f}s")
+                await asyncio.sleep(backoff)
+            else:
+                logger.error(
+                    f"Final timeout on {share_uri} after {max_retries} retries")
+                raise
+    raise RuntimeError("Unreachable")
+
+
+def find_details_data_in_blob(parsed_json: Dict[str, Any], apartment_id: str = "unknown") -> Optional[Dict[str, Any]]:
+    logger.debug("Navigating JSON blob from share_uri for details...")
+    for item in parsed_json.get('require', []):
+        if isinstance(item, list) and len(item) >= 4 and isinstance(item[3], list) and len(item[3]) > 0:
+            data_block = item[3][0]
+            if (isinstance(data_block, dict) and '__bbox' in data_block and
+                    isinstance(data_block['__bbox'], dict) and 'require' in data_block['__bbox']):
+                inner_require_list = data_block['__bbox']['require']
+                for inner_item in inner_require_list:
+                    if (isinstance(inner_item, list) and len(inner_item) >= 4 and
+                            isinstance(inner_item[3], list) and len(inner_item[3]) >= 2):
+                        potential_key = inner_item[3][0]
+                        potential_data_obj = inner_item[3][1]
+                        if isinstance(potential_key, str) and potential_key.startswith(JSON_KEY_PREFIX_DETAILS):
+                            nested_bbox = potential_data_obj.get("__bbox", {})
+                            result = nested_bbox.get("result", {})
+                            data_viewer = result.get(
+                                "data", {}).get("viewer", {})
+                            product_details = data_viewer.get(
+                                "marketplace_product_details_page", {})
+                            if product_details:
+                                logger.info(
+                                    f"Found detailed data under key {potential_key} for apartment {apartment_id}.")
+
+                                # Save ONLY the marketplace_product_details_page fragment if debug is on
+                                if logger.isEnabledFor(logging.DEBUG):
+                                    safe_id = "".join(
+                                        c if c.isalnum() or c in "._-" else "_" for c in str(apartment_id))
+                                    debug_path = Path(
+                                        "out") / f"details_fragment_{safe_id}.json"
+                                    with open(debug_path, 'w', encoding='utf-8') as f:
+                                        json.dump(product_details, f,
+                                                  ensure_ascii=False, indent=2)
+                                    logger.debug(
+                                        f"Saved marketplace_product_details_page fragment to {debug_path}")
+
+                                return product_details
+    logger.debug("No detailed product data found in blob.")
+    return None
+
+
+def safe_get(d: Any, *keys: str) -> Any:
+    """Safely traverse nested dicts/lists. Returns None if any key missing or type mismatch."""
+    for key in keys:
+        if isinstance(d, dict) and key in d:
+            d = d[key]
+        else:
+            return None
+    return d
+
+
+def extract_additional_details(product_details: Dict[str, Any]) -> Dict[str, Any]:
+    target = safe_get(product_details, 'target')
+    if not isinstance(target, dict):
+        raise Exception(
+            "Invalid target data structure (not a dict...) in product details.")
+
+    description = safe_get(target, 'redacted_description', 'text') or 'N/A'
+
+    location_details = safe_get(target, 'location', 'reverse_geocode_detailed')
+    address_city = safe_get(location_details, 'city') or 'N/A'
+    street = safe_get(target, 'home_address', 'street') or 'N/A'
+    full_address = f"{street}, {address_city}" if street != 'N/A' and address_city != 'N/A' else 'N/A'
+
+    delivery_types = safe_get(target, 'delivery_types') or []
+    if not isinstance(delivery_types, list):
+        delivery_types = []
+
+    unit_room_info = safe_get(target, 'unit_room_info') or 'N/A'
+
+    comments = safe_get(target, 'marketplace_comments')
+    comments_count = safe_get(comments, 'total_count') or 'N/A'
+
+    return {
+        'description': description,
+        'full_address': full_address,
+        'delivery_types': delivery_types,
+        'unit_room_info': unit_room_info,
+        'comments_count': comments_count,
+    }
+
+
+async def fetch_and_parse_details(session: aiohttp.ClientSession, apartment: Dict[str, Any], apartments_list: List[Dict[str, Any]], index: int) -> Dict[str, Any]:
+    share_uri = apartment.get('share_uri')
+    apartment_id = apartment.get('id', 'Unknown')
+    if not share_uri or share_uri == 'N/A':
+        logger.warning(
+            f"No valid share_uri for apartment ID {apartment_id}, skipping details.")
+        return {}
+
+    delay = random.uniform(MIN_DELAY_BETWEEN_REQUESTS,
+                           MAX_DELAY_BETWEEN_REQUESTS)
+    logger.debug(
+        f"Delaying {delay:.2f}s before fetching details for {apartment_id}")
+    await asyncio.sleep(delay)
+
+    html_content = await fetch_html_from_share_uri_with_retry(session, share_uri)
+
+    json_script_strs = extract_json_script_content(html_content)
+    if not json_script_strs:
+        raise ValueError(
+            f"No JSON script content found on share_uri page for apartment ID {apartment_id}.")
+
+    details_data = None
+    for json_str in json_script_strs:
+        try:
+            parsed_json = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            logger.error(
+                f"Invalid JSON in script for apartment {apartment_id}: {e}")
+            logger.error(
+                f"Problematic JSON (first 500 chars): {json_str[:500]}")
+            raise  # Stop to investigate
+
+        details_data = find_details_data_in_blob(
+            parsed_json, apartment_id=apartment_id)
+        if details_data:
+            break
+
+    if not details_data:
+        raise ValueError(
+            f"Failed to find detailed data on share_uri page for apartment ID {apartment_id}.")
+
+    additional_details = extract_additional_details(details_data)
+    apartments_list[index].update(additional_details)
+    save_apartments_to_json(apartments_list, JSON_OUTPUT_FILE_WITH_DETAILS)
+    return additional_details
+
+
+async def enrich_apartments_with_details(session: aiohttp.ClientSession, apartments: List[Dict[str, Any]]):
+    print("\n--- Fetching detailed data for each apartment in small batches ---")
+    for i in range(0, len(apartments), BATCH_SIZE):
+        batch = apartments[i:i + BATCH_SIZE]
+        batch_indices = list(range(i, min(i + BATCH_SIZE, len(apartments))))
+        print(
+            f"\n--- Processing Batch {i // BATCH_SIZE + 1}/{(len(apartments) - 1) // BATCH_SIZE + 1} ---")
+
+        async with asyncio.TaskGroup() as tg:
+            for j, apartment in enumerate(batch):
+                idx = batch_indices[j]
+                tg.create_task(fetch_and_parse_details(
+                    session, apartment, apartments, idx))
+
+        print(f"--- Completed Batch {i // BATCH_SIZE + 1} ---")
+
+
 def process_json_scripts(json_script_strs: List[str]) -> List[Dict[str, Any]]:
-    """Processes a list of JSON script strings to find rental data."""
     apartments = []
     found_data = False
 
     for i, json_str in enumerate(json_script_strs):
         print(f"--- Checking JSON Script {i+1}/{len(json_script_strs)} ---")
-        parsed_json = json.loads(json_str)
+        try:
+            parsed_json = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in script {i+1}: {e}")
+            logger.error(
+                f"Problematic JSON string (first 500 chars): {json_str[:500]}")
+            raise  # Do not continue — investigate malformed JSON
 
         rental_edges = find_rental_data_in_blob(parsed_json)
         if rental_edges:
@@ -247,42 +440,34 @@ def process_json_scripts(json_script_strs: List[str]) -> List[Dict[str, Any]]:
 
     if not found_data:
         raise ValueError(
-            "Failed to find 'marketplace_rentals_map_view_stories' in any of the JSON script tags.")
+            "Failed to find 'marketplace_rentals_map_view_stories' in any JSON script.")
 
     return apartments
 
 
 async def main():
-    url = "https://www.facebook.com/marketplace/telaviv/propertyrentals?minPrice=2&maxPrice=10000&minBedrooms=3&exact=false&latitude=32.0778&longitude=34.7677&radius=3"
+    url = DEFAULT_LISTINGS_URL
 
-    timeout = aiohttp.ClientTimeout(total=20)
+    timeout = aiohttp.ClientTimeout(
+        total=TOTAL_TIMEOUT,
+        connect=CONNECT_TIMEOUT,
+        sock_read=SOCK_READ_TIMEOUT
+    )
     async with aiohttp.ClientSession(timeout=timeout) as session:
         html_content = await fetch_html(session, url)
-
-        print("--- Raw HTML Fetched ---")
-        print(
-            f"Successfully fetched HTML, length: {len(html_content)} characters.")
-
-        # Save the fetched HTML for investigation
+        print(f"--- Raw HTML Fetched (length: {len(html_content)}) ---")
         save_html_to_file(html_content)
 
-        print("\n--- Parsing HTML for JSON Script using BeautifulSoup ---")
+        print("\n--- Parsing HTML for JSON Script ---")
         json_script_strs = extract_json_script_content(html_content)
-
-        if not json_script_strs:
-            raise ValueError(
-                "Failed to extract any JSON script content from HTML using BeautifulSoup.")
-
         apartments = process_json_scripts(json_script_strs)
 
         print(f"\n--- Extracted {len(apartments)} Apartments ---")
-        for i, apt in enumerate(apartments):
-            print(f"\n--- Apartment {i+1} ---")
-            for key, value in apt.items():
-                print(f"  {key}: {value}")
+        await enrich_apartments_with_details(session, apartments)
 
-        # Save the extracted apartments to a JSON file
-        save_apartments_to_json(apartments)
+        print(
+            f"\n--- Final data: {len(apartments)} Apartments with details ---")
+        save_apartments_to_json(apartments, JSON_OUTPUT_FILE_WITH_DETAILS)
 
 
 if __name__ == "__main__":
