@@ -1,4 +1,7 @@
 .venv/
 out/
 
+scraper.log
+
 *.html
+*.pyc

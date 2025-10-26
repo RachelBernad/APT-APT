@@ -1,15 +1,34 @@
+# yad2.py
 import asyncio
-import aiohttp
+import datetime
 import hashlib
 import json
-from pathlib import Path
-import datetime
+import logging
 import random
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Any, Dict, List
 
+import aiohttp
+
+# Import shared configuration
+from shared_scrapers_config import (LOG_FILE, LOG_LEVEL,
+                                    MAX_DELAY_BETWEEN_REQUESTS,
+                                    MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
+                                    REQUEST_TIMEOUT, ScraperLogFormatter)
+from shared_scrapers_config import logger as shared_logger
+
+# --- Configure Yad2-specific logger with prefix ---
+yad2_logger = logging.getLogger(__name__)
+# Apply the custom formatter with scraper name
+# Example handler, apply to all handlers if needed
+handler = logging.StreamHandler()
+handler.setFormatter(ScraperLogFormatter(
+    '%(asctime)s - %(levelname)s - %(message)s', 'YAD2'))
+yad2_logger.addHandler(handler)
+# Set level for Yad2 logger specifically
+yad2_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO to reduce spam
 
 # --- Configuration ---
-APT_FILE = Path('./yad2_apts.json')
 BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/VNJEK8g5hoH41L9F3_H99/rent.json?minPrice=4000&maxPrice=10000&minRooms=2.5&maxRooms=4&topArea=2&area=1&city={ct}&page={pg}'
 CITIES = [5000]  # Tel Aviv
 
@@ -34,15 +53,11 @@ DEFAULT_HEADERS = {
     'User-Agent': USER_AGENT,
 }
 
-# --- Timing ---
-MIN_DELAY = 2.5
-MAX_DELAY = 6.0
-REQUEST_TIMEOUT = 30  # seconds
-
 
 class ApartmentScraper:
-    def __init__(self, apt_file: Path = APT_FILE):
-        self.apt_file = apt_file
+    def __init__(self):
+        # No file path needed anymore
+        pass
 
     def _process_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
         processed_item = {}
@@ -51,6 +66,10 @@ class ApartmentScraper:
         address = item.get('address', {})
         processed_item['city'] = address.get('city', {}).get('text', '')
         processed_item['street'] = address.get('street', {}).get('text', '')
+        # Extract coordinates
+        coords = address.get('coords', {})
+        processed_item['latitude'] = coords.get('lat')
+        processed_item['longitude'] = coords.get('lon')
 
         # Extract price
         processed_item['price'] = item.get('price')
@@ -81,15 +100,18 @@ class ApartmentScraper:
 
         # Calculate and add MD5 hash
         processed_item['md5'] = self._get_md5(processed_item)
+        processed_item['type'] = 'yad2'  # Add type field
         return processed_item
 
     async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]:
-        await asyncio.sleep(random.uniform(MIN_DELAY, MAX_DELAY))
+        await asyncio.sleep(random.uniform(MIN_DELAY_BETWEEN_REQUESTS, MAX_DELAY_BETWEEN_REQUESTS))
         url = BASE_URL_TEMPLATE.format(ct=city, pg=page_number)
 
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=DEFAULT_HEADERS) as response:
+                yad2_logger.info(
+                    f"Fetching page {page_number} for city {city}, URL: {url}")
                 response.raise_for_status()
                 page_data = await response.json()
 
@@ -99,20 +121,13 @@ class ApartmentScraper:
                 commercial_ads = feed_data.get('commercial', [])
                 total_ads_on_page = len(private_ads) + len(commercial_ads)
 
-                print(
+                yad2_logger.info(
                     f"Fetched page {page_number} for city {city}: Found {total_ads_on_page} apartments")
 
                 return page_data
 
     def _get_md5(self, thing: Any) -> str:
         return hashlib.md5(str(thing).encode()).hexdigest()
-
-    def _load_existing_data(self) -> Dict[str, Dict[str, Any]]:
-        if self.apt_file.exists():
-            with self.apt_file.open('r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            return {}
 
     async def _process_page(self, page: Dict[str, Any]) -> List[Dict[str, Any]]:
         processed_items = []
@@ -131,7 +146,8 @@ class ApartmentScraper:
             first_page = await self._get_page_data(1, city)
 
             # Extract total pages and total items from the new JSON structure
-            pagination_data = first_page.get('pageProps', {}).get('feed', {}).get('pagination', {})
+            pagination_data = first_page.get('pageProps', {}).get(
+                'feed', {}).get('pagination', {})
             page_count = pagination_data.get('totalPages', 0)
             total_expected += pagination_data.get('total', 0)
 
@@ -139,6 +155,8 @@ class ApartmentScraper:
 
             # Handle the case where there is only one page
             if page_count > 1:
+                yad2_logger.info(
+                    f"City {city} has {page_count} pages. Fetching remaining pages...")
                 tasks = []
                 for page_number in range(2, page_count + 1):
                     tasks.append(self._get_page_data(page_number, city))
@@ -150,64 +168,23 @@ class ApartmentScraper:
 
         # Check if the number of fetched items matches the expected total
         if len(current) != total_expected:
-            print(
-                f"WARNING: Fetched {len(current)} items, but expected {total_expected} according to pagination.")
+            yad2_logger.warning(
+                f"Fetched {len(current)} items, but expected {total_expected} according to pagination.")
 
         return current
 
-    def _update_or_add_items(self, old_by_md5: Dict[str, Dict[str, Any]], current: List[Dict[str, Any]]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
-        new_items = {}
-        updated_items = {}
-
-        for current_item in current:
-            current_md5 = current_item['md5']
-            current_id = current_item['id']
-
-            if current_md5 in old_by_md5:
-                existing_item = old_by_md5[current_md5]
-                if current_id != existing_item['id']:
-                    # Update the ID and URL in the existing item
-                    existing_item['id'] = current_id
-                    existing_item['apartment_page_url'] = current_item['apartment_page_url']
-                    updated_items[current_md5] = existing_item
-            else:
-                new_items[current_md5] = current_item
-
-        return new_items, updated_items
-
-    def _save_data(self, final_all_md5_based: Dict[str, Dict[str, Any]]) -> None:
-        with self.apt_file.open('w', encoding='utf-8') as out:
-            json.dump(final_all_md5_based, out, ensure_ascii=False, indent=2)
-
-    async def run(self) -> None:
-        old_data = self._load_existing_data()
-
-        # Create a mapping from MD5 hash to the full item data for comparison
-        old_by_md5 = {item['md5']: item for item in old_data.values()}
-
+    async def run(self) -> List[Dict[str, Any]]:
+        yad2_logger.info("Starting Yad2 scraper run...")
         current = await self.get_current()
-
-        new_items, updated_items = self._update_or_add_items(
-            old_by_md5, current)
-
-        # Reconstruct the final dictionary
-        final_all_md5_based = {}
-        for md5_key, stored_item in old_by_md5.items():
-            if md5_key not in new_items and md5_key not in updated_items:
-                final_all_md5_based[md5_key] = stored_item
-
-        final_all_md5_based.update(new_items)
-        final_all_md5_based.update(updated_items)
-
-        self._save_data(final_all_md5_based)
-
-        now = str(datetime.datetime.now()).split('.')[0]
-        print(f'{now}: New: {len(new_items)} | Updated: {len(updated_items)}')
+        yad2_logger.info(
+            f"Yad2 scraper finished, returning {len(current)} items.")
+        return current
 
 
 async def main() -> None:
     scraper = ApartmentScraper()
-    await scraper.run()
+    apartments = await scraper.run()
+    print(f"Yad2 scraper returned {len(apartments)} apartments.")
 
 
 if __name__ == '__main__':
