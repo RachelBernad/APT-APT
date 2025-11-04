@@ -2,6 +2,7 @@
 out/
 
 scraper.log
+subscribers.json
 
 *.html
 *.pyc

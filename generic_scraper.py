@@ -7,22 +7,11 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
+# Import the scrapers
 import facebook
 import yad2
 from shared_scrapers_config import OUTPUT_DIR, ScraperLogFormatter
 from shared_scrapers_config import logger as shared_logger
-
-# --- Configure Generic Scraper-specific logger with prefix ---
-generic_logger = logging.getLogger(__name__)
-# Apply the custom formatter with scraper name
-# Example handler, apply to all handlers if needed
-handler = logging.StreamHandler()
-handler.setFormatter(ScraperLogFormatter(
-    '%(asctime)s - %(levelname)s - %(message)s', 'GENERIC'))
-generic_logger.addHandler(handler)
-# Set level for Generic logger (inherits from root if not set)
-# Keep at DEBUG for detailed merging logs
-generic_logger.setLevel(logging.DEBUG)
 
 # --- Configuration ---
 MERGED_OUTPUT_FILE = OUTPUT_DIR / 'merged_apartments.json'
@@ -34,13 +23,26 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
     'yad2': {
         'scraper_class': yad2.ApartmentScraper,
         'type_name': 'yad2',
-        'logger': logging.getLogger(yad2.__name__),  # Use the module's logger
+        'logger': logging.getLogger(yad2.__name__),
+        # Common filter parameters
+        'min_price': 3,
+        'max_price': 10000,
+        'min_rooms': 2.5,
+        'max_rooms': 4,
     },
     'facebook': {
         'scraper_class': facebook.FacebookMarketplaceScraper,
-        'type_name': 'facebook marketplace',  # Updated type name
-        # Use the module's logger
+        'type_name': 'facebook marketplace',
         'logger': logging.getLogger(facebook.__name__),
+        # Common filter parameters
+        'min_price': 3000,
+        'max_price': 15000,
+        'min_rooms': 2,
+        'min_bedrooms': 2,
+        # Location-based parameters
+        'lat': 32.0853,  # Tel Aviv
+        'lng': 34.7818,
+        'radius': 3,  # 3km
     }
     # Add more scrapers here as needed
     # 'new_scraper_name': {
@@ -57,14 +59,33 @@ def _get_md5(thing: Any) -> str:
 
 
 async def run_generic_scraper():
-    generic_logger.info(
+    shared_logger.info(
         "Starting Generic Scraper to merge data from registered scrapers...")
 
     # --- Run All Registered Scrapers Concurrently ---
     tasks = []
     scrapers_to_run = {}
     for name, config in SCRAPER_REGISTRY.items():
-        scraper_instance = config['scraper_class']()
+        # Pass filter parameters to the scraper instance
+        if name == 'yad2':
+            scraper_instance = config['scraper_class'](
+                min_price=config['min_price'],
+                max_price=config['max_price'],
+                min_rooms=config['min_rooms'],
+                max_rooms=config['max_rooms']
+            )
+        elif name == 'facebook':
+            scraper_instance = config['scraper_class'](
+                min_price=config['min_price'],
+                max_price=config['max_price'],
+                min_bedrooms=config['min_bedrooms'],
+                lat=config['lat'],
+                lng=config['lng'],
+                radius=config['radius']
+            )
+        else:
+            scraper_instance = config['scraper_class']()
+        
         # Store the instance and its config for later use
         scrapers_to_run[name] = {
             'instance': scraper_instance,
@@ -95,17 +116,18 @@ async def run_generic_scraper():
             # Calculate MD5 if not present (should be done by scraper, but just in case)
             if 'md5' not in apt:
                 apt['md5'] = _get_md5(apt)
-        all_apartments.extend(scraper_results)
+            
+            all_apartments.append(apt)
 
     # --- Merge Logic (Similar to Yad2 but across types) ---
     old_data = {}
     if MERGED_OUTPUT_FILE.exists():
         with MERGED_OUTPUT_FILE.open('r', encoding='utf-8') as f:
             old_data = json.load(f)
-        generic_logger.info(
+        shared_logger.info(
             f"Loaded {len(old_data)} old items from {MERGED_OUTPUT_FILE}")
     else:
-        generic_logger.info(
+        shared_logger.info(
             f"No existing merged data file found at {MERGED_OUTPUT_FILE}, starting fresh.")
 
     old_by_md5 = {item['md5']: item for item in old_data.values()}
@@ -158,19 +180,24 @@ async def run_generic_scraper():
     # --- Save Merged Data ---
     with MERGED_OUTPUT_FILE.open('w', encoding='utf-8') as out:
         json.dump(final_all_md5_based, out, ensure_ascii=False, indent=2)
-    generic_logger.info(
+    shared_logger.info(
         f"Merged data saved to {MERGED_OUTPUT_FILE} with {len(final_all_md5_based)} items.")
 
     now = str(datetime.datetime.now()).split('.')[0]
-    generic_logger.info(
-        f'{now}: Generic Scraper - New: {len(new_items)} | Updated: {len(updated_items)}')
+    
+    # Calculate total new and updated across all scrapers
+    total_new = sum(stats['new'] for stats in scraper_stats.values())
+    total_updated = sum(stats['updated'] for stats in scraper_stats.values())
+    
+    shared_logger.info(
+        f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
 
     # Print per-scraper stats
     for name, stats in scraper_stats.items():
         print(f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
 
-    # Keep print for console feedback for the main summary
-    print(f'{now}: Generic Scraper - New: {len(new_items)} | Updated: {len(updated_items)}')
+    # Print total summary
+    print(f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
 
 
 async def main():

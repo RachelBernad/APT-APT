@@ -4,7 +4,7 @@ from pathlib import Path
 
 # --- Shared Logging Configuration ---
 LOG_FILE = "scraper.log"
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 # Custom formatter to add scraper name prefix
 class ScraperLogFormatter(logging.Formatter):

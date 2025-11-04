@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import aiohttp
+from bs4 import BeautifulSoup
 
 # Import shared configuration
 from shared_scrapers_config import (LOG_FILE, LOG_LEVEL,
@@ -17,21 +18,12 @@ from shared_scrapers_config import (LOG_FILE, LOG_LEVEL,
                                     REQUEST_TIMEOUT, ScraperLogFormatter)
 from shared_scrapers_config import logger as shared_logger
 
-# --- Configure Yad2-specific logger with prefix ---
-yad2_logger = logging.getLogger(__name__)
-# Apply the custom formatter with scraper name
-# Example handler, apply to all handlers if needed
-handler = logging.StreamHandler()
-handler.setFormatter(ScraperLogFormatter(
-    '%(asctime)s - %(levelname)s - %(message)s', 'YAD2'))
-yad2_logger.addHandler(handler)
-# Set level for Yad2 logger specifically
-yad2_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO to reduce spam
-
 # --- Configuration ---
-BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/VNJEK8g5hoH41L9F3_H99/rent.json?minPrice=4000&maxPrice=10000&minRooms=2.5&maxRooms=4&topArea=2&area=1&city={ct}&page={pg}'
-CITIES = [5000]  # Tel Aviv
+# URL Templates
+BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&city={ct}&page={pg}'
+RENT_PAGE_URL = 'https://www.yad2.co.il/realestate/rent?topArea=2&area=1&city=5000'
 
+CITIES = [5000]  # Tel Aviv
 APARTMENT_PAGE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/item/{token}'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
@@ -55,17 +47,70 @@ DEFAULT_HEADERS = {
 
 
 class ApartmentScraper:
-    def __init__(self):
-        # No file path needed anymore
-        pass
+    def __init__(self, min_price=3, max_price=10000, min_rooms=2.5, max_rooms=4):
+        self.build_id = None
+        self.min_price = min_price
+        self.max_price = max_price
+        self.min_rooms = min_rooms
+        self.max_rooms = max_rooms
+        
+    async def _fetch_build_id(self) -> str:
+        """
+        Fetch the build ID from the main rent page.
+        This ID is required for constructing the API URLs.
+        """
+        timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(RENT_PAGE_URL, headers=DEFAULT_HEADERS) as response:
+                shared_logger.info(f"Fetching build ID from {RENT_PAGE_URL}")
+                response.raise_for_status()
+                content = await response.text()
+                
+                # Parse the HTML to find the build ID
+                soup = BeautifulSoup(content, 'html.parser')
+                
+                # Look for the script with id="__NEXT_DATA__"
+                data_script = soup.find('script', {'id': '__NEXT_DATA__'})
+                if data_script and data_script.string:
+                    try:
+                        data = json.loads(data_script.string)
+                        build_id = data.get('buildId')
+                        if build_id:
+                            shared_logger.info(f"Found build ID from NEXT_DATA: {build_id}")
+                            return build_id
+                    except (json.JSONDecodeError, AttributeError):
+                        shared_logger.error("Could not parse NEXT_DATA script content")
+                
+                # If we still can't find it, raise an exception
+                shared_logger.error("Could not find build ID in the page content")
+                raise ValueError("Could not extract build ID from rent page")
+    
+    async def _ensure_build_id(self):
+        """Ensure we have a valid build ID, fetch it if needed."""
+        if not self.build_id:
+            self.build_id = await self._fetch_build_id()
 
     def _process_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
         processed_item = {}
 
         # Extract address details - accessing 'text' field from nested objects
         address = item.get('address', {})
-        processed_item['city'] = address.get('city', {}).get('text', '')
-        processed_item['street'] = address.get('street', {}).get('text', '')
+        city = address.get('city', {}).get('text', '')
+        street = address.get('street', {}).get('text', '')
+        
+        # Create unified location field
+        if city and street:
+            location = f"{street}, {city}"
+        elif city:
+            location = city
+        elif street:
+            location = street
+        else:
+            location = ""
+        
+        processed_item['city'] = city
+        processed_item['street'] = street
+        processed_item['location'] = location
         # Extract coordinates
         coords = address.get('coords', {})
         processed_item['latitude'] = coords.get('lat')
@@ -105,12 +150,24 @@ class ApartmentScraper:
 
     async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]:
         await asyncio.sleep(random.uniform(MIN_DELAY_BETWEEN_REQUESTS, MAX_DELAY_BETWEEN_REQUESTS))
-        url = BASE_URL_TEMPLATE.format(ct=city, pg=page_number)
+        
+        # Ensure we have the build ID before making requests
+        await self._ensure_build_id()
+        
+        url = BASE_URL_TEMPLATE.format(
+            build_id=self.build_id, 
+            min_price=self.min_price,
+            max_price=self.max_price,
+            min_rooms=self.min_rooms,
+            max_rooms=self.max_rooms,
+            ct=city, 
+            pg=page_number
+        )
 
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=DEFAULT_HEADERS) as response:
-                yad2_logger.info(
+                shared_logger.info(
                     f"Fetching page {page_number} for city {city}, URL: {url}")
                 response.raise_for_status()
                 page_data = await response.json()
@@ -121,7 +178,7 @@ class ApartmentScraper:
                 commercial_ads = feed_data.get('commercial', [])
                 total_ads_on_page = len(private_ads) + len(commercial_ads)
 
-                yad2_logger.info(
+                shared_logger.info(
                     f"Fetched page {page_number} for city {city}: Found {total_ads_on_page} apartments")
 
                 return page_data
@@ -155,7 +212,7 @@ class ApartmentScraper:
 
             # Handle the case where there is only one page
             if page_count > 1:
-                yad2_logger.info(
+                shared_logger.info(
                     f"City {city} has {page_count} pages. Fetching remaining pages...")
                 tasks = []
                 for page_number in range(2, page_count + 1):
@@ -168,15 +225,15 @@ class ApartmentScraper:
 
         # Check if the number of fetched items matches the expected total
         if len(current) != total_expected:
-            yad2_logger.warning(
+            shared_logger.warning(
                 f"Fetched {len(current)} items, but expected {total_expected} according to pagination.")
 
         return current
 
     async def run(self) -> List[Dict[str, Any]]:
-        yad2_logger.info("Starting Yad2 scraper run...")
+        shared_logger.info("Starting Yad2 scraper run...")
         current = await self.get_current()
-        yad2_logger.info(
+        shared_logger.info(
             f"Yad2 scraper finished, returning {len(current)} items.")
         return current
 

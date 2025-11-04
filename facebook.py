@@ -31,7 +31,6 @@ facebook_logger.setLevel(LOG_LEVEL)
 
 # --- URLs and Endpoints ---
 MARKETPLACE_BASE_URL = "https://www.facebook.com/marketplace/"
-DEFAULT_LISTINGS_URL = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice=2&maxPrice=10000&minBedrooms=3&exact=false&latitude=32.0778&longitude=34.7677&radius=3"
 
 # --- File Names ---
 HTML_OUTPUT_FILE = OUTPUT_DIR / "fetched_page.html"
@@ -70,8 +69,8 @@ HEADERS = {
 
 
 class FacebookMarketplaceScraper:
-    def __init__(self, listings_url: str = DEFAULT_LISTINGS_URL, output_dir: Path = OUTPUT_DIR):
-        self.listings_url = listings_url
+    def __init__(self, min_price, max_price, min_bedrooms, lat, lng, radius, output_dir: Path = OUTPUT_DIR):
+        self.listings_url = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice={min_price}&maxPrice={max_price}&minBedrooms={min_bedrooms}&exact=false&latitude={lat}&longitude={lng}&radius={radius}"
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
 
@@ -97,7 +96,7 @@ class FacebookMarketplaceScraper:
                 json_strings.append(content.strip())
 
         if json_strings:
-            facebook_logger.info(
+            facebook_logger.debug(
                 f"Found {len(json_strings)} potential JSON script tags using BeautifulSoup.")
             return json_strings
         else:
@@ -129,7 +128,7 @@ class FacebookMarketplaceScraper:
                                 stories_data = data_viewer.get(
                                     "marketplace_rentals_map_view_stories", {})
                                 if stories_data:
-                                    facebook_logger.info(
+                                    facebook_logger.debug(
                                         f"Found 'marketplace_rentals_map_view_stories' under key {potential_key}.")
                                     edges = stories_data.get("edges", [])
                                     return edges
@@ -154,6 +153,18 @@ class FacebookMarketplaceScraper:
             if uri:
                 listing_photos_urls.append(uri)
 
+        # Extract numeric price from formatted price
+        import re
+        numeric_price = None
+        if formatted_price_text != 'N/A':
+            # Remove currency symbols and commas, extract the number
+            numeric_price_str = re.sub(r'[^\d,]', '', formatted_price_text)
+            numeric_price_str = numeric_price_str.replace(',', '')
+            try:
+                numeric_price = int(numeric_price_str)
+            except ValueError:
+                numeric_price = None
+
         # Removed 'title' field as requested
         # title = for_sale_item.get('name', 'N/A')
 
@@ -161,9 +172,10 @@ class FacebookMarketplaceScraper:
             "id": id,
             "latitude": latitude,
             "longitude": longitude,
+            "price": numeric_price,  # Use the extracted numeric price
             "formatted_price": formatted_price_text,
             "share_uri": share_uri,
-            "listing_photos_urls": listing_photos_urls,
+            "images": listing_photos_urls,  # Rename to match generic field
             # "title": title, # Removed
         }
 
@@ -213,9 +225,9 @@ class FacebookMarketplaceScraper:
                 )
 
     async def fetch_html_from_share_uri(self, session: aiohttp.ClientSession, share_uri: str) -> str:
-        facebook_logger.info(f"Fetching Share URI: {share_uri}")
+        facebook_logger.debug(f"Fetching Share URI: {share_uri}")
         async with session.get(share_uri, headers=HEADERS) as response:
-            facebook_logger.info(
+            facebook_logger.debug(
                 f"Response Status for Share URI: {response.status}")
 
             if response.status == 200:
@@ -294,7 +306,7 @@ class FacebookMarketplaceScraper:
                                 product_details = data_viewer.get(
                                     "marketplace_product_details_page", {})
                                 if product_details:
-                                    facebook_logger.info(
+                                    facebook_logger.debug(
                                         f"Found detailed data under key {potential_key} for apartment {apartment_id}.")
 
                                     # Save ONLY the marketplace_product_details_page fragment if debug is on
@@ -338,11 +350,23 @@ class FacebookMarketplaceScraper:
         street = self.safe_get(target, 'home_address', 'street') or 'N/A'
         full_address = f"{street}, {address_city}" if street != 'N/A' and address_city != 'N/A' else 'N/A'
 
+        # Use full_address as location for unification
+        location = full_address
+
         delivery_types = self.safe_get(target, 'delivery_types') or []
         if not isinstance(delivery_types, list):
             delivery_types = []
 
         unit_room_info = self.safe_get(target, 'unit_room_info') or 'N/A'
+
+        # Extract rooms from unit_room_info if available
+        import re
+        rooms = 'N/A'
+        if unit_room_info != 'N/A':
+            # Extract room count from unit_room_info like "3 beds · 1 bath"
+            room_match = re.search(r'(\d+)\s*beds?', unit_room_info)
+            if room_match:
+                rooms = room_match.group(1)
 
         comments = self.safe_get(target, 'marketplace_comments')
         comments_count = self.safe_get(comments, 'total_count') or 'N/A'
@@ -350,8 +374,10 @@ class FacebookMarketplaceScraper:
         return {
             'description': description,
             'full_address': full_address,
+            'location': location,  # Add the unified location field
             'delivery_types': delivery_types,
             'unit_room_info': unit_room_info,
+            'rooms': rooms,  # Add the unified rooms field
             'comments_count': comments_count,
         }
 
