@@ -39,9 +39,9 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'max_price': 10000,
         'min_bedrooms': 2.5,
         # Location-based parameters
-        'lat': 32.0853,  # Tel Aviv
-        'lng': 34.7818,
-        'radius': 3,  # 3km
+        'lat': 32.08214,  # Tel Aviv
+        'lng': 34.77842, # Can be calculated using this site: https://www.calcmaps.com/map-radius/
+        'radius': 2,  # 3km
     }
     # Add more scrapers here as needed
     # 'new_scraper_name': {

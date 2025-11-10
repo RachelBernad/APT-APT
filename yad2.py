@@ -182,7 +182,7 @@ class ApartmentScraper:
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=DEFAULT_HEADERS) as response:
-                yad2_logger.info(
+                yad2_logger.debug(
                     f"Fetching page {page_number} for city {city}, URL: {url}")
                 response.raise_for_status()
                 page_data = await response.json()
