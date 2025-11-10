@@ -1,5 +1,5 @@
 {
     "deploy": {
-        "startCommand": "python main.py"
+        "startCommand": "python telegram_bot.py"
     }
 }
