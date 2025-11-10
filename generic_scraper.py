@@ -28,17 +28,16 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'min_price': 3,
         'max_price': 10000,
         'min_rooms': 2.5,
-        'max_rooms': 4,
+        'max_rooms': 5,
     },
     'facebook': {
         'scraper_class': facebook.FacebookMarketplaceScraper,
         'type_name': 'facebook marketplace',
         'logger': logging.getLogger(facebook.__name__),
         # Common filter parameters
-        'min_price': 3000,
-        'max_price': 15000,
-        'min_rooms': 2,
-        'min_bedrooms': 2,
+        'min_price': 3,
+        'max_price': 10000,
+        'min_bedrooms': 2.5,
         # Location-based parameters
         'lat': 32.0853,  # Tel Aviv
         'lng': 34.7818,
@@ -85,7 +84,7 @@ async def run_generic_scraper():
             )
         else:
             scraper_instance = config['scraper_class']()
-        
+
         # Store the instance and its config for later use
         scrapers_to_run[name] = {
             'instance': scraper_instance,
@@ -116,7 +115,7 @@ async def run_generic_scraper():
             # Calculate MD5 if not present (should be done by scraper, but just in case)
             if 'md5' not in apt:
                 apt['md5'] = _get_md5(apt)
-            
+
             all_apartments.append(apt)
 
     # --- Merge Logic (Similar to Yad2 but across types) ---
@@ -184,11 +183,11 @@ async def run_generic_scraper():
         f"Merged data saved to {MERGED_OUTPUT_FILE} with {len(final_all_md5_based)} items.")
 
     now = str(datetime.datetime.now()).split('.')[0]
-    
+
     # Calculate total new and updated across all scrapers
     total_new = sum(stats['new'] for stats in scraper_stats.values())
     total_updated = sum(stats['updated'] for stats in scraper_stats.values())
-    
+
     shared_logger.info(
         f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
 

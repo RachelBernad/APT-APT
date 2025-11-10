@@ -37,7 +37,6 @@ HTML_OUTPUT_FILE = OUTPUT_DIR / "fetched_page.html"
 JSON_OUTPUT_FILE_WITH_DETAILS = OUTPUT_DIR / "apartments_with_details.json"
 # New internal directory for debug JSONs
 DEBUG_JSON_DIR = OUTPUT_DIR / "debug_jsons"
-DEBUG_JSON_DIR.mkdir(exist_ok=True)  # Create the directory if it doesn't exist
 
 # --- Batch Configuration ---
 BATCH_SIZE = 50
@@ -70,6 +69,21 @@ HEADERS = {
 
 class FacebookMarketplaceScraper:
     def __init__(self, min_price, max_price, min_bedrooms, lat, lng, radius, output_dir: Path = OUTPUT_DIR):
+        self.min_price = min_price
+        self.max_price = max_price
+        self.min_bedrooms = min_bedrooms
+        self.lat = lat
+        self.lng = lng
+        self.radius = radius
+        
+        # Log the filters being used
+        facebook_logger.info(
+            f"Facebook scraper initialized with filters - "
+            f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
+            f"Min Bedrooms: {self.min_bedrooms}, "
+            f"Location: ({self.lat}, {self.lng}), Radius: {self.radius}m"
+        )
+        
         self.listings_url = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice={min_price}&maxPrice={max_price}&minBedrooms={min_bedrooms}&exact=false&latitude={lat}&longitude={lng}&radius={radius}"
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
@@ -311,6 +325,8 @@ class FacebookMarketplaceScraper:
 
                                     # Save ONLY the marketplace_product_details_page fragment if debug is on
                                     if facebook_logger.isEnabledFor(logging.DEBUG):
+                                        # Create the directory if it doesn't exist
+                                        DEBUG_JSON_DIR.mkdir(exist_ok=True)
                                         safe_id = "".join(
                                             c if c.isalnum() or c in "._-" else "_" for c in str(apartment_id))
                                         # Save to the internal debug directory
@@ -508,7 +524,15 @@ class FacebookMarketplaceScraper:
 
 
 async def main():
-    scraper = FacebookMarketplaceScraper()
+    # Example usage with required parameters
+    scraper = FacebookMarketplaceScraper(
+        min_price=3000,
+        max_price=10000,
+        min_bedrooms=2,
+        lat=32.0853,
+        lng=34.7818,
+        radius=5000
+    )
     await scraper.run()
 
 

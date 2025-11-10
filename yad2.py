@@ -18,6 +18,14 @@ from shared_scrapers_config import (LOG_FILE, LOG_LEVEL,
                                     REQUEST_TIMEOUT, ScraperLogFormatter)
 from shared_scrapers_config import logger as shared_logger
 
+# --- Configure Yad2-specific logger with prefix ---
+yad2_logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setFormatter(ScraperLogFormatter(
+    '%(asctime)s - %(levelname)s - %(message)s', 'YAD2'))
+yad2_logger.addHandler(handler)
+yad2_logger.setLevel(logging.INFO)
+
 # --- Configuration ---
 # URL Templates
 BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&city={ct}&page={pg}'
@@ -54,6 +62,13 @@ class ApartmentScraper:
         self.min_rooms = min_rooms
         self.max_rooms = max_rooms
         
+        # Log the filters being used
+        yad2_logger.info(
+            f"Yad2 scraper initialized with filters - "
+            f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
+            f"Min Rooms: {self.min_rooms}, Max Rooms: {self.max_rooms}"
+        )
+        
     async def _fetch_build_id(self) -> str:
         """
         Fetch the build ID from the main rent page.
@@ -62,7 +77,7 @@ class ApartmentScraper:
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(RENT_PAGE_URL, headers=DEFAULT_HEADERS) as response:
-                shared_logger.info(f"Fetching build ID from {RENT_PAGE_URL}")
+                yad2_logger.info(f"Fetching build ID from {RENT_PAGE_URL}")
                 response.raise_for_status()
                 content = await response.text()
                 
@@ -76,13 +91,13 @@ class ApartmentScraper:
                         data = json.loads(data_script.string)
                         build_id = data.get('buildId')
                         if build_id:
-                            shared_logger.info(f"Found build ID from NEXT_DATA: {build_id}")
+                            yad2_logger.info(f"Found build ID from NEXT_DATA: {build_id}")
                             return build_id
                     except (json.JSONDecodeError, AttributeError):
-                        shared_logger.error("Could not parse NEXT_DATA script content")
+                        yad2_logger.error("Could not parse NEXT_DATA script content")
                 
                 # If we still can't find it, raise an exception
-                shared_logger.error("Could not find build ID in the page content")
+                yad2_logger.error("Could not find build ID in the page content")
                 raise ValueError("Could not extract build ID from rent page")
     
     async def _ensure_build_id(self):
@@ -167,7 +182,7 @@ class ApartmentScraper:
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=DEFAULT_HEADERS) as response:
-                shared_logger.info(
+                yad2_logger.info(
                     f"Fetching page {page_number} for city {city}, URL: {url}")
                 response.raise_for_status()
                 page_data = await response.json()
@@ -178,7 +193,7 @@ class ApartmentScraper:
                 commercial_ads = feed_data.get('commercial', [])
                 total_ads_on_page = len(private_ads) + len(commercial_ads)
 
-                shared_logger.info(
+                yad2_logger.debug(
                     f"Fetched page {page_number} for city {city}: Found {total_ads_on_page} apartments")
 
                 return page_data
@@ -212,7 +227,7 @@ class ApartmentScraper:
 
             # Handle the case where there is only one page
             if page_count > 1:
-                shared_logger.info(
+                yad2_logger.info(
                     f"City {city} has {page_count} pages. Fetching remaining pages...")
                 tasks = []
                 for page_number in range(2, page_count + 1):
@@ -225,15 +240,15 @@ class ApartmentScraper:
 
         # Check if the number of fetched items matches the expected total
         if len(current) != total_expected:
-            shared_logger.warning(
+            yad2_logger.warning(
                 f"Fetched {len(current)} items, but expected {total_expected} according to pagination.")
 
         return current
 
     async def run(self) -> List[Dict[str, Any]]:
-        shared_logger.info("Starting Yad2 scraper run...")
+        yad2_logger.info("Starting Yad2 scraper run...")
         current = await self.get_current()
-        shared_logger.info(
+        yad2_logger.info(
             f"Yad2 scraper finished, returning {len(current)} items.")
         return current
 
