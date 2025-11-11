@@ -12,26 +12,21 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 # Import shared configuration
-from shared_scrapers_config import (LOG_FILE, LOG_LEVEL,
-                                    MAX_DELAY_BETWEEN_REQUESTS,
+from shared_scrapers_config import (MAX_DELAY_BETWEEN_REQUESTS,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
-                                    REQUEST_TIMEOUT, ScraperLogFormatter)
-from shared_scrapers_config import logger as shared_logger
+                                    REQUEST_TIMEOUT)
+from shared_scrapers_config import logger as shared_logger # This is now a placeholder
 
-# --- Configure Yad2-specific logger with prefix ---
+# --- Configure Yad2-specific logger ---
+# This will be configured by the telegram bot's setup_logging
 yad2_logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-handler.setFormatter(ScraperLogFormatter(
-    '%(asctime)s - %(levelname)s - %(message)s', 'YAD2'))
-yad2_logger.addHandler(handler)
-yad2_logger.setLevel(logging.INFO)
 
 # --- Configuration ---
 # URL Templates
 BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&city={ct}&page={pg}'
 RENT_PAGE_URL = 'https://www.yad2.co.il/realestate/rent?topArea=2&area=1&city=5000'
-
 CITIES = [5000]  # Tel Aviv
+
 APARTMENT_PAGE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/item/{token}'
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
@@ -61,14 +56,13 @@ class ApartmentScraper:
         self.max_price = max_price
         self.min_rooms = min_rooms
         self.max_rooms = max_rooms
-        
         # Log the filters being used
         yad2_logger.info(
             f"Yad2 scraper initialized with filters - "
             f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
             f"Min Rooms: {self.min_rooms}, Max Rooms: {self.max_rooms}"
         )
-        
+
     async def _fetch_build_id(self) -> str:
         """
         Fetch the build ID from the main rent page.
@@ -80,10 +74,8 @@ class ApartmentScraper:
                 yad2_logger.info(f"Fetching build ID from {RENT_PAGE_URL}")
                 response.raise_for_status()
                 content = await response.text()
-                
                 # Parse the HTML to find the build ID
                 soup = BeautifulSoup(content, 'html.parser')
-                
                 # Look for the script with id="__NEXT_DATA__"
                 data_script = soup.find('script', {'id': '__NEXT_DATA__'})
                 if data_script and data_script.string:
@@ -95,11 +87,11 @@ class ApartmentScraper:
                             return build_id
                     except (json.JSONDecodeError, AttributeError):
                         yad2_logger.error("Could not parse NEXT_DATA script content")
-                
+
                 # If we still can't find it, raise an exception
                 yad2_logger.error("Could not find build ID in the page content")
                 raise ValueError("Could not extract build ID from rent page")
-    
+
     async def _ensure_build_id(self):
         """Ensure we have a valid build ID, fetch it if needed."""
         if not self.build_id:
@@ -112,7 +104,6 @@ class ApartmentScraper:
         address = item.get('address', {})
         city = address.get('city', {}).get('text', '')
         street = address.get('street', {}).get('text', '')
-        
         # Create unified location field
         if city and street:
             location = f"{street}, {city}"
@@ -122,7 +113,6 @@ class ApartmentScraper:
             location = street
         else:
             location = ""
-        
         processed_item['city'] = city
         processed_item['street'] = street
         processed_item['location'] = location
@@ -165,10 +155,8 @@ class ApartmentScraper:
 
     async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]:
         await asyncio.sleep(random.uniform(MIN_DELAY_BETWEEN_REQUESTS, MAX_DELAY_BETWEEN_REQUESTS))
-        
         # Ensure we have the build ID before making requests
         await self._ensure_build_id()
-        
         url = BASE_URL_TEMPLATE.format(
             build_id=self.build_id, 
             min_price=self.min_price,
@@ -238,10 +226,10 @@ class ApartmentScraper:
                 for page in pages:
                     current.extend(await self._process_page(page))
 
-        # Check if the number of fetched items matches the expected total
-        if len(current) != total_expected:
-            yad2_logger.warning(
-                f"Fetched {len(current)} items, but expected {total_expected} according to pagination.")
+        # # Check if the number of fetched items matches the expected total
+        # if len(current) != total_expected:
+        #     yad2_logger.warning(
+        #         f"Fetched {len(current)} items, but expected {total_expected} according to pagination.")
 
         return current
 
@@ -256,7 +244,7 @@ class ApartmentScraper:
 async def main() -> None:
     scraper = ApartmentScraper()
     apartments = await scraper.run()
-    print(f"Yad2 scraper returned {len(apartments)} apartments.")
+    yad2_logger.debug(f"Yad2 scraper returned {len(apartments)} apartments.")
 
 
 if __name__ == '__main__':

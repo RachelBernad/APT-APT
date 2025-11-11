@@ -11,33 +11,24 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 # Import shared configuration
-from shared_scrapers_config import (CONNECT_TIMEOUT, LOG_FILE, LOG_LEVEL,
+from shared_scrapers_config import (CONNECT_TIMEOUT,
                                     MAX_DELAY_BETWEEN_REQUESTS,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
                                     REQUEST_TIMEOUT, SOCK_READ_TIMEOUT,
-                                    TOTAL_TIMEOUT, ScraperLogFormatter)
-from shared_scrapers_config import logger as shared_logger
+                                    TOTAL_TIMEOUT)
+from shared_scrapers_config import logger as shared_logger # This is now a placeholder
 
-# --- Configure Facebook-specific logger with prefix ---
+# --- Configure Facebook-specific logger ---
+# This will be configured by the telegram bot's setup_logging
 facebook_logger = logging.getLogger(__name__)
-# Apply the custom formatter with scraper name
-# Example handler, apply to all handlers if needed
-handler = logging.StreamHandler()
-handler.setFormatter(ScraperLogFormatter(
-    '%(asctime)s - %(levelname)s - %(message)s', 'FACEBOOK'))
-facebook_logger.addHandler(handler)
-# Set level for Facebook logger (inherits from root if not set)
-facebook_logger.setLevel(LOG_LEVEL)
 
 # --- URLs and Endpoints ---
 MARKETPLACE_BASE_URL = "https://www.facebook.com/marketplace/"
-
 # --- File Names ---
 HTML_OUTPUT_FILE = OUTPUT_DIR / "fetched_page.html"
 JSON_OUTPUT_FILE_WITH_DETAILS = OUTPUT_DIR / "apartments_with_details.json"
 # New internal directory for debug JSONs
 DEBUG_JSON_DIR = OUTPUT_DIR / "debug_jsons"
-
 # --- Batch Configuration ---
 BATCH_SIZE = 50
 
@@ -75,7 +66,6 @@ class FacebookMarketplaceScraper:
         self.lat = lat
         self.lng = lng
         self.radius = radius
-        
         # Log the filters being used
         facebook_logger.info(
             f"Facebook scraper initialized with filters - "
@@ -83,7 +73,6 @@ class FacebookMarketplaceScraper:
             f"Min Bedrooms: {self.min_bedrooms}, "
             f"Location: ({self.lat}, {self.lng}), Radius: {self.radius}m"
         )
-        
         self.listings_url = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice={min_price}&maxPrice={max_price}&minBedrooms={min_bedrooms}&exact=false&latitude={lat}&longitude={lng}&radius={radius}"
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
@@ -91,7 +80,7 @@ class FacebookMarketplaceScraper:
     def save_html_to_file(self, html_content: str, filename: Path = HTML_OUTPUT_FILE):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        facebook_logger.info(f"Fetched HTML saved to {filename}")
+        facebook_logger.debug(f"Fetched HTML saved to {filename}")
 
     def save_apartments_to_json(self, apartments: List[Dict[str, Any]], filename: Path = JSON_OUTPUT_FILE_WITH_DETAILS):
         with open(filename, 'w', encoding='utf-8') as f:
@@ -368,7 +357,6 @@ class FacebookMarketplaceScraper:
 
         # Use full_address as location for unification
         location = full_address
-
         delivery_types = self.safe_get(target, 'delivery_types') or []
         if not isinstance(delivery_types, list):
             delivery_types = []
@@ -446,12 +434,12 @@ class FacebookMarketplaceScraper:
         return additional_details
 
     async def enrich_apartments_with_details(self, session: aiohttp.ClientSession, apartments: List[Dict[str, Any]]):
-        print("\n--- Fetching detailed data for each apartment in small batches ---")
+        facebook_logger.debug("\n--- Fetching detailed data for each apartment in small batches ---")
         for i in range(0, len(apartments), BATCH_SIZE):
             batch = apartments[i:i + BATCH_SIZE]
             batch_indices = list(
                 range(i, min(i + BATCH_SIZE, len(apartments))))
-            print(
+            facebook_logger.debug(
                 f"\n--- Processing Batch {i // BATCH_SIZE + 1}/{(len(apartments) - 1) // BATCH_SIZE + 1} ---")
 
             async with asyncio.TaskGroup() as tg:
@@ -460,14 +448,14 @@ class FacebookMarketplaceScraper:
                     tg.create_task(self.fetch_and_parse_details(
                         session, apartment, apartments, idx))
 
-            print(f"--- Completed Batch {i // BATCH_SIZE + 1} ---")
+            facebook_logger.debug(f"--- Completed Batch {i // BATCH_SIZE + 1} ---")
 
     def process_json_scripts(self, json_script_strs: List[str]) -> List[Dict[str, Any]]:
         apartments = []
         found_data = False
 
         for i, json_str in enumerate(json_script_strs):
-            print(
+            facebook_logger.debug(
                 f"--- Checking JSON Script {i+1}/{len(json_script_strs)} ---")
             try:
                 parsed_json = json.loads(json_str)
@@ -479,7 +467,7 @@ class FacebookMarketplaceScraper:
 
             rental_edges = self.find_rental_data_in_blob(parsed_json)
             if rental_edges:
-                facebook_logger.info(
+                facebook_logger.debug(
                     f"Found {len(rental_edges)} rental listings in JSON script {i+1}.")
                 found_data = True
                 for edge in rental_edges:
@@ -504,18 +492,17 @@ class FacebookMarketplaceScraper:
         )
         async with aiohttp.ClientSession(timeout=timeout) as session:
             html_content = await self.fetch_html(session, self.listings_url)
-            print(f"--- Raw HTML Fetched (length: {len(html_content)}) ---")
-            self.save_html_to_file(html_content)
+            facebook_logger.debug(f"--- Raw HTML Fetched (length: {len(html_content)}) ---")
+            # self.save_html_to_file(html_content) # FOR DEBUGGING ONLY
 
-            print("\n--- Parsing HTML for JSON Script ---")
+            facebook_logger.debug("\n--- Parsing HTML for JSON Script ---")
             json_script_strs = self.extract_json_script_content(html_content)
             apartments = self.process_json_scripts(json_script_strs)
 
-            print(f"\n--- Extracted {len(apartments)} Apartments ---")
+            facebook_logger.debug(f"\n--- Extracted {len(apartments)} Apartments ---")
             await self.enrich_apartments_with_details(session, apartments)
 
-            print(
-                f"\n--- Final data: {len(apartments)} Apartments with details ---")
+            facebook_logger.debug(f"\n--- Final data: {len(apartments)} Apartments with details ---")
             # Save the final enriched list to the JSON file
             # self.save_apartments_to_json(
             #     apartments, JSON_OUTPUT_FILE_WITH_DETAILS)

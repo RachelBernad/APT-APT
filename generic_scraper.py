@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 # Import the scrapers
 import facebook
 import yad2
-from shared_scrapers_config import OUTPUT_DIR, ScraperLogFormatter
+from shared_scrapers_config import OUTPUT_DIR
 from shared_scrapers_config import logger as shared_logger
 
 # --- Configuration ---
@@ -193,10 +193,10 @@ async def run_generic_scraper():
 
     # Print per-scraper stats
     for name, stats in scraper_stats.items():
-        print(f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
+        shared_logger.debug(f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
 
     # Print total summary
-    print(f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
+    shared_logger.debug(f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
 
 
 async def main():

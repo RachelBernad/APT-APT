@@ -12,16 +12,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotComm
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 import generic_scraper  # Import the generic scraper module
+from shared_scrapers_config import setup_logging # Import the unified logging setup
 
-# --- Logging Setup ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("bot.log"),  # Log to bot.log
-        logging.StreamHandler()         # Also log to console
-    ]
-)
+# --- Setup Unified Logging ---
+setup_logging()
 bot_logger = logging.getLogger(__name__)
 
 # Suppress overly verbose logs from telegram library
@@ -31,14 +25,13 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # --- Configuration ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 # How often to run the full scrape cycle (e.g., every 5 minutes)
-CHECK_INTERVAL_SECONDS = 300
+CHECK_INTERVAL_SECONDS = 60 * 15
 # Delay between sending messages to avoid rate limits (in seconds)
 MIN_MESSAGE_DELAY_SECONDS = 0.5
 MAX_MESSAGE_DELAY_SECONDS = 1.0
 # File to store subscribed chat IDs
 MERGED_OUTPUT_FILE = generic_scraper.MERGED_OUTPUT_FILE
 SUBSCRIBERS_FILE = Path("subscribers.json")
-
 
 class TelegramBot:
     def __init__(self, token: str):
@@ -119,19 +112,17 @@ class TelegramBot:
                     ]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
                 help_message = (
-                    "🏠 **Apartment Finder Bot**\n\n"
-                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n\n"
+                    "🏠 **Apartment Finder Bot**\n"
+                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n"
                     "Available commands:\n"
                     "/start - Show this help message\n"
                     "/help - Show this help message\n"
                     "/subscribe - Subscribe to receive updates about new apartments\n"
                     "/unsubscribe - Unsubscribe from updates\n"
-                    "/dumpall - Get all apartments currently in the database\n\n"
+                    "/dumpall - Get all apartments currently in the database\n"
                     "Use the buttons below to manage your subscription or view apartments."
                 )
-                
                 await update.message.reply_text(
                     help_message,
                     reply_markup=reply_markup,
@@ -163,19 +154,17 @@ class TelegramBot:
                     ]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
                 help_message = (
-                    "🏠 **Apartment Finder Bot**\n\n"
-                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n\n"
+                    "🏠 **Apartment Finder Bot**\n"
+                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n"
                     "Available commands:\n"
                     "/start - Show this help message\n"
                     "/help - Show this help message\n"
                     "/subscribe - Subscribe to receive updates about new apartments\n"
                     "/unsubscribe - Unsubscribe from updates\n"
-                    "/dumpall - Get all apartments currently in the database\n\n"
+                    "/dumpall - Get all apartments currently in the database\n"
                     "Use the buttons below to manage your subscription or view apartments."
                 )
-                
                 await update.message.reply_text(
                     help_message,
                     reply_markup=reply_markup,
@@ -248,7 +237,6 @@ class TelegramBot:
                     current_data = json.load(f)
 
                 apartments = list(current_data.values())
-                
                 if not apartments:
                     await update.message.reply_text("No apartments found in the database.")
                     return
@@ -256,7 +244,7 @@ class TelegramBot:
                 # Send a message for each apartment (or batch them if there are many)
                 total_apartments = len(apartments)
                 await update.message.reply_text(f"Sending {total_apartments} apartments...")
-                
+
                 for i, apt in enumerate(apartments):
                     message = self.format_apartment_message(apt)
                     try:
@@ -323,9 +311,9 @@ class TelegramBot:
         """Handle button presses from inline keyboard."""
         query = update.callback_query
         await query.answer()
-        
+
         chat_id = query.message.chat_id
-        
+
         if query.data == 'subscribe':
             self.subscribed_chats.add(chat_id)
             self.save_subscribers()
@@ -348,7 +336,6 @@ class TelegramBot:
                 current_data = json.load(f)
 
             apartments = list(current_data.values())
-            
             if not apartments:
                 await query.edit_message_text(text="No apartments found in the database.")
                 return
@@ -356,7 +343,7 @@ class TelegramBot:
             # Send a message for each apartment
             total_apartments = len(apartments)
             await query.edit_message_text(f"Sending {total_apartments} apartments...")
-            
+
             for i, apt in enumerate(apartments):
                 message = self.format_apartment_message(apt)
                 try:
@@ -478,7 +465,7 @@ class TelegramBot:
                 BotCommand("unsubscribe", "Unsubscribe from apartment updates"),
                 BotCommand("dumpall", "Get all apartments currently in the database")
             ])
-            
+
             # Add command handlers
             self.application.add_handler(
                 CommandHandler("start", self.start_command))
@@ -523,7 +510,6 @@ class TelegramBot:
                     "Telegram Bot application shut down gracefully.")
             except Exception as e:
                 bot_logger.error(f"Error during bot shutdown: {e}")
-
 
 async def main():
     if not TELEGRAM_BOT_TOKEN:
