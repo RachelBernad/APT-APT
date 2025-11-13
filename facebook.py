@@ -1,6 +1,7 @@
 # facebook.py
 import asyncio
 import datetime
+import hashlib
 import json
 import logging
 import random
@@ -16,7 +17,8 @@ from shared_scrapers_config import (CONNECT_TIMEOUT,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
                                     REQUEST_TIMEOUT, SOCK_READ_TIMEOUT,
                                     TOTAL_TIMEOUT)
-from shared_scrapers_config import logger as shared_logger # This is now a placeholder
+# This is now a placeholder
+from shared_scrapers_config import logger as shared_logger
 
 # --- Configure Facebook-specific logger ---
 # This will be configured by the telegram bot's setup_logging
@@ -30,7 +32,7 @@ JSON_OUTPUT_FILE_WITH_DETAILS = OUTPUT_DIR / "apartments_with_details.json"
 # New internal directory for debug JSONs
 DEBUG_JSON_DIR = OUTPUT_DIR / "debug_jsons"
 # --- Batch Configuration ---
-BATCH_SIZE = 50
+BATCH_SIZE = 25
 
 # --- JSON Script Tag Attributes ---
 JSON_SCRIPT_TAG_ATTR_NAME = 'data-sjs'
@@ -58,6 +60,21 @@ HEADERS = {
 }
 
 
+def _get_md5_for_comparison(item: Dict[str, Any]) -> str:
+    """Calculate MD5 hash based on specific fields for comparison."""
+    comparison_data = {
+        'price': item.get('price'),
+        'id': item.get('id'),
+        'location': item.get('location'),
+        'latitude': item.get('latitude'),
+        'longitude': item.get('longitude')
+    }
+    # Create a consistent string representation for hashing
+    # Sorting keys ensures the same order regardless of dict order
+    comparison_string = json.dumps(comparison_data, sort_keys=True, default=str)
+    return hashlib.md5(comparison_string.encode()).hexdigest()
+
+
 class FacebookMarketplaceScraper:
     def __init__(self, min_price, max_price, min_bedrooms, lat, lng, radius, output_dir: Path = OUTPUT_DIR):
         self.min_price = min_price
@@ -71,7 +88,7 @@ class FacebookMarketplaceScraper:
             f"Facebook scraper initialized with filters - "
             f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
             f"Min Bedrooms: {self.min_bedrooms}, "
-            f"Location: ({self.lat}, {self.lng}), Radius: {self.radius}m"
+            f"Location: ({self.lat}, {self.lng}), Radius: {self.radius}km"
         )
         self.listings_url = f"{MARKETPLACE_BASE_URL}telaviv/propertyrentals?minPrice={min_price}&maxPrice={max_price}&minBedrooms={min_bedrooms}&exact=false&latitude={lat}&longitude={lng}&radius={radius}"
         self.output_dir = output_dir
@@ -143,7 +160,7 @@ class FacebookMarketplaceScraper:
 
         id = for_sale_item.get('id', 'N/A')
         location = for_sale_item.get('location', {})
-        # Use 'latitude' and 'longitude' for consistency with Yad2
+
         latitude = location.get('latitude', 'N/A')
         longitude = location.get('longitude', 'N/A')
         formatted_price_text = for_sale_item.get(
@@ -156,7 +173,6 @@ class FacebookMarketplaceScraper:
             if uri:
                 listing_photos_urls.append(uri)
 
-        # Extract numeric price from formatted price
         import re
         numeric_price = None
         if formatted_price_text != 'N/A':
@@ -171,7 +187,7 @@ class FacebookMarketplaceScraper:
         # Removed 'title' field as requested
         # title = for_sale_item.get('name', 'N/A')
 
-        return {
+        apartment_item = {
             "id": id,
             "latitude": latitude,
             "longitude": longitude,
@@ -181,6 +197,10 @@ class FacebookMarketplaceScraper:
             "images": listing_photos_urls,  # Rename to match generic field
             # "title": title, # Removed
         }
+
+        # Calculate MD5 based on specific fields
+        apartment_item['md5'] = _get_md5_for_comparison(apartment_item)
+        return apartment_item
 
     async def fetch_html(self, session: aiohttp.ClientSession, url: str) -> str:
         facebook_logger.info(f"Fetching URL: {url}")
@@ -427,6 +447,7 @@ class FacebookMarketplaceScraper:
                 f"Failed to find detailed data on share_uri page for apartment ID {apartment_id}.")
 
         additional_details = self.extract_additional_details(details_data)
+        additional_details['apartment_page_url'] = share_uri
         apartments_list[index].update(additional_details)
         # Update the JSON file as details are fetched
         # self.save_apartments_to_json(
@@ -434,7 +455,8 @@ class FacebookMarketplaceScraper:
         return additional_details
 
     async def enrich_apartments_with_details(self, session: aiohttp.ClientSession, apartments: List[Dict[str, Any]]):
-        facebook_logger.debug("\n--- Fetching detailed data for each apartment in small batches ---")
+        facebook_logger.debug(
+            "\n--- Fetching detailed data for each apartment in small batches ---")
         for i in range(0, len(apartments), BATCH_SIZE):
             batch = apartments[i:i + BATCH_SIZE]
             batch_indices = list(
@@ -448,7 +470,8 @@ class FacebookMarketplaceScraper:
                     tg.create_task(self.fetch_and_parse_details(
                         session, apartment, apartments, idx))
 
-            facebook_logger.debug(f"--- Completed Batch {i // BATCH_SIZE + 1} ---")
+            facebook_logger.debug(
+                f"--- Completed Batch {i // BATCH_SIZE + 1} ---")
 
     def process_json_scripts(self, json_script_strs: List[str]) -> List[Dict[str, Any]]:
         apartments = []
@@ -492,21 +515,25 @@ class FacebookMarketplaceScraper:
         )
         async with aiohttp.ClientSession(timeout=timeout) as session:
             html_content = await self.fetch_html(session, self.listings_url)
-            facebook_logger.debug(f"--- Raw HTML Fetched (length: {len(html_content)}) ---")
+            facebook_logger.debug(
+                f"--- Raw HTML Fetched (length: {len(html_content)}) ---")
             # self.save_html_to_file(html_content) # FOR DEBUGGING ONLY
 
             facebook_logger.debug("\n--- Parsing HTML for JSON Script ---")
             json_script_strs = self.extract_json_script_content(html_content)
             apartments = self.process_json_scripts(json_script_strs)
 
-            facebook_logger.debug(f"\n--- Extracted {len(apartments)} Apartments ---")
+            facebook_logger.debug(
+                f"\n--- Extracted {len(apartments)} Apartments ---")
             await self.enrich_apartments_with_details(session, apartments)
 
-            facebook_logger.debug(f"\n--- Final data: {len(apartments)} Apartments with details ---")
+            facebook_logger.debug(
+                f"\n--- Final data: {len(apartments)} Apartments with details ---")
             # Save the final enriched list to the JSON file
             # self.save_apartments_to_json(
             #     apartments, JSON_OUTPUT_FILE_WITH_DETAILS)
             # Return the list of apartments for potential use by the generic scraper
+            # The apartments list now contains items with the 'md5' field calculated by this scraper
             return apartments
 
 

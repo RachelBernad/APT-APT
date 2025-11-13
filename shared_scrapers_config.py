@@ -10,13 +10,13 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 # --- HTTP Configuration ---
 CONNECT_TIMEOUT = 20
-SOCK_READ_TIMEOUT = 60
+SOCK_READ_TIMEOUT = 120
 REQUEST_TIMEOUT = 30
 TOTAL_TIMEOUT = CONNECT_TIMEOUT + SOCK_READ_TIMEOUT + 100
 
 # --- Delay Configuration ---
 MIN_DELAY_BETWEEN_REQUESTS = 2.0
-MAX_DELAY_BETWEEN_REQUESTS = 5.0
+MAX_DELAY_BETWEEN_REQUESTS = 8.0
 
 def setup_logging():
     """Set up the root logger to log everything to bot.log."""

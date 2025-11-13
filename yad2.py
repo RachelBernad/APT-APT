@@ -15,7 +15,8 @@ from bs4 import BeautifulSoup
 from shared_scrapers_config import (MAX_DELAY_BETWEEN_REQUESTS,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
                                     REQUEST_TIMEOUT)
-from shared_scrapers_config import logger as shared_logger # This is now a placeholder
+from shared_scrapers_config import \
+    logger as shared_logger  # This is now a placeholder
 
 # --- Configure Yad2-specific logger ---
 # This will be configured by the telegram bot's setup_logging
@@ -23,7 +24,7 @@ yad2_logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 # URL Templates
-BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&city={ct}&page={pg}'
+BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&multiNeighborhood=1519,1483,1461,1520&page={pg}'
 RENT_PAGE_URL = 'https://www.yad2.co.il/realestate/rent?topArea=2&area=1&city=5000'
 CITIES = [5000]  # Tel Aviv
 
@@ -153,7 +154,8 @@ class ApartmentScraper:
         processed_item['type'] = 'yad2'  # Add type field
         return processed_item
 
-    async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]:
+    # TODO: the city is deprecated now I'm using specifically multi neighborhoods in TLV
+    async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]: 
         await asyncio.sleep(random.uniform(MIN_DELAY_BETWEEN_REQUESTS, MAX_DELAY_BETWEEN_REQUESTS))
         # Ensure we have the build ID before making requests
         await self._ensure_build_id()
@@ -163,15 +165,18 @@ class ApartmentScraper:
             max_price=self.max_price,
             min_rooms=self.min_rooms,
             max_rooms=self.max_rooms,
-            ct=city, 
             pg=page_number
         )
 
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=DEFAULT_HEADERS) as response:
-                yad2_logger.debug(
-                    f"Fetching page {page_number} for city {city}, URL: {url}")
+                if page_number == 1:
+                    yad2_logger.info(
+                        f"Fetching first page for city {city}, URL: {url}")
+                else:
+                    yad2_logger.debug(
+                        f"Fetching page {page_number} for city {city}, URL: {url}")
                 response.raise_for_status()
                 page_data = await response.json()
 

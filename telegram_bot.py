@@ -6,13 +6,16 @@ import os
 import random
 import re
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
+                      Update)
 from telegram.error import TelegramError
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
-import generic_scraper  # Import the generic scraper module
-from shared_scrapers_config import setup_logging # Import the unified logging setup
+from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
+                          ContextTypes)
+
+import generic_scraper
+from shared_scrapers_config import setup_logging
 
 # --- Setup Unified Logging ---
 setup_logging()
@@ -27,8 +30,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 # How often to run the full scrape cycle (e.g., every 5 minutes)
 CHECK_INTERVAL_SECONDS = 60 * 15
 # Delay between sending messages to avoid rate limits (in seconds)
-MIN_MESSAGE_DELAY_SECONDS = 0.5
-MAX_MESSAGE_DELAY_SECONDS = 1.0
+MIN_MESSAGE_DELAY_SECONDS = 2
+MAX_MESSAGE_DELAY_SECONDS = 5
 # File to store subscribed chat IDs
 MERGED_OUTPUT_FILE = generic_scraper.MERGED_OUTPUT_FILE
 SUBSCRIBERS_FILE = Path("subscribers.json")

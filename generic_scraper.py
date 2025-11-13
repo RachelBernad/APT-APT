@@ -10,6 +10,8 @@ from typing import Any, Dict, List
 # Import the scrapers
 import facebook
 import yad2
+# Import the new Facebook Groups scraper
+import facebook_groups_scraper
 from shared_scrapers_config import OUTPUT_DIR
 from shared_scrapers_config import logger as shared_logger
 
@@ -27,8 +29,8 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         # Common filter parameters
         'min_price': 3,
         'max_price': 10000,
-        'min_rooms': 2.5,
-        'max_rooms': 5,
+        'min_rooms': 3,
+        'max_rooms': None,
     },
     'facebook': {
         'scraper_class': facebook.FacebookMarketplaceScraper,
@@ -37,18 +39,27 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         # Common filter parameters
         'min_price': 3,
         'max_price': 10000,
-        'min_bedrooms': 2.5,
+        'min_bedrooms': 3,
         # Location-based parameters
         'lat': 32.08214,  # Tel Aviv
-        'lng': 34.77842, # Can be calculated using this site: https://www.calcmaps.com/map-radius/
-        'radius': 2,  # 3km
+        # Can be calculated using this site: https://www.calcmaps.com/map-radius/
+        'lng': 34.77842,
+        'radius': 2,  # 2km
+    },
+    # Add the new Facebook Groups scraper
+    'facebook_groups': {
+        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
+        'type_name': 'facebook groups',
+        'logger': logging.getLogger(facebook_groups_scraper.__name__),
+        # Common filter parameters for Facebook Groups
+        'min_price': 3,
+        'max_price': 10000,
+        'min_rooms': 3,
+        'max_rooms': None,
+        'is_shared_apartment': False,
+        'is_sublet': False,
+        'limit': 50,  # Max number of items to fetch per request
     }
-    # Add more scrapers here as needed
-    # 'new_scraper_name': {
-    #     'scraper_class': new_scraper_module.NewScraperClass,
-    #     'type_name': 'new_scraper_type',
-    #     'logger': logging.getLogger(new_scraper_module.__name__),
-    # },
 }
 
 
@@ -81,6 +92,18 @@ async def run_generic_scraper():
                 lat=config['lat'],
                 lng=config['lng'],
                 radius=config['radius']
+            )
+        elif name == 'facebook_groups':
+            # Pass the parameters for the Facebook Groups scraper
+            scraper_instance = config['scraper_class'](
+                min_price=config['min_price'],
+                max_price=config['max_price'],
+                min_rooms=config['min_rooms'],
+                max_rooms=config['max_rooms'],
+                is_shared_apartment=config['is_shared_apartment'],
+                is_sublet=config['is_sublet'],
+                limit=config['limit']
+                # 'structured_locations' uses the default from the scraper class if not specified here
             )
         else:
             scraper_instance = config['scraper_class']()
@@ -193,10 +216,12 @@ async def run_generic_scraper():
 
     # Print per-scraper stats
     for name, stats in scraper_stats.items():
-        shared_logger.debug(f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
+        shared_logger.debug(
+            f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
 
     # Print total summary
-    shared_logger.debug(f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
+    shared_logger.debug(
+        f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
 
 
 async def main():
