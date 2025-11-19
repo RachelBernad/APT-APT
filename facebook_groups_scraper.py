@@ -136,7 +136,7 @@ class FacebookGroupsScraper:
             url = API_BASE_URL
             # aiohttp handles URL encoding automatically when passing params
             async with session.get(url, headers=DEFAULT_HEADERS, params=params) as response:
-                facebook_groups_logger.info(
+                facebook_groups_logger.debug(
                     f"API Response Status for page {page}: {response.status}")
 
                 if response.status == 200:

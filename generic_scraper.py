@@ -9,9 +9,9 @@ from typing import Any, Dict, List
 
 # Import the scrapers
 import facebook
-import yad2
 # Import the new Facebook Groups scraper
 import facebook_groups_scraper
+import yad2
 from shared_scrapers_config import OUTPUT_DIR
 from shared_scrapers_config import logger as shared_logger
 
@@ -22,6 +22,18 @@ MERGED_OUTPUT_FILE = OUTPUT_DIR / 'merged_apartments.json'
 # Define a type alias for scraper functions
 ScraperFunction = callable  # This is a placeholder, use proper typing if needed
 SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
+    'facebook_groups': {
+        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
+        'type_name': 'facebook groups',
+        'logger': logging.getLogger(facebook_groups_scraper.__name__),
+        'min_price': 3,
+        'max_price': 10000,
+        'min_rooms': 3,
+        'max_rooms': None,
+        'is_shared_apartment': False,
+        'is_sublet': False,
+        'limit': 50,  # Max number of items to fetch per request
+    },
     'yad2': {
         'scraper_class': yad2.ApartmentScraper,
         'type_name': 'yad2',
@@ -32,34 +44,20 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'min_rooms': 3,
         'max_rooms': None,
     },
-    'facebook': {
-        'scraper_class': facebook.FacebookMarketplaceScraper,
-        'type_name': 'facebook marketplace',
-        'logger': logging.getLogger(facebook.__name__),
-        # Common filter parameters
-        'min_price': 3,
-        'max_price': 10000,
-        'min_bedrooms': 3,
-        # Location-based parameters
-        'lat': 32.08214,  # Tel Aviv
-        # Can be calculated using this site: https://www.calcmaps.com/map-radius/
-        'lng': 34.77842,
-        'radius': 2,  # 2km
-    },
-    # Add the new Facebook Groups scraper
-    'facebook_groups': {
-        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
-        'type_name': 'facebook groups',
-        'logger': logging.getLogger(facebook_groups_scraper.__name__),
-        # Common filter parameters for Facebook Groups
-        'min_price': 3,
-        'max_price': 10000,
-        'min_rooms': 3,
-        'max_rooms': None,
-        'is_shared_apartment': False,
-        'is_sublet': False,
-        'limit': 50,  # Max number of items to fetch per request
-    }
+    # 'facebook': {
+    #     'scraper_class': facebook.FacebookMarketplaceScraper,
+    #     'type_name': 'facebook marketplace',
+    #     'logger': logging.getLogger(facebook.__name__),
+    #     # Common filter parameters
+    #     'min_price': 3,
+    #     'max_price': 10000,
+    #     'min_bedrooms': 3,
+    #     # Location-based parameters
+    #     'lat': 32.08214,  # Tel Aviv
+    #     # Can be calculated using this site: https://www.calcmaps.com/map-radius/
+    #     'lng': 34.77842,
+    #     'radius': 2,  # 2km
+    # },
 }
 
 

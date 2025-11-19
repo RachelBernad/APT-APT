@@ -15,8 +15,7 @@ from bs4 import BeautifulSoup
 from shared_scrapers_config import (MAX_DELAY_BETWEEN_REQUESTS,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
                                     REQUEST_TIMEOUT)
-from shared_scrapers_config import \
-    logger as shared_logger  # This is now a placeholder
+from shared_scrapers_config import logger as shared_logger
 
 # --- Configure Yad2-specific logger ---
 # This will be configured by the telegram bot's setup_logging
@@ -24,7 +23,7 @@ yad2_logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 # URL Templates
-BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&multiNeighborhood=1519,1483,1461,1520&page={pg}'
+BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&multiNeighborhood=1519,1483,1461,1520,1462&page={pg}'
 RENT_PAGE_URL = 'https://www.yad2.co.il/realestate/rent?topArea=2&area=1&city=5000'
 CITIES = [5000]  # Tel Aviv
 
