@@ -451,7 +451,17 @@ class TelegramBot:
                 if md5 not in self.known_apartments:
                     new_apartments.append(item)
                 elif item.get('id') != self.known_apartments[md5].get('id'):
-                    updated_apartments.append(item)
+                    # Check if the price has changed before adding to updated_apartments
+                    old_price = self.known_apartments[md5].get('price')
+                    new_price = item.get('price')
+                    if old_price != new_price:
+                        updated_apartments.append(item)
+                        bot_logger.debug(f"Price changed for item with MD5 {md5}. Old: {old_price}, New: {new_price}")
+                    else:
+                        # Price hasn't changed, just update the known apartment's ID/URL
+                        self.known_apartments[md5]['id'] = item.get('id')
+                        self.known_apartments[md5]['apartment_page_url'] = item.get('apartment_page_url')
+                        bot_logger.debug(f"ID/URL updated for item with MD5 {md5}, but price is the same ({new_price}). Not notifying.")
 
             # Notify subscribed chats about new apartments
             for apt in new_apartments:
@@ -463,9 +473,9 @@ class TelegramBot:
                         MIN_MESSAGE_DELAY_SECONDS, MAX_MESSAGE_DELAY_SECONDS)
                     await asyncio.sleep(delay)
 
-            # Notify subscribed chats about updated apartments
+            # Notify subscribed chats about updated apartments (price changes only)
             for apt in updated_apartments:
-                message = f"<b>🔄 Apartment Updated!</b>\nID changed for: {apt.get('id', 'N/A')}\nURL: <a href='{apt.get('apartment_page_url', 'N/A')}'>Link</a>"
+                message = f"<b>🔄 Apartment Price Changed!</b>\nNew Price: ₪{apt.get('price', 'N/A'):,}\nURL: <a href='{apt.get('apartment_page_url', 'N/A')}'>Link</a>"
                 for chat_id in self.subscribed_chats.copy():
                     await self.send_message_to_chat(chat_id, message)
                     # Add a random delay between sending messages to avoid rate limits
@@ -474,9 +484,20 @@ class TelegramBot:
                     await asyncio.sleep(delay)
 
             # Update the known apartments after processing
-            self.known_apartments = current_by_md5
+            # Add new apartments
+            for apt in new_apartments:
+                self.known_apartments[apt['md5']] = apt
+            # Update existing apartments (including those with same price but new ID/URL, handled above)
+            for apt in current_by_md5.values():
+                # This ensures any apartment not explicitly handled as 'new' or 'price-changed-updated'
+                # still updates its known state (e.g., if other fields changed but price didn't)
+                # However, since we only send notifications for price changes, this is primarily for tracking.
+                # The core logic for price change is already handled in the loop above.
+                # This final update is safe and ensures the known state is current.
+                self.known_apartments[apt['md5']] = apt
+
             bot_logger.info(
-                f"Scraping cycle finished. Found {len(new_apartments)} new and {len(updated_apartments)} updated apartments.")
+                f"Scraping cycle finished. Found {len(new_apartments)} new and {len(updated_apartments)} price-changed apartments.")
 
         except Exception as e:
             bot_logger.error(f"Unexpected error during scraping cycle: {e}")

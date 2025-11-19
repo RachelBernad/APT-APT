@@ -216,10 +216,10 @@ class ApartmentScraper:
             async with session.get(url, headers=DEFAULT_HEADERS, params=params) as response:
                 if page_number == 1:
                     yad2_logger.info(
-                        f"Fetching first page for city {city}, URL: {url}, Params: {params}")
+                        f"Fetching first page for city {city} with neighborhoods {self.multi_neighborhoods_str}, URL: {url}, Params: {params}")
                 else:
                     yad2_logger.debug(
-                        f"Fetching page {page_number} for city {city}, URL: {url}, Params: {params}")
+                        f"Fetching page {page_number} for city {city} with neighborhoods {self.multi_neighborhoods_str}, URL: {url}, Params: {params}")
                 response.raise_for_status()
                 page_data = await response.json()
 
@@ -230,7 +230,7 @@ class ApartmentScraper:
                 total_ads_on_page = len(private_ads) + len(agency_ads)
 
                 yad2_logger.debug(
-                    f"Fetched page {page_number} for city {city}: Found {total_ads_on_page} apartments")
+                    f"Fetched page {page_number} for city {city} with neighborhoods {self.multi_neighborhoods_str}: Found {total_ads_on_page} apartments")
 
                 return page_data
 
@@ -267,7 +267,7 @@ class ApartmentScraper:
             # Handle the case where there is only one page
             if page_count > 1:
                 yad2_logger.info(
-                    f"City {city} has {page_count} pages. Fetching remaining pages...")
+                    f"City {city} with neighborhoods {self.multi_neighborhoods_str} has {page_count} pages. Fetching remaining pages...")
                 tasks = []
                 for page_number in range(2, page_count + 1):
                     tasks.append(self._get_page_data(page_number, city))
