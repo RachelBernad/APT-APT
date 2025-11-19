@@ -302,7 +302,6 @@ class TelegramBot:
         floor = apt.get('floor', 'N/A')
         type_ = apt.get('type', 'Unknown')
         tags = apt.get('tags', [])
-        unit_room_info = apt.get('unit_room_info', 'N/A')
 
         # Format price with currency symbol if it's a number
         formatted_price = f"₪{price:,}" if isinstance(
@@ -314,7 +313,6 @@ class TelegramBot:
             f"<b>Price:</b> {formatted_price}\n"
             f"<b>Location:</b> {location}\n"
             f"<b>Rooms:</b> {rooms}\n"
-            f"<b>Unit Info:</b> {unit_room_info}\n"
             f"<b>Size:</b> {size} sqm\n"
             f"<b>Floor:</b> {floor}\n"
             f"<b>Tags:</b> {', '.join(tags) if tags else 'N/A'}\n"
