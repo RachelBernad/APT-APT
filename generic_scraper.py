@@ -39,7 +39,7 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         # Common filter parameters
         'min_price': 3,
         'max_price': 10000,
-        'min_rooms': 3, # the facebook api doesn't support float room counts
+        'min_rooms': 3,  # the facebook api doesn't support float room counts
         'max_rooms': None,
         'is_shared_apartment': False,
         'is_sublet': False,
