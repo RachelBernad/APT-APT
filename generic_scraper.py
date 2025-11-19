@@ -19,8 +19,7 @@ from shared_scrapers_config import logger as shared_logger
 MERGED_OUTPUT_FILE = OUTPUT_DIR / 'merged_apartments.json'
 
 # --- Scraper Registry (For easy extension) ---
-# Define a type alias for scraper functions
-ScraperFunction = callable  # This is a placeholder, use proper typing if needed
+ScraperFunction = callable
 SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
     'facebook_groups': {
         'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
@@ -33,7 +32,7 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'max_rooms': None,
         'is_shared_apartment': False,
         'is_sublet': False,
-        'limit': 50,  # Max number of items to fetch per request
+        'limit': 50,  # Max number of items to fetch per request (shouldn't really be changed...)
     },
     'yad2': {
         'scraper_class': yad2.ApartmentScraper,
