@@ -6,7 +6,7 @@ import os
 import random
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
                       Update)
@@ -14,6 +14,7 @@ from telegram.error import TelegramError
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           ContextTypes)
 
+# Import the generic scraper module to access its function and MERGED_OUTPUT_FILE
 import generic_scraper
 from shared_scrapers_config import setup_logging
 
@@ -32,9 +33,11 @@ CHECK_INTERVAL_SECONDS = 60 * 15
 # Delay between sending messages to avoid rate limits (in seconds)
 MIN_MESSAGE_DELAY_SECONDS = 2
 MAX_MESSAGE_DELAY_SECONDS = 5
+
+MERGED_OUTPUT_FILE = Path.cwd() / Path("out/merged_apartments.json")
+
 # File to store subscribed chat IDs
-MERGED_OUTPUT_FILE = generic_scraper.MERGED_OUTPUT_FILE
-SUBSCRIBERS_FILE = Path("subscribers.json")
+SUBSCRIBERS_FILE = Path.cwd() / Path("out/subscribers.json")
 
 
 class TelegramBot:
@@ -42,7 +45,9 @@ class TelegramBot:
         self.application = Application.builder().token(token).build()
         # Store chat IDs that have subscribed
         self.subscribed_chats = self.load_subscribers()
-        self.known_apartments = {}
+        # This will store apartments by their ID for quick lookup and saving
+        self.known_apartments_by_id = {}
+        # Load the initial state of apartments from the merged file
         self.load_known_apartments()
 
     def load_subscribers(self):
@@ -84,30 +89,47 @@ class TelegramBot:
                 f"Error saving subscribers to {SUBSCRIBERS_FILE}: {e}")
 
     def load_known_apartments(self):
+        """Load the current state of apartments from the merged file into a dictionary keyed by ID."""
         if MERGED_OUTPUT_FILE.exists():
             try:
                 with open(MERGED_OUTPUT_FILE, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                self.known_apartments = {
-                    md5: item for md5, item in data.items()}
+                # Reconstruct the known apartments dictionary keyed by ID
+                self.known_apartments_by_id = {
+                    item['id']: item for item in data.values()}
                 bot_logger.info(
-                    f"Loaded {len(self.known_apartments)} apartments from {MERGED_OUTPUT_FILE}")
+                    f"Loaded {len(self.known_apartments_by_id)} apartments into known state from {MERGED_OUTPUT_FILE}")
             except json.JSONDecodeError as e:
                 bot_logger.error(
                     f"Error decoding JSON from {MERGED_OUTPUT_FILE}: {e}")
-                self.known_apartments = {}
+                self.known_apartments_by_id = {}
             except FileNotFoundError:
                 bot_logger.warning(
                     f"Merged file {MERGED_OUTPUT_FILE} does not exist yet.")
-                self.known_apartments = {}
+                self.known_apartments_by_id = {}
             except Exception as e:
                 bot_logger.error(
                     f"Unexpected error loading {MERGED_OUTPUT_FILE}: {e}")
-                self.known_apartments = {}
+                self.known_apartments_by_id = {}
         else:
             bot_logger.warning(
                 f"Merged file {MERGED_OUTPUT_FILE} does not exist yet.")
-            self.known_apartments = {}
+            self.known_apartments_by_id = {}
+
+    def save_known_apartments(self):
+        """Save the current state of known apartments to the merged file."""
+        try:
+            # Convert the dictionary keyed by ID back to the format expected by the JSON file (dict keyed by a unique key like ID)
+            # The structure is now { "some_unique_id": {...apt_data...}, ... }
+            # where the key "some_unique_id" is the value of apt_data["id"]
+            with open(MERGED_OUTPUT_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.known_apartments_by_id, f,
+                          ensure_ascii=False, indent=2)
+            bot_logger.info(
+                f"Saved {len(self.known_apartments_by_id)} apartments to {MERGED_OUTPUT_FILE}")
+        except Exception as e:
+            bot_logger.error(
+                f"Error saving apartments to {MERGED_OUTPUT_FILE}: {e}")
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /start command."""
@@ -425,44 +447,55 @@ class TelegramBot:
                 f"Unexpected error sending message to chat {chat_id}: {e}")
 
     async def run_scraping_cycle(self):
-        """Run the generic scraper and check for new/updated apartments."""
+        """Load old data, run generic scraper, compare, update internal state, save, and notify."""
         try:
             bot_logger.info("Starting scraping cycle...")
-            # Run the generic scraper and capture its output
-            await generic_scraper.run_generic_scraper()
-            bot_logger.info("Scraping cycle completed.")
 
-            # Reload the merged data after scraping
-            if not MERGED_OUTPUT_FILE.exists():
-                bot_logger.warning(
-                    f"Merged file {MERGED_OUTPUT_FILE} does not exist after scraping.")
-                return
+            # 1. Load the *current* state of apartments from the JSON file *before* scraping
+            # This ensures the comparison is against the state *before* the new data arrives
+            # Use a copy to compare against
+            old_apartments_by_id = self.known_apartments_by_id.copy()
 
-            with open(MERGED_OUTPUT_FILE, 'r', encoding='utf-8') as f:
-                current_data = json.load(f)
+            # 2. Run the generic scraper to get the new list of apartments
+            all_new_apartments = await generic_scraper.run_generic_scraper()
 
-            current_by_md5 = {md5: item for md5, item in current_data.items()}
-            new_apartments = []
-            updated_apartments = []
-
-            for md5, item in current_by_md5.items():
-                if md5 not in self.known_apartments:
-                    new_apartments.append(item)
-                elif item.get('id') != self.known_apartments[md5].get('id'):
-                    # Check if the price has changed before adding to updated_apartments
-                    old_price = self.known_apartments[md5].get('price')
-                    new_price = item.get('price')
-                    if old_price != new_price:
-                        updated_apartments.append(item)
-                        bot_logger.debug(f"Price changed for item with MD5 {md5}. Old: {old_price}, New: {new_price}")
+            # 3. Compare new apartments against old state to find new and updated
+            new_items = []
+            updated_items = []
+            for apt in all_new_apartments:
+                apt_id = apt['id']
+                if apt_id in old_apartments_by_id:
+                    # Apartment exists, potentially updated
+                    old_apt = old_apartments_by_id[apt_id]
+                    # Check if the price has changed (or any other field you care about)
+                    if old_apt.get('price') != apt.get('price'):
+                        updated_items.append(apt)
+                        bot_logger.debug(
+                            f"Price changed for existing apartment ID {apt_id}. Old: {old_apt.get('price')}, New: {apt.get('price')}")
                     else:
-                        # Price hasn't changed, just update the known apartment's ID/URL
-                        self.known_apartments[md5]['id'] = item.get('id')
-                        self.known_apartments[md5]['apartment_page_url'] = item.get('apartment_page_url')
-                        bot_logger.debug(f"ID/URL updated for item with MD5 {md5}, but price is the same ({new_price}). Not notifying.")
+                        bot_logger.debug(
+                            f"Existing apartment ID {apt_id} price unchanged ({apt.get('price')}).")
+                    # Always update the internal state with the new data (even if only URL changed)
+                    self.known_apartments_by_id[apt_id] = apt
+                else:
+                    # Apartment is new
+                    new_items.append(apt)
+                    self.known_apartments_by_id[apt_id] = apt
+                    bot_logger.debug(f"New apartment found with ID {apt_id}.")
+                    
+            bot_logger.info(
+                f"Scraping cycle completed. Received {len(new_items)} new apartments and {len(updated_items)} updated apartments from scrapers.")
 
-            # Notify subscribed chats about new apartments
-            for apt in new_apartments:
+            # 4. Save the updated state (new and updated apartments, plus any old ones not in the new list)
+            # In this model, we keep *all* apartments found in the new scrape in the final state.
+            # Apartments that disappeared from the scrape are removed from the state.
+            # If you want to keep old apartments indefinitely, you'd need a different logic here.
+            # For now, the state reflects the *current* scrape results.
+            self.save_known_apartments()
+
+            # 5. Notify subscribers about new and updated apartments
+            # Notify about NEW apartments
+            for apt in new_items:
                 message = self.format_apartment_message(apt)
                 for chat_id in self.subscribed_chats.copy():  # Use copy to avoid issues if set changes during iteration
                     await self.send_message_to_chat(chat_id, message)
@@ -471,8 +504,8 @@ class TelegramBot:
                         MIN_MESSAGE_DELAY_SECONDS, MAX_MESSAGE_DELAY_SECONDS)
                     await asyncio.sleep(delay)
 
-            # Notify subscribed chats about updated apartments (price changes only)
-            for apt in updated_apartments:
+            # Notify about UPDATED apartments (price changes only)
+            for apt in updated_items:
                 message = f"<b>🔄 Apartment Price Changed!</b>\nNew Price: ₪{apt.get('price', 'N/A'):,}\nURL: <a href='{apt.get('apartment_page_url', 'N/A')}'>Link</a>"
                 for chat_id in self.subscribed_chats.copy():
                     await self.send_message_to_chat(chat_id, message)
@@ -481,21 +514,8 @@ class TelegramBot:
                         MIN_MESSAGE_DELAY_SECONDS, MAX_MESSAGE_DELAY_SECONDS)
                     await asyncio.sleep(delay)
 
-            # Update the known apartments after processing
-            # Add new apartments
-            for apt in new_apartments:
-                self.known_apartments[apt['md5']] = apt
-            # Update existing apartments (including those with same price but new ID/URL, handled above)
-            for apt in current_by_md5.values():
-                # This ensures any apartment not explicitly handled as 'new' or 'price-changed-updated'
-                # still updates its known state (e.g., if other fields changed but price didn't)
-                # However, since we only send notifications for price changes, this is primarily for tracking.
-                # The core logic for price change is already handled in the loop above.
-                # This final update is safe and ensures the known state is current.
-                self.known_apartments[apt['md5']] = apt
-
             bot_logger.info(
-                f"Scraping cycle finished. Found {len(new_apartments)} new and {len(updated_apartments)} price-changed apartments.")
+                f"Scraping cycle finished. Notified about {len(new_items)} new and {len(updated_items)} price-changed apartments.")
 
         except Exception as e:
             bot_logger.error(f"Unexpected error during scraping cycle: {e}")

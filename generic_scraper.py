@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 # Import the scrapers
 import facebook
@@ -16,24 +16,12 @@ from shared_scrapers_config import OUTPUT_DIR
 from shared_scrapers_config import logger as shared_logger
 
 # --- Configuration ---
-MERGED_OUTPUT_FILE = OUTPUT_DIR / 'merged_apartments.json'
+# Note: MERGED_OUTPUT_FILE is no longer used by the generic scraper itself
+# MERGED_OUTPUT_FILE = OUTPUT_DIR / 'merged_apartments.json'
 
-# --- Scraper Registry (For easy extension) ---
+# --- Scraper Registry (For easy extension and filtering) ---
 ScraperFunction = callable
 SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
-    'facebook_groups': {
-        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
-        'type_name': 'facebook groups',
-        'logger': logging.getLogger(facebook_groups_scraper.__name__),
-        # Common filter parameters
-        'min_price': 3,
-        'max_price': 10000,
-        'min_rooms': 2.5,
-        'max_rooms': None,
-        'is_shared_apartment': False,
-        'is_sublet': False,
-        'limit': 50,  # Max number of items to fetch per request (shouldn't really be changed...)
-    },
     'yad2': {
         'scraper_class': yad2.ApartmentScraper,
         'type_name': 'yad2',
@@ -42,8 +30,22 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'min_price': 3,
         'max_price': 10000,
         'min_rooms': 2.5,
-        'min_squaremeter': 60,
+        'min_squaremeter': 65,
     },
+    'facebook_groups': {
+        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
+        'type_name': 'facebook groups',
+        'logger': logging.getLogger(facebook_groups_scraper.__name__),
+        # Common filter parameters
+        'min_price': 3,
+        'max_price': 10000,
+        'min_rooms': 3, # the facebook api doesn't support float room counts
+        'max_rooms': None,
+        'is_shared_apartment': False,
+        'is_sublet': False,
+        # Max number of items to fetch per request (shouldn't really be changed...)
+        'limit': 50,
+    }
     # 'facebook': {
     #     'scraper_class': facebook.FacebookMarketplaceScraper,
     #     'type_name': 'facebook marketplace',
@@ -66,9 +68,14 @@ def _get_md5(thing: Any) -> str:
     return hashlib.md5(str(thing).encode()).hexdigest()
 
 
-async def run_generic_scraper():
+# Return the combined list of apartments from all scrapers
+async def run_generic_scraper() -> List[Dict[str, Any]]:
+    """
+    Runs all registered scrapers concurrently and returns the combined list of apartments.
+    Does NOT load, merge, or save data to merged_apartments.json.
+    """
     shared_logger.info(
-        "Starting Generic Scraper to merge data from registered scrapers...")
+        "Starting Generic Scraper to fetch data from registered scrapers...")
 
     # --- Run All Registered Scrapers Concurrently ---
     tasks = []
@@ -102,10 +109,10 @@ async def run_generic_scraper():
                 is_shared_apartment=config['is_shared_apartment'],
                 is_sublet=config['is_sublet'],
                 limit=config['limit'],
-                # 'structured_locations' uses the default from the scraper class if not specified here
+                structured_locations=config.get('structured_locations', None)
             )
         else:
-            scraper_instance = config['scraper_class']()
+            raise ValueError(f"Unknown scraper name: {name}")
 
         # Store the instance and its config for later use
         scrapers_to_run[name] = {
@@ -120,7 +127,7 @@ async def run_generic_scraper():
     results = await asyncio.gather(*tasks)
 
     # Combine results with scraper names
-    all_apartments = []
+    all_scraped_apartments = []
     scraper_stats = {}  # To store counts per scraper
     for i, (name, config_info) in enumerate(scrapers_to_run.items()):
         scraper_results = results[i]
@@ -129,102 +136,40 @@ async def run_generic_scraper():
         logger = config['logger']
 
         logger.info(f"Scraper '{name}' returned {len(scraper_results)} items.")
-        scraper_stats[name] = {'new': 0, 'updated': 0}
+        scraper_stats[name] = {'scraped': len(scraper_results)}
 
         for apt in scraper_results:
             # Ensure 'type' field is set correctly
             apt['type'] = scraper_type
             # Calculate MD5 if not present (should be done by scraper, but just in case)
             if 'md5' not in apt:
+                logger.warning(f"MD5 not found for apartment: {apt}")
                 apt['md5'] = _get_md5(apt)
 
-            all_apartments.append(apt)
-
-    # --- Merge Logic (Similar to Yad2 but across types) ---
-    old_data = {}
-    if MERGED_OUTPUT_FILE.exists():
-        with MERGED_OUTPUT_FILE.open('r', encoding='utf-8') as f:
-            old_data = json.load(f)
-        shared_logger.info(
-            f"Loaded {len(old_data)} old items from {MERGED_OUTPUT_FILE}")
-    else:
-        shared_logger.info(
-            f"No existing merged data file found at {MERGED_OUTPUT_FILE}, starting fresh.")
-
-    old_by_md5 = {item['md5']: item for item in old_data.values()}
-
-    # Process current items (from all scrapers)
-    new_items = {}
-    updated_items = {}
-
-    for current_item in all_apartments:
-        current_md5 = current_item['md5']
-        current_id = current_item['id']
-        # Get the type to find the associated logger/stats
-        current_type = current_item['type']
-
-        if current_md5 in old_by_md5:
-            existing_item = old_by_md5[current_md5]
-            if current_id != existing_item['id']:
-                # Update the ID and URL in the existing item
-                existing_item['id'] = current_id
-                existing_item['apartment_page_url'] = current_item['apartment_page_url']
-                updated_items[current_md5] = existing_item
-
-                # Find the logger for the item's type to log the update
-                for name, config in SCRAPER_REGISTRY.items():
-                    if config['type_name'] == current_type:
-                        config['logger'].debug(
-                            f"Updated ID for item with MD5 {current_md5}")
-                        scraper_stats[name]['updated'] += 1
-                        break
-        else:
-            new_items[current_md5] = current_item
-
-            # Find the logger for the item's type to log the new item
-            for name, config in SCRAPER_REGISTRY.items():
-                if config['type_name'] == current_type:
-                    config['logger'].debug(
-                        f"Found new item with MD5 {current_md5}")
-                    scraper_stats[name]['new'] += 1
-                    break
-
-    # Reconstruct the final dictionary
-    final_all_md5_based = {}
-    for md5_key, stored_item in old_by_md5.items():
-        if md5_key not in new_items and md5_key not in updated_items:
-            final_all_md5_based[md5_key] = stored_item
-
-    final_all_md5_based.update(new_items)
-    final_all_md5_based.update(updated_items)
-
-    # --- Save Merged Data ---
-    with MERGED_OUTPUT_FILE.open('w', encoding='utf-8') as out:
-        json.dump(final_all_md5_based, out, ensure_ascii=False, indent=2)
-    shared_logger.info(
-        f"Merged data saved to {MERGED_OUTPUT_FILE} with {len(final_all_md5_based)} items.")
+            all_scraped_apartments.append(apt)
 
     now = str(datetime.datetime.now()).split('.')[0]
 
-    # Calculate total new and updated across all scrapers
-    total_new = sum(stats['new'] for stats in scraper_stats.values())
-    total_updated = sum(stats['updated'] for stats in scraper_stats.values())
+    # Calculate total scraped across all scrapers
+    total_scraped = sum(stats.get('scraped', 0)
+                        for stats in scraper_stats.values())
 
     shared_logger.info(
-        f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
+        f'{now}: Generic Scraper - Total Scraped: {total_scraped}')
 
     # Print per-scraper stats
     for name, stats in scraper_stats.items():
         shared_logger.debug(
-            f'[{name.upper()}] New: {stats["new"]} | Updated: {stats["updated"]}')
+            f'[{name.upper()}] Scraped: {stats["scraped"]}')
 
-    # Print total summary
-    shared_logger.debug(
-        f'{now}: Generic Scraper - Total New: {total_new} | Total Updated: {total_updated}')
+    # Return the combined list of all apartments fetched
+    return all_scraped_apartments
 
 
 async def main():
-    await run_generic_scraper()
+    all_apartments = await run_generic_scraper()
+    print(
+        f"Scraping completed. Fetched {len(all_apartments)} apartments from all sources.")
 
 
 if __name__ == '__main__':

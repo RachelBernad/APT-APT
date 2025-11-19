@@ -299,7 +299,7 @@ async def main() -> None:
         max_price=10000,
         min_rooms=2.5,
         # max_rooms=4.0, # This filter is None, so it won't be added to the URL
-        min_squaremeter=60,
+        min_squaremeter=65,
         # image_only=True,
         # price_only=None, # This filter is None, so it won't be added to the URL
     )
