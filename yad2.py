@@ -296,11 +296,11 @@ async def main() -> None:
     # Example usage with default neighborhoods and some filters
     scraper = ApartmentScraper(
         min_price=3000,
-        max_price=8000,
-        min_rooms=2.0,
+        max_price=10000,
+        min_rooms=2.5,
         # max_rooms=4.0, # This filter is None, so it won't be added to the URL
         min_squaremeter=60,
-        image_only=True,
+        # image_only=True,
         # price_only=None, # This filter is None, so it won't be added to the URL
     )
     apartments = await scraper.run()
