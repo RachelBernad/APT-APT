@@ -26,9 +26,10 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
         'type_name': 'facebook groups',
         'logger': logging.getLogger(facebook_groups_scraper.__name__),
+        # Common filter parameters
         'min_price': 3,
         'max_price': 10000,
-        'min_rooms': 3,
+        'min_rooms': 2.5,
         'max_rooms': None,
         'is_shared_apartment': False,
         'is_sublet': False,
@@ -41,7 +42,7 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         # Common filter parameters
         'min_price': 3,
         'max_price': 10000,
-        'min_rooms': 3,
+        'min_rooms': 2.5,
         'max_rooms': None,
     },
     # 'facebook': {
@@ -51,7 +52,7 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
     #     # Common filter parameters
     #     'min_price': 3,
     #     'max_price': 10000,
-    #     'min_bedrooms': 3,
+    #     'min_bedrooms': 2.5,
     #     # Location-based parameters
     #     'lat': 32.08214,  # Tel Aviv
     #     # Can be calculated using this site: https://www.calcmaps.com/map-radius/
