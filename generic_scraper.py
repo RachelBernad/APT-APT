@@ -42,7 +42,7 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'min_price': 3,
         'max_price': 10000,
         'min_rooms': 2.5,
-        'max_rooms': None,
+        'min_squaremeter': 60,
     },
     # 'facebook': {
     #     'scraper_class': facebook.FacebookMarketplaceScraper,
@@ -77,30 +77,31 @@ async def run_generic_scraper():
         # Pass filter parameters to the scraper instance
         if name == 'yad2':
             scraper_instance = config['scraper_class'](
-                min_price=config['min_price'],
-                max_price=config['max_price'],
-                min_rooms=config['min_rooms'],
-                max_rooms=config['max_rooms']
+                min_price=config.get('min_price', None),
+                max_price=config.get('max_price', None),
+                min_rooms=config.get('min_rooms', None),
+                max_rooms=config.get('max_rooms', None),
+                min_squaremeter=config.get('min_squaremeter', None)
             )
-        elif name == 'facebook':
-            scraper_instance = config['scraper_class'](
-                min_price=config['min_price'],
-                max_price=config['max_price'],
-                min_bedrooms=config['min_bedrooms'],
-                lat=config['lat'],
-                lng=config['lng'],
-                radius=config['radius']
-            )
+        # elif name == 'facebook':
+        #     scraper_instance = config['scraper_class'](
+        #         min_price=config['min_price'],
+        #         max_price=config['max_price'],
+        #         min_bedrooms=config['min_bedrooms'],
+        #         lat=config['lat'],
+        #         lng=config['lng'],
+        #         radius=config['radius']
+        #     )
         elif name == 'facebook_groups':
             # Pass the parameters for the Facebook Groups scraper
             scraper_instance = config['scraper_class'](
                 min_price=config['min_price'],
                 max_price=config['max_price'],
                 min_rooms=config['min_rooms'],
-                max_rooms=config['max_rooms'],
+                max_rooms=config.get('max_rooms', None),
                 is_shared_apartment=config['is_shared_apartment'],
                 is_sublet=config['is_sublet'],
-                limit=config['limit']
+                limit=config['limit'],
                 # 'structured_locations' uses the default from the scraper class if not specified here
             )
         else:

@@ -292,7 +292,6 @@ class TelegramBot:
 
     def format_apartment_message(self, apt: Dict[str, Any]) -> str:
         # Use the normalized fields
-        title = apt.get('title', apt.get('id', 'N/A'))
         price = apt.get('price', 'N/A')
         location = apt.get(
             'location', f"{apt.get('street', 'N/A')}, {apt.get('city', 'N/A')}")
@@ -303,10 +302,7 @@ class TelegramBot:
         floor = apt.get('floor', 'N/A')
         type_ = apt.get('type', 'Unknown')
         tags = apt.get('tags', [])
-        full_address = apt.get('full_address', 'N/A')
         unit_room_info = apt.get('unit_room_info', 'N/A')
-        delivery_types = apt.get('delivery_types', 'N/A')
-        comments_count = apt.get('comments_count', 'N/A')
 
         # Format price with currency symbol if it's a number
         formatted_price = f"₪{price:,}" if isinstance(
@@ -315,16 +311,12 @@ class TelegramBot:
         message = (
             f"<b>🏠 Apartment Found!</b>\n"
             f"<b>Type:</b> {type_}\n"
-            f"<b>Title:</b> {title}\n"
             f"<b>Price:</b> {formatted_price}\n"
             f"<b>Location:</b> {location}\n"
-            f"<b>Full Address:</b> {full_address}\n"
             f"<b>Rooms:</b> {rooms}\n"
             f"<b>Unit Info:</b> {unit_room_info}\n"
             f"<b>Size:</b> {size} sqm\n"
             f"<b>Floor:</b> {floor}\n"
-            f"<b>Delivery Types:</b> {delivery_types}\n"
-            f"<b>Comments Count:</b> {comments_count}\n"
             f"<b>Tags:</b> {', '.join(tags) if tags else 'N/A'}\n"
             f"<b>Description:</b> {description}\n"
             f"<b>URL:</b> <a href='{url}'>Link</a>"

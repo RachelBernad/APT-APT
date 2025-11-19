@@ -6,7 +6,7 @@ import json
 import logging
 import random
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -22,8 +22,9 @@ from shared_scrapers_config import logger as shared_logger
 yad2_logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-# URL Templates
-BASE_URL_TEMPLATE = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json?minPrice={min_price}&maxPrice={max_price}&minRooms={min_rooms}&maxRooms={max_rooms}&topArea=2&area=1&multiNeighborhood=1519,1483,1461,1520,1462&page={pg}'
+# URL Templates - Base without optional filters
+# The base URL now includes only the non-optional parts and placeholders for build_id, city, neighborhoods, and page
+BASE_URL = 'https://www.yad2.co.il/realestate/_next/data/{build_id}/rent.json'
 RENT_PAGE_URL = 'https://www.yad2.co.il/realestate/rent?topArea=2&area=1&city=5000'
 CITIES = [5000]  # Tel Aviv
 
@@ -50,17 +51,32 @@ DEFAULT_HEADERS = {
 
 
 class ApartmentScraper:
-    def __init__(self, min_price=3, max_price=10000, min_rooms=2.5, max_rooms=4):
+    def __init__(self, min_price: Optional[int] = None, max_price: Optional[int] = None, min_rooms: Optional[float] = None, max_rooms: Optional[float] = None, multi_neighborhoods: List[int] = None, min_squaremeter: Optional[int] = None, image_only: Optional[bool] = None, price_only: Optional[bool] = None):
+        if multi_neighborhoods is None:
+            # Default to central Tel Aviv neighborhood IDs
+            multi_neighborhoods = [1519, 1483, 1461, 1520, 1462]
+        
         self.build_id = None
         self.min_price = min_price
         self.max_price = max_price
         self.min_rooms = min_rooms
         self.max_rooms = max_rooms
+        self.min_squaremeter = min_squaremeter
+        self.image_only = image_only
+        self.price_only = price_only
+        # Store the list of neighborhoods
+        self.multi_neighborhoods = multi_neighborhoods
+        # Create a comma-separated string for the URL
+        self.multi_neighborhoods_str = ','.join(map(str, self.multi_neighborhoods))
+        
         # Log the filters being used
         yad2_logger.info(
             f"Yad2 scraper initialized with filters - "
             f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
-            f"Min Rooms: {self.min_rooms}, Max Rooms: {self.max_rooms}"
+            f"Min Rooms: {self.min_rooms}, Max Rooms: {self.max_rooms}, "
+            f"Min SquareMeter: {self.min_squaremeter}, "
+            f"Image Only: {self.image_only}, Price Only: {self.price_only}, "
+            f"Multi Neighborhoods: {self.multi_neighborhoods_str}"
         )
 
     async def _fetch_build_id(self) -> str:
@@ -147,43 +163,71 @@ class ApartmentScraper:
         # Extract floor if available in address.house
         house_details = address.get('house', {})
         processed_item['floor'] = str(house_details.get('floor', ''))
+        
+        md5_item_part = {
+            'location': processed_item['location'],
+            'price': processed_item['price'],
+        }
 
         # Calculate and add MD5 hash
-        processed_item['md5'] = self._get_md5(processed_item)
+        processed_item['md5'] = self._get_md5(md5_item_part)
         processed_item['type'] = 'yad2'  # Add type field
         return processed_item
 
-    # TODO: the city is deprecated now I'm using specifically multi neighborhoods in TLV
     async def _get_page_data(self, page_number: int, city: int) -> Dict[str, Any]: 
         await asyncio.sleep(random.uniform(MIN_DELAY_BETWEEN_REQUESTS, MAX_DELAY_BETWEEN_REQUESTS))
         # Ensure we have the build ID before making requests
         await self._ensure_build_id()
-        url = BASE_URL_TEMPLATE.format(
-            build_id=self.build_id, 
-            min_price=self.min_price,
-            max_price=self.max_price,
-            min_rooms=self.min_rooms,
-            max_rooms=self.max_rooms,
-            pg=page_number
-        )
+        
+        # Prepare the base URL with the build ID
+        url = BASE_URL.format(build_id=self.build_id)
+        
+        # Prepare query parameters dictionary
+        # Start with the required parameters that are always present
+        params = {
+            "topArea": "2",
+            "area": "1",
+            "city": city,
+            "multiNeighborhood": self.multi_neighborhoods_str,
+            "page": page_number
+        }
+        
+        # Add optional filters to the params dictionary if they are not None
+        if self.min_price is not None:
+            params["minPrice"] = self.min_price
+        if self.max_price is not None:
+            params["maxPrice"] = self.max_price
+        if self.min_rooms is not None:
+            params["minRooms"] = self.min_rooms
+        if self.max_rooms is not None:
+            params["maxRooms"] = self.max_rooms
+        if self.min_squaremeter is not None:
+            params["minSquareMeter"] = self.min_squaremeter
+        if self.image_only is not None:
+            # Convert boolean to 0 or 1 for the API
+            params["imageOnly"] = int(self.image_only)
+        if self.price_only is not None:
+            # Convert boolean to 0 or 1 for the API
+            params["priceOnly"] = int(self.price_only)
 
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, headers=DEFAULT_HEADERS) as response:
+            # Pass the params dictionary to aiohttp
+            async with session.get(url, headers=DEFAULT_HEADERS, params=params) as response:
                 if page_number == 1:
                     yad2_logger.info(
-                        f"Fetching first page for city {city}, URL: {url}")
+                        f"Fetching first page for city {city}, URL: {url}, Params: {params}")
                 else:
                     yad2_logger.debug(
-                        f"Fetching page {page_number} for city {city}, URL: {url}")
+                        f"Fetching page {page_number} for city {city}, URL: {url}, Params: {params}")
                 response.raise_for_status()
                 page_data = await response.json()
 
                 # Log the number of apartments found on this page
                 feed_data = page_data.get('pageProps', {}).get('feed', {})
                 private_ads = feed_data.get('private', [])
-                commercial_ads = feed_data.get('commercial', [])
-                total_ads_on_page = len(private_ads) + len(commercial_ads)
+                agency_ads = feed_data.get('agency', [])
+                total_ads_on_page = len(private_ads) + len(agency_ads)
 
                 yad2_logger.debug(
                     f"Fetched page {page_number} for city {city}: Found {total_ads_on_page} apartments")
@@ -198,6 +242,9 @@ class ApartmentScraper:
         feed_data = page.get('pageProps', {}).get('feed', {})
 
         for item in feed_data.get('private', []):
+            processed_items.append(self._process_item(item))
+            
+        for item in feed_data.get('agency', []):
             processed_items.append(self._process_item(item))
 
         return processed_items
@@ -246,9 +293,23 @@ class ApartmentScraper:
 
 
 async def main() -> None:
-    scraper = ApartmentScraper()
+    # Example usage with default neighborhoods and some filters
+    scraper = ApartmentScraper(
+        min_price=3000,
+        max_price=8000,
+        min_rooms=2.0,
+        # max_rooms=4.0, # This filter is None, so it won't be added to the URL
+        min_squaremeter=60,
+        image_only=True,
+        # price_only=None, # This filter is None, so it won't be added to the URL
+    )
     apartments = await scraper.run()
     yad2_logger.debug(f"Yad2 scraper returned {len(apartments)} apartments.")
+
+    # Example usage with no filters (all optional params are None by default)
+    # scraper_no_filters = ApartmentScraper()
+    # apartments_no_filters = await scraper_no_filters.run()
+    # yad2_logger.debug(f"Yad2 scraper (no filters) returned {len(apartments_no_filters)} apartments.")
 
 
 if __name__ == '__main__':
