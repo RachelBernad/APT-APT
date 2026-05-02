@@ -9,10 +9,15 @@ from typing import Any, Dict, List, Tuple
 
 # Import the scrapers
 import facebook
-# Import the new Facebook Groups scraper
-import facebook_groups_scraper
+# RentlyFly/Facebook Groups is disabled for the Krayot search because it does
+# not currently return listings for all requested Krayot locations.
+# import facebook_groups_scraper
 import yad2
-from shared_scrapers_config import OUTPUT_DIR
+from shared_scrapers_config import (DEFAULT_MAX_PRICE, DEFAULT_MAX_ROOMS,
+                                    DEFAULT_MIN_ROOMS,
+                                    DEFAULT_STRUCTURED_LOCATIONS,
+                                    DEFAULT_TARGET_CITIES,
+                                    OUTPUT_DIR)
 from shared_scrapers_config import logger as shared_logger
 
 # --- Configuration ---
@@ -28,24 +33,35 @@ SCRAPER_REGISTRY: Dict[str, Dict[str, Any]] = {
         'logger': logging.getLogger(yad2.__name__),
         # Common filter parameters
         'min_price': 3,
-        'max_price': 10000,
-        'min_rooms': 2.5,
+        'max_price': DEFAULT_MAX_PRICE,
+        'min_rooms': DEFAULT_MIN_ROOMS,
+        'max_rooms': DEFAULT_MAX_ROOMS,
+        'require_mamad': True,
+        'require_elevator': True,
+        'min_floor': None,
+        'max_floor': None,
         'min_squaremeter': 65,
     },
-    'facebook_groups': {
-        'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
-        'type_name': 'facebook groups',
-        'logger': logging.getLogger(facebook_groups_scraper.__name__),
-        # Common filter parameters
-        'min_price': 3,
-        'max_price': 10000,
-        'min_rooms': 3,  # the facebook api doesn't support float room counts
-        'max_rooms': None,
-        'is_shared_apartment': False,
-        'is_sublet': False,
-        # Max number of items to fetch per request (shouldn't really be changed...)
-        'limit': 50,
-    }
+    # 'facebook_groups': {
+    #     'scraper_class': facebook_groups_scraper.FacebookGroupsScraper,
+    #     'type_name': 'facebook groups',
+    #     'logger': logging.getLogger(facebook_groups_scraper.__name__),
+    #     # Common filter parameters
+    #     'min_price': 3,
+    #     'max_price': DEFAULT_MAX_PRICE,
+    #     'min_rooms': DEFAULT_MIN_ROOMS,
+    #     'max_rooms': DEFAULT_MAX_ROOMS,
+    #     'require_mamad': None,
+    #     'require_elevator': None,
+    #     'min_floor': None,
+    #     'max_floor': None,
+    #     'is_shared_apartment': False,
+    #     'is_sublet': False,
+    #     # Max number of items to fetch per request (shouldn't really be changed...)
+    #     'limit': 50,
+    #     'target_cities': DEFAULT_TARGET_CITIES,
+    #     'structured_locations': DEFAULT_STRUCTURED_LOCATIONS,
+    # }
     # 'facebook': {
     #     'scraper_class': facebook.FacebookMarketplaceScraper,
     #     'type_name': 'facebook marketplace',
@@ -77,9 +93,8 @@ async def run_generic_scraper() -> List[Dict[str, Any]]:
     shared_logger.info(
         "Starting Generic Scraper to fetch data from registered scrapers...")
 
-    # --- Run All Registered Scrapers Concurrently ---
-    tasks = []
-    scrapers_to_run = {}
+    # --- Run Registered Scrapers Sequentially to reduce anti-bot pressure ---
+    scrapers_to_run = []
     for name, config in SCRAPER_REGISTRY.items():
         # Pass filter parameters to the scraper instance
         if name == 'yad2':
@@ -88,6 +103,10 @@ async def run_generic_scraper() -> List[Dict[str, Any]]:
                 max_price=config.get('max_price', None),
                 min_rooms=config.get('min_rooms', None),
                 max_rooms=config.get('max_rooms', None),
+                require_mamad=config.get('require_mamad', None),
+                require_elevator=config.get('require_elevator', None),
+                min_floor=config.get('min_floor', None),
+                max_floor=config.get('max_floor', None),
                 min_squaremeter=config.get('min_squaremeter', None)
             )
         # elif name == 'facebook':
@@ -109,31 +128,41 @@ async def run_generic_scraper() -> List[Dict[str, Any]]:
                 is_shared_apartment=config['is_shared_apartment'],
                 is_sublet=config['is_sublet'],
                 limit=config['limit'],
-                structured_locations=config.get('structured_locations', None)
+                target_cities=config.get('target_cities', None),
+                structured_locations=config.get('structured_locations', None),
+                require_mamad=config.get('require_mamad', None),
+                require_elevator=config.get('require_elevator', None),
+                min_floor=config.get('min_floor', None),
+                max_floor=config.get('max_floor', None)
             )
         else:
             raise ValueError(f"Unknown scraper name: {name}")
 
         # Store the instance and its config for later use
-        scrapers_to_run[name] = {
+        scrapers_to_run.append({
+            'name': name,
             'instance': scraper_instance,
             'config': config
-        }
-        # Create the task to run the scraper
-        task = asyncio.create_task(scraper_instance.run())
-        tasks.append(task)
-
-    # Gather results from all tasks
-    results = await asyncio.gather(*tasks)
+        })
 
     # Combine results with scraper names
     all_scraped_apartments = []
+    seen_apartments = set()
     scraper_stats = {}  # To store counts per scraper
-    for i, (name, config_info) in enumerate(scrapers_to_run.items()):
-        scraper_results = results[i]
+    for config_info in scrapers_to_run:
+        name = config_info['name']
         config = config_info['config']
         scraper_type = config['type_name']
         logger = config['logger']
+
+        try:
+            scraper_results = await config_info['instance'].run()
+        except Exception as scraper_error:
+            logger.error(
+                f"Scraper '{name}' failed: {scraper_error}"
+            )
+            scraper_stats[name] = {'scraped': 0, 'failed': True}
+            continue
 
         logger.info(f"Scraper '{name}' returned {len(scraper_results)} items.")
         scraper_stats[name] = {'scraped': len(scraper_results)}
@@ -146,6 +175,10 @@ async def run_generic_scraper() -> List[Dict[str, Any]]:
                 logger.warning(f"MD5 not found for apartment: {apt}")
                 apt['md5'] = _get_md5(apt)
 
+            apartment_key = (apt.get('type'), apt.get('id'))
+            if apartment_key in seen_apartments:
+                continue
+            seen_apartments.add(apartment_key)
             all_scraped_apartments.append(apt)
 
     now = str(datetime.datetime.now()).split('.')[0]

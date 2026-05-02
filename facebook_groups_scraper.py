@@ -4,12 +4,18 @@ import hashlib
 import json
 import logging
 import random
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
 import aiohttp
 
 from shared_scrapers_config import (CONNECT_TIMEOUT,
+                                    DEFAULT_MAX_PRICE,
+                                    DEFAULT_MAX_ROOMS,
+                                    DEFAULT_MIN_ROOMS,
+                                    DEFAULT_STRUCTURED_LOCATIONS,
+                                    DEFAULT_TARGET_CITIES,
                                     MAX_DELAY_BETWEEN_REQUESTS,
                                     MIN_DELAY_BETWEEN_REQUESTS, OUTPUT_DIR,
                                     REQUEST_TIMEOUT, SOCK_READ_TIMEOUT,
@@ -27,7 +33,7 @@ DEFAULT_HEADERS = {
     "User-Agent": DEFAULT_USER_AGENT,
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.5",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Encoding": "gzip, deflate",
     "Connection": "keep-alive",
     "Referer": "https://rentlyfly.ai/",  # Referrer might be needed
     "Sec-Fetch-Dest": "empty",
@@ -59,23 +65,24 @@ class FacebookGroupsScraper:
         self,
         min_price: int | None = None,
         max_price: int | None = None,
-        min_rooms: int | None = None,
-        max_rooms: int | None = None,
+        min_rooms: float | None = None,
+        max_rooms: float | None = None,
         is_shared_apartment: bool | None = None,
         is_sublet: bool | None = None,
         limit: int | None = None,
+        target_cities: List[str] | None = None,
         structured_locations: List[Dict[str, str]] | None = None,
+        require_mamad: bool | None = None,
+        require_elevator: bool | None = None,
+        min_floor: int | None = None,
+        max_floor: int | None = None,
         output_dir: Path = OUTPUT_DIR,
 
     ):
+        if target_cities is None:
+            target_cities = list(DEFAULT_TARGET_CITIES)
         if structured_locations is None:
-            # Default to central Tel Aviv areas as per the example
-            structured_locations = [
-                {"hood": "הצפון הישן - החלק הדרומי", "area": "מרכז"},
-                {"hood": "הצפון הישן - החלק הצפוני", "area": "מרכז"},
-                {"hood": "הצפון החדש - החלק הדרומי", "area": "מרכז"},
-                {"hood": "לב תל אביב", "area": "מרכז"},
-            ]
+            structured_locations = [dict(location) for location in DEFAULT_STRUCTURED_LOCATIONS]
 
         self.limit = limit
         self.min_price = min_price
@@ -84,7 +91,22 @@ class FacebookGroupsScraper:
         self.is_sublet = is_sublet
         self.min_rooms = min_rooms
         self.max_rooms = max_rooms
+        self.target_cities = target_cities
         self.structured_locations = structured_locations
+        self.normalized_target_cities = {
+            self._normalize_text(city) for city in self.target_cities
+        }
+        self.normalized_structured_locations = [
+            {
+                key: self._normalize_text(value)
+                for key, value in location.items()
+            }
+            for location in self.structured_locations
+        ]
+        self.require_mamad = require_mamad
+        self.require_elevator = require_elevator
+        self.min_floor = min_floor
+        self.max_floor = max_floor
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
 
@@ -95,8 +117,29 @@ class FacebookGroupsScraper:
             f"Min Price: {self.min_price}, Max Price: {self.max_price}, "
             f"Is Shared: {self.is_shared_apartment}, Is Sublet: {self.is_sublet}, "
             f"Min Rooms: {self.min_rooms}, Max Rooms: {self.max_rooms}, "
-            f"Locations: {self.structured_locations}"
+            f"Cities: {self.target_cities}, Locations: {self.structured_locations}, "
+            f"Mamad: {self.require_mamad}, Elevator: {self.require_elevator}, "
+            f"Min Floor: {self.min_floor}, Max Floor: {self.max_floor}"
         )
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        return re.sub(r"[\"'׳״\s-]+", "", value or "").casefold()
+
+    @staticmethod
+    def _extract_floor_from_description(description: str | None) -> int | None:
+        if not description:
+            return None
+
+        normalized_description = description.replace("\n", " ")
+        if "קומת קרקע" in normalized_description or "ground floor" in normalized_description.casefold():
+            return 0
+
+        match = re.search(r"(?:ב?קומה|floor)\s*(\d+)", normalized_description, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+
+        return None
 
     def build_query_params(self, page: int) -> Dict[str, Any]:
         """Build the query parameters for the API request."""
@@ -110,7 +153,10 @@ class FacebookGroupsScraper:
             "isSublet": str(self.is_sublet).lower() if self.is_sublet is not None else None,
             "minRooms": self.min_rooms,
             "maxRooms": self.max_rooms,
-            # Use json.dumps for the structured locations list, ensuring unicode
+            "isMamad": str(self.require_mamad).lower() if self.require_mamad is not None else None,
+            "isElevator": str(self.require_elevator).lower() if self.require_elevator is not None else None,
+            "minFloor": self.min_floor,
+            "maxFloor": self.max_floor,
             "structuredLocations": json.dumps(self.structured_locations, ensure_ascii=False),
         }
         if self.limit is not None:
@@ -118,6 +164,24 @@ class FacebookGroupsScraper:
         # Remove any None values from the params dictionary before sending
         filtered_params = {k: v for k, v in params.items() if v is not None}
         return filtered_params
+
+    def _matches_target_location(self, item: Dict[str, Any]) -> bool:
+        city = self._normalize_text(item.get('city', ''))
+        hood = self._normalize_text(item.get('hood', ''))
+        if city not in self.normalized_target_cities:
+            return False
+
+        city_locations = [
+            location for location in self.normalized_structured_locations
+            if location.get('city') == city
+        ]
+        if not city_locations:
+            return True
+
+        return any(
+            not location.get('hood') or location.get('hood') == hood
+            for location in city_locations
+        )
 
     async def fetch_apartments_page(self, page: int) -> Dict[str, Any]:
         """Fetch a single page of apartments from the API using a new session."""
@@ -203,6 +267,8 @@ class FacebookGroupsScraper:
         # Extract core details
         price = raw_item.get('price', 'N/A')
         location_details = raw_item.get('location', {})
+        if isinstance(location_details, str):
+            location_details = {'city': location_details}
         url = raw_item.get('url', 'N/A')
         description = raw_item.get('description', 'No description provided')
         time_posted = raw_item.get('time', 'N/A')
@@ -216,6 +282,9 @@ class FacebookGroupsScraper:
         user_username = raw_item.get('user_username_raw', 'N/A')
         group_name = raw_item.get('group_name', 'N/A')
         group_url = raw_item.get('group_url', 'N/A')
+        floor = self._extract_floor_from_description(description)
+        is_mamad = raw_item.get('isMamad', False)
+        is_elevator = raw_item.get('isElevator', False)
 
         # Construct unified location string
         city = location_details.get('city', 'N/A')
@@ -261,6 +330,7 @@ class FacebookGroupsScraper:
             "area": area,
             "hood": hood,
             "street": street,
+            "floor": floor,
             "rooms": rooms_available,  # Map roomsAvailable to rooms
             "images": photos,  # Use the photos list
             "thumbnail_url": thumbnail_url,
@@ -269,6 +339,8 @@ class FacebookGroupsScraper:
             "is_shared_apartment": is_shared,
             "is_brokered_apartment": is_brokered,
             "is_sublet": is_sublet,
+            "is_mamad": is_mamad,
+            "is_elevator": is_elevator,
             "user_username_raw": user_username,
             "group_name": group_name,
             "group_url": group_url,
@@ -299,6 +371,30 @@ class FacebookGroupsScraper:
             if data_list:
                 normalized_page_data = [
                     self.normalize_apartment_data(item) for item in data_list]
+                normalized_page_data = [
+                    item for item in normalized_page_data
+                    if self._matches_target_location(item)
+                ]
+                if self.require_mamad is not None:
+                    normalized_page_data = [
+                        item for item in normalized_page_data
+                        if bool(item.get('is_mamad')) == self.require_mamad
+                    ]
+                if self.require_elevator is not None:
+                    normalized_page_data = [
+                        item for item in normalized_page_data
+                        if bool(item.get('is_elevator')) == self.require_elevator
+                    ]
+                if self.min_floor is not None:
+                    normalized_page_data = [
+                        item for item in normalized_page_data
+                        if item.get('floor') is not None and item.get('floor') >= self.min_floor
+                    ]
+                if self.max_floor is not None:
+                    normalized_page_data = [
+                        item for item in normalized_page_data
+                        if item.get('floor') is not None and item.get('floor') <= self.max_floor
+                    ]
                 all_apartments.extend(normalized_page_data)
                 facebook_groups_logger.debug(
                     f"Normalized {len(normalized_page_data)} items from page {current_page}.")
@@ -329,8 +425,9 @@ class FacebookGroupsScraper:
 async def main():
     # Example usage with default parameters
     scraper = FacebookGroupsScraper(
-        min_rooms=3,
-        max_price=10000,
+        min_rooms=DEFAULT_MIN_ROOMS,
+        max_rooms=DEFAULT_MAX_ROOMS,
+        max_price=DEFAULT_MAX_PRICE,
         limit=50,
         is_shared_apartment=False,
         is_sublet=False

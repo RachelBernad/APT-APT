@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.git/
+.gitignore
+.DS_Store
+.env
+.env.*
+out/
+bot.log
+*.log
+a.jsonl
+copilot-session-*.md

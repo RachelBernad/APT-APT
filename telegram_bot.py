@@ -1,5 +1,6 @@
 # telegram_bot.py
 import asyncio
+import html
 import json
 import logging
 import os
@@ -33,6 +34,8 @@ CHECK_INTERVAL_SECONDS = 60 * 15
 # Delay between sending messages to avoid rate limits (in seconds)
 MIN_MESSAGE_DELAY_SECONDS = 2
 MAX_MESSAGE_DELAY_SECONDS = 5
+MANUAL_DUMP_MESSAGE_DELAY_SECONDS = 0.25
+MAX_DESCRIPTION_CHARS = 700
 
 MERGED_OUTPUT_FILE = Path.cwd() / Path("out/merged_apartments.json")
 
@@ -152,7 +155,7 @@ class TelegramBot:
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 help_message = (
                     "🏠 **Apartment Finder Bot**\n"
-                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n"
+                    "I can help you find new apartments on Yad2!\n"
                     "Available commands:\n"
                     "/start - Show this help message\n"
                     "/help - Show this help message\n"
@@ -197,7 +200,7 @@ class TelegramBot:
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 help_message = (
                     "🏠 **Apartment Finder Bot**\n"
-                    "I can help you find new apartments on Yad2 and Facebook Marketplace!\n"
+                    "I can help you find new apartments on Yad2!\n"
                     "Available commands:\n"
                     "/start - Show this help message\n"
                     "/help - Show this help message\n"
@@ -290,10 +293,9 @@ class TelegramBot:
                     message = self.format_apartment_message(apt)
                     try:
                         await update.message.reply_text(message, parse_mode='HTML')
-                        # Add a random delay to avoid hitting rate limits
-                        delay = random.uniform(
-                            MIN_MESSAGE_DELAY_SECONDS, MAX_MESSAGE_DELAY_SECONDS)
-                        await asyncio.sleep(delay)
+                        bot_logger.info(
+                            f"Sent dumpall apartment {i + 1}/{total_apartments} to chat {chat_id}.")
+                        await asyncio.sleep(MANUAL_DUMP_MESSAGE_DELAY_SECONDS)
                     except TelegramError as e:
                         bot_logger.error(
                             f"Error sending apartment {i} to chat {chat_id}: {e}")
@@ -315,15 +317,18 @@ class TelegramBot:
     def format_apartment_message(self, apt: Dict[str, Any]) -> str:
         # Use the normalized fields
         price = apt.get('price', 'N/A')
-        location = apt.get(
-            'location', f"{apt.get('street', 'N/A')}, {apt.get('city', 'N/A')}")
-        url = apt.get('apartment_page_url', 'N/A')
-        description = apt.get('description', 'No description available')
-        rooms = apt.get('rooms', 'N/A')
-        size = apt.get('size', 'N/A')
-        floor = apt.get('floor', 'N/A')
-        type_ = apt.get('type', 'Unknown')
+        location = self._html_value(apt.get(
+            'location', f"{apt.get('street', 'N/A')}, {apt.get('city', 'N/A')}"))
+        url = html.escape(str(apt.get('apartment_page_url', 'N/A')), quote=True)
+        description = self._html_value(
+            self._trim_text(apt.get('description', 'No description available')))
+        rooms = self._html_value(apt.get('rooms', 'N/A'))
+        size = self._html_value(apt.get('size', 'N/A'))
+        floor = self._html_value(apt.get('floor', 'N/A'))
+        type_ = self._html_value(apt.get('type', 'Unknown'))
         tags = apt.get('tags', [])
+        mamad = self._format_bool(apt.get('is_mamad', 'N/A'))
+        elevator = self._format_bool(apt.get('is_elevator', 'N/A'))
 
         # Format price with currency symbol if it's a number
         formatted_price = f"₪{price:,}" if isinstance(
@@ -337,11 +342,39 @@ class TelegramBot:
             f"<b>Rooms:</b> {rooms}\n"
             f"<b>Size:</b> {size} sqm\n"
             f"<b>Floor:</b> {floor}\n"
-            f"<b>Tags:</b> {', '.join(tags) if tags else 'N/A'}\n"
+            f"<b>Mamad:</b> {mamad}\n"
+            f"<b>Elevator:</b> {elevator}\n"
+            f"<b>Tags:</b> {self._format_tags(tags)}\n"
             f"<b>Description:</b> {description}\n"
             f"<b>URL:</b> <a href='{url}'>Link</a>"
         )
         return message
+
+    @staticmethod
+    def _html_value(value: Any) -> str:
+        return html.escape(str(value), quote=False)
+
+    @staticmethod
+    def _trim_text(value: Any) -> str:
+        text = str(value)
+        if len(text) <= MAX_DESCRIPTION_CHARS:
+            return text
+        return text[:MAX_DESCRIPTION_CHARS].rstrip() + "..."
+
+    @staticmethod
+    def _format_bool(value: Any) -> str:
+        if value is True:
+            return "Yes"
+        if value is False:
+            return "No"
+        return html.escape(str(value), quote=False)
+
+    def _format_tags(self, tags: Any) -> str:
+        if not tags:
+            return "N/A"
+        if not isinstance(tags, list):
+            return self._html_value(tags)
+        return ', '.join(self._html_value(tag) for tag in tags)
 
     async def button_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle button presses from inline keyboard."""
@@ -499,10 +532,9 @@ class TelegramBot:
                 message = self.format_apartment_message(apt)
                 for chat_id in self.subscribed_chats.copy():  # Use copy to avoid issues if set changes during iteration
                     await self.send_message_to_chat(chat_id, message)
-                    # Add a random delay between sending messages to avoid rate limits
-                    delay = random.uniform(
-                        MIN_MESSAGE_DELAY_SECONDS, MAX_MESSAGE_DELAY_SECONDS)
-                    await asyncio.sleep(delay)
+                    bot_logger.info(
+                        f"Sent new apartment notification to chat {chat_id}.")
+                    await asyncio.sleep(MANUAL_DUMP_MESSAGE_DELAY_SECONDS)
 
             # Notify about UPDATED apartments (price changes only)
             for apt in updated_items:
