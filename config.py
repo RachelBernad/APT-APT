@@ -44,8 +44,9 @@ REPORT_COOLDOWN_HOURS = int(os.getenv("REPORT_COOLDOWN_HOURS", "24"))
 # --- Sources ---
 ENABLE_RENTLYFLY = os.getenv("ENABLE_RENTLYFLY", "1") == "1"
 # Tel Aviv-Yafo. rentlyfly.ai only covers this city, so it is only layered on
-# top of a Yad2 search whose city matches this id.
-TEL_AVIV_CITY_ID = int(os.getenv("TEL_AVIV_CITY_ID", "5000"))
+# top of a Yad2 search whose city matches this id. Yad2 city ids are 4-char,
+# zero-padded strings (e.g. "0070" = Ashdod), so this is kept as a string.
+TEL_AVIV_CITY_ID = os.getenv("TEL_AVIV_CITY_ID", "5000")
 RENTLYFLY_API_URL = os.getenv("RENTLYFLY_API_URL", "https://rentlyfly.ai/api/listings")
 # rentlyfly returns newest-first; only fetch the most recent pages each cycle
 # (the whole dataset is thousands of listings — we only need what is new).

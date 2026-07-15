@@ -27,7 +27,7 @@ class LocationSignature:
     """
     region_id: int
     area_id: Optional[int]
-    city_id: Optional[int]
+    city_id: Optional[str]        # Yad2 city ids are 4-char zero-padded strings ("0070")
     neighborhood_id: Optional[int] = None
 
 
@@ -42,7 +42,7 @@ class LocationTarget:
     level: str
     region_id: int
     area_id: Optional[int] = None
-    city_id: Optional[int] = None
+    city_id: Optional[str] = None     # Yad2 city ids are 4-char zero-padded strings
     hood_id: Optional[int] = None
     street_id: Optional[int] = None
     display_name: str = ""
@@ -56,7 +56,7 @@ class ResolvedLocation:
     display: str                     # fullTitleText
     region_id: int
     area_id: Optional[int] = None
-    city_id: Optional[int] = None
+    city_id: Optional[str] = None    # 4-char zero-padded string ("0070")
     hood_id: Optional[int] = None
     street_id: Optional[int] = None
     match_name: Optional[str] = None  # neighborhood/street text, for local matching

@@ -69,6 +69,14 @@ def _as_int(value: Any) -> Optional[int]:
         return None
 
 
+def _str_id(value: Any) -> Optional[str]:
+    """Keep an id as its canonical string. Yad2 city ids are 4-char, zero-padded
+    ('0070'), and some are alphanumeric ('103P'), so they must NEVER be int()-ed."""
+    if value in (None, ""):
+        return None
+    return str(value).strip()
+
+
 _AC_CACHE: Dict[str, Any] = {}   # text_he -> payload (locations are stable; safe to cache)
 _AC_CACHE_MAX = 2000
 
@@ -123,7 +131,7 @@ def _flatten(payload: Dict[str, Any]) -> List[ResolvedLocation]:
             continue
         out.append(ResolvedLocation(
             level="hood", display=h.get("fullTitleText", ""), region_id=region_id,
-            area_id=_as_int(h.get("areaId")), city_id=_as_int(h.get("cityId")),
+            area_id=_as_int(h.get("areaId")), city_id=_str_id(h.get("cityId")),
             hood_id=_as_int(h.get("hoodId")),
             match_name=_first_segment(h.get("fullTitleText", "")),
         ))
@@ -134,7 +142,7 @@ def _flatten(payload: Dict[str, Any]) -> List[ResolvedLocation]:
             continue
         out.append(ResolvedLocation(
             level="city", display=c.get("fullTitleText", ""), region_id=region_id,
-            area_id=_as_int(c.get("areaId")), city_id=_as_int(c.get("cityId")),
+            area_id=_as_int(c.get("areaId")), city_id=_str_id(c.get("cityId")),
         ))
 
     for a in payload.get("areas", []) or []:
@@ -152,7 +160,7 @@ def _flatten(payload: Dict[str, Any]) -> List[ResolvedLocation]:
             continue
         out.append(ResolvedLocation(
             level="street", display=s.get("fullTitleText", ""), region_id=region_id,
-            area_id=_as_int(s.get("areaId")), city_id=_as_int(s.get("cityId")),
+            area_id=_as_int(s.get("areaId")), city_id=_str_id(s.get("cityId")),
             street_id=_as_int(s.get("streetId")),
             match_name=_first_segment(s.get("fullTitleText", "")),
         ))
@@ -224,7 +232,7 @@ def load_catalog() -> Dict[str, Any]:
 
 
 @lru_cache(maxsize=64)
-def load_city_hoods(city_id: int) -> Optional[Dict[str, Any]]:
+def load_city_hoods(city_id: str) -> Optional[Dict[str, Any]]:
     path = config.HOODS_DIR / f"{city_id}.json"
     try:
         with open(path, encoding="utf-8") as f:
@@ -233,19 +241,18 @@ def load_city_hoods(city_id: int) -> Optional[Dict[str, Any]]:
         return None
 
 
-def browsable_city_ids() -> List[int]:
+def browsable_city_ids() -> List[str]:
     """Cities that ship a bundled quarter→hood catalog for tap-to-browse."""
     ids = []
     try:
         for p in sorted(config.HOODS_DIR.glob("*.json")):
-            if p.stem.isdigit():
-                ids.append(int(p.stem))
+            ids.append(p.stem)
     except OSError:
         pass
     return ids
 
 
-def city_quarters(city_id: int) -> List[Dict[str, Any]]:
+def city_quarters(city_id: str) -> List[Dict[str, Any]]:
     data = load_city_hoods(city_id) or {}
     return data.get("quarters", [])
 
@@ -262,14 +269,14 @@ def hood_target(city_catalog: Dict[str, Any], hood_name: str,
         level="hood",
         region_id=int(city_catalog.get("regionId") or 0),
         area_id=_as_int(city_catalog.get("areaId")),
-        city_id=_as_int(city_catalog.get("cityId")),
+        city_id=_str_id(city_catalog.get("cityId")),
         hood_id=None,
         display_name=_hood_display(hood_name, city_display),
         match_name=normalize_name(hood_name),
     )
 
 
-def make_hood_target(region_id: int, city_id: int, hood_name: str,
+def make_hood_target(region_id: int, city_id: str, hood_name: str,
                      city_display: str = "") -> LocationTarget:
     """Build a hood target for a live-fetched (non-bundled) city hood."""
     return LocationTarget(
@@ -287,7 +294,7 @@ _POPULAR_CITY_NAMES = [
 ]
 
 
-def city_name(city_id: int) -> str:
+def city_name(city_id: str) -> str:
     """City display name from the bundled catalog (falls back to the id)."""
     c = load_catalog().get("cities", {}).get(str(city_id))
     return c["name"] if c and c.get("name") else str(city_id)
@@ -305,11 +312,11 @@ def popular_cities() -> List[tuple]:
     for name in _POPULAR_CITY_NAMES:
         hit = by_name.get(name) or by_norm.get(normalize_name(name))
         if hit and hit[1]:
-            out.append((name, int(hit[1]), int(hit[0])))
+            out.append((name, int(hit[1]), str(hit[0])))   # city id stays a string
     return out
 
 
-async def fetch_city_hoods(http: aiohttp.ClientSession, region_id: int, city_id: int) -> List[str]:
+async def fetch_city_hoods(http: aiohttp.ClientSession, region_id: int, city_id: str) -> List[str]:
     """Live-list a city's neighborhoods from the feed (one request, fast).
 
     Works for any city in Israel — markers carry the hood name. Capped at 200

@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS search_locations (
     level        TEXT NOT NULL,
     region_id    INTEGER NOT NULL,
     area_id      INTEGER,
-    city_id      INTEGER,
+    city_id      TEXT,       -- Yad2 city ids are 4-char zero-padded strings ("0070")
     hood_id      INTEGER,
     street_id    INTEGER,
     display_name TEXT,
@@ -156,11 +156,12 @@ def _row_to_search(row: aiosqlite.Row) -> SavedSearch:
 
 
 def _row_to_location(row: aiosqlite.Row) -> LocationTarget:
+    city_id = row["city_id"]
     return LocationTarget(
         level=row["level"],
         region_id=row["region_id"],
         area_id=row["area_id"],
-        city_id=row["city_id"],
+        city_id=None if city_id is None else str(city_id),  # keep '0070' padding
         hood_id=row["hood_id"],
         street_id=row["street_id"],
         display_name=row["display_name"] or "",
@@ -202,6 +203,7 @@ class Database:
         await self._maybe_migrate_v1()
         await self._conn.executescript(_SCHEMA)
         await self._repair_seen_fk()
+        await self._migrate_city_id_text()
         await self._conn.execute(
             "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
             (SCHEMA_VERSION,),
@@ -241,6 +243,47 @@ class Database:
         await self._conn.execute("PRAGMA foreign_keys=ON")
         await self._conn.commit()
         logger.warning("seen_listings FK repaired.")
+
+    async def _migrate_city_id_text(self) -> None:
+        """Rebuild search_locations if city_id is an INTEGER column (older schema).
+
+        Yad2 city ids are 4-char zero-padded strings ('0070'); an INTEGER-affinity
+        column silently drops leading zeros on insert ('0070' -> 70), which breaks
+        the feed query and catalog lookup for every leading-zero city (≈half of
+        them). Convert the column to TEXT, recovering padding for any numeric rows.
+        """
+        if not await self._table_exists("search_locations"):
+            return
+        cur = await self._conn.execute("PRAGMA table_info(search_locations)")
+        info = {r["name"]: (r["type"] or "") for r in await cur.fetchall()}
+        if info.get("city_id", "").upper() == "TEXT":
+            return
+        logger.warning("Migrating search_locations.city_id INTEGER -> TEXT …")
+        await self._conn.commit()
+        await self._conn.execute("PRAGMA foreign_keys=OFF")
+        await self._conn.executescript(
+            "CREATE TABLE search_locations_fix ("
+            " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            " search_id INTEGER NOT NULL REFERENCES saved_searches(id) ON DELETE CASCADE,"
+            " level TEXT NOT NULL, region_id INTEGER NOT NULL, area_id INTEGER,"
+            " city_id TEXT, hood_id INTEGER, street_id INTEGER,"
+            " display_name TEXT, match_name TEXT);"
+            "INSERT INTO search_locations_fix"
+            " (id, search_id, level, region_id, area_id, city_id, hood_id, street_id,"
+            "  display_name, match_name)"
+            " SELECT id, search_id, level, region_id, area_id,"
+            "  CASE WHEN city_id IS NULL THEN NULL"
+            "       WHEN typeof(city_id)='integer' THEN printf('%04d', city_id)"
+            "       ELSE city_id END,"
+            "  hood_id, street_id, display_name, match_name FROM search_locations;"
+            "DROP TABLE search_locations;"
+            "ALTER TABLE search_locations_fix RENAME TO search_locations;"
+            "CREATE INDEX IF NOT EXISTS idx_loc_search ON search_locations(search_id);"
+        )
+        await self._conn.commit()
+        await self._conn.execute("PRAGMA foreign_keys=ON")
+        await self._conn.commit()
+        logger.warning("search_locations.city_id migrated to TEXT.")
 
     async def _maybe_migrate_v1(self) -> None:
         """Migrate a v1 (single-location) saved_searches into v2 in place."""

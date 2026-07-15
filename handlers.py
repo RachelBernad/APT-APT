@@ -160,6 +160,15 @@ def _city_picker_screen(draft: dict) -> tuple:
     return "\n".join(lines), InlineKeyboardMarkup(rows)
 
 
+def _city_display_name(context, cid: str) -> str:
+    """Best display name for a city id: prefer the typed-search candidate's title
+    (covers cities not in the bundled catalog), else the bundled catalog name."""
+    for c in context.user_data.get("cand_cities", []):
+        if c.city_id == cid:
+            return c.display
+    return locations.city_name(cid)
+
+
 def _cand_selected(draft: dict, cand: ResolvedLocation) -> bool:
     key = _loc_key(locations.target_from_resolved(cand))
     return any(_loc_key(t) == key for t in draft["locations"])
@@ -282,8 +291,14 @@ def _render_card(draft: dict) -> tuple:
     ]
     if _is_tlv(draft):
         rows.append([InlineKeyboardButton(f"🔗 Source: {src_label}", callback_data="wz:toggle:src")])
-    rows.append([InlineKeyboardButton("✅ Save monitor", callback_data="wz:save"),
-                InlineKeyboardButton("✖ Cancel", callback_data="wz:cancel")])
+    # In edit mode, offer "Back" (to the monitor list) instead of a destructive
+    # Cancel; when adding, keep Cancel (there's no list to go back to yet).
+    if draft.get("edit_id"):
+        rows.append([InlineKeyboardButton("✅ Save monitor", callback_data="wz:save"),
+                    InlineKeyboardButton("↩ Back", callback_data="wz:backlist")])
+    else:
+        rows.append([InlineKeyboardButton("✅ Save monitor", callback_data="wz:save"),
+                    InlineKeyboardButton("✖ Cancel", callback_data="wz:cancel")])
     return text, InlineKeyboardMarkup(rows)
 
 
@@ -411,8 +426,8 @@ class BotHandlers:
         if data == "az:home":
             return await render(*_city_picker_screen(draft))
         if parts[:2] == ["az", "city"]:
-            rid, cid = int(parts[2]), int(parts[3])
-            name = locations.city_name(cid)
+            rid, cid = int(parts[2]), parts[3]   # city id is a string ("0070")
+            name = _city_display_name(context, cid)
             context.user_data["browse"] = {"rid": rid, "cid": cid, "name": name}
             catalog = locations.load_city_hoods(cid)
             if catalog and catalog.get("quarters"):        # bundled → curated quarters
@@ -429,15 +444,15 @@ class BotHandlers:
             context.user_data["browse"]["hoods"] = hoods
             return await render(*_flat_hoods_screen(draft, context.user_data["browse"]))
         if parts[:2] == ["az", "whole"]:
-            rid, cid = int(parts[2]), int(parts[3])
+            rid, cid = int(parts[2]), parts[3]
             _add_location(draft, LocationTarget(level="city", region_id=rid, city_id=cid,
-                                               display_name=locations.city_name(cid)))
+                                               display_name=_city_display_name(context, cid)))
             return await render(*_city_picker_screen(draft))
         if parts[:2] == ["az", "q"]:
-            return await render(*_hoods_screen(draft, int(parts[2]), int(parts[3]), int(parts[4])))
+            return await render(*_hoods_screen(draft, int(parts[2]), parts[3], int(parts[4])))
         if parts[:2] == ["az", "h"]:
-            self._toggle_bundled_hood(draft, int(parts[2]), int(parts[3]), int(parts[4]), int(parts[5]))
-            return await render(*_hoods_screen(draft, int(parts[2]), int(parts[3]), int(parts[4])))
+            self._toggle_bundled_hood(draft, int(parts[2]), parts[3], int(parts[4]), int(parts[5]))
+            return await render(*_hoods_screen(draft, int(parts[2]), parts[3], int(parts[4])))
         if parts[:2] == ["az", "bh"]:
             self._toggle_flat_hood(draft, context.user_data.get("browse"), int(parts[2]))
             return await render(*_flat_hoods_screen(draft, context.user_data.get("browse", {"rid": 0, "cid": 0, "name": "", "hoods": []})))
@@ -535,6 +550,11 @@ class BotHandlers:
         if data == "wz:cancel":
             context.user_data.clear()
             await query.edit_message_text("Cancelled. Nothing was saved.")
+            return ConversationHandler.END
+        if data == "wz:backlist":
+            # Edit-mode back: discard unsaved changes, return to the monitor list.
+            context.user_data.clear()
+            await self._show_searches(update, context, edit=True)
             return ConversationHandler.END
         if data == "wz:save":
             return await self._save_draft(update, context)
