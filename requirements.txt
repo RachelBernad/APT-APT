@@ -1,5 +1,5 @@
-Brotli==1.1.0
+python-telegram-bot[job-queue]==22.5
 aiohttp
-python-telegram-bot==22.5
-httpx==0.28.1
-beautifulsoup4==4.14.2
+aiosqlite
+rapidfuzz
+Brotli==1.1.0

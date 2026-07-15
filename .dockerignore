@@ -6,7 +6,11 @@ __pycache__/
 .env
 .env.*
 out/
+*.db
+*.db-wal
+*.db-shm
 bot.log
 *.log
 a.jsonl
+codedb.snapshot
 copilot-session-*.md

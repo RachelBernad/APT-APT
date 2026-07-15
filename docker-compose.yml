@@ -5,5 +5,9 @@ services:
     restart: unless-stopped
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      CHECK_INTERVAL_SECONDS: ${CHECK_INTERVAL_SECONDS:-900}
+      DB_PATH: ${DB_PATH:-out/bot.db}
+      ENABLE_RENTLYFLY: ${ENABLE_RENTLYFLY:-1}
+      BACKFILL_CAP: ${BACKFILL_CAP:-10}
     volumes:
       - ./out:/app/out

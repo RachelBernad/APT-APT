@@ -1,0 +1,5208 @@
+{
+ "areas": {
+  "1": {
+   "name": "אזור תל אביב יפו",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "10": {
+   "name": "בקעת אונו",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "11": {
+   "name": "אזור חולון ובת ים",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "12": {
+   "name": "אזור נס ציונה ורחובות",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "13": {
+   "name": "אזור עפולה והעמקים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "14": {
+   "name": "אזור הכנרת והסביבה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "15": {
+   "name": "אזור חדרה והסביבה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "16": {
+   "name": "אזור קיסריה והסביבה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "17": {
+   "name": "אזור נתניה והסביבה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "18": {
+   "name": "אזור רמת השרון והרצליה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "20": {
+   "name": "אזור הגליל העליון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "21": {
+   "name": "אזור אשדוד, אשקלון והסביבה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "22": {
+   "name": "אזור באר שבע והסביבה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "24": {
+   "name": "אזור אילת והערבה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "3": {
+   "name": "אזור רמת גן וגבעתיים",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "4": {
+   "name": "פתח תקווה והסביבה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "42": {
+   "name": "אזור רעננה וכפר סבא",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "45": {
+   "name": "אזור ישובי השומרון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "5": {
+   "name": "אזור חיפה והסביבה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "51": {
+   "name": "אזור רמלה - לוד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "52": {
+   "name": "אזור גדרה - יבנה והסביבה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "53": {
+   "name": "אזור כרמיאל והסביבה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "54": {
+   "name": "אזור הוד השרון והסביבה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "6": {
+   "name": "אזור הקריות",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "67": {
+   "name": "אזור זכרון יעקב וחוף הכרמל",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "68": {
+   "name": "אזור עכו נהריה והסביבה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "69": {
+   "name": "אזור בית שמש והסביבה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "7": {
+   "name": "אזור ירושלים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "70": {
+   "name": "אזור צפון השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "71": {
+   "name": "אזור ראש העין והסביבה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "72": {
+   "name": "אזור קרית גת והסביבה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "74": {
+   "name": "אזור הגליל התחתון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "77": {
+   "name": "אזור אריאל וישובי יהודה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "78": {
+   "name": "אזור בני ברק וגבעת שמואל",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "79": {
+   "name": "אזור בקעת הירדן וצפון ים המלח",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "8": {
+   "name": "אזור מודיעין והסביבה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "80": {
+   "name": "אזור גוש עציון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "81": {
+   "name": "אזור דרום השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "82": {
+   "name": "אזור דרום ים המלח",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "83": {
+   "name": "רמת הגולן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "85": {
+   "name": "אזור הנגב המערבי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "86": {
+   "name": "אזור הרי יהודה, מבשרת והסביבה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "87": {
+   "name": "אזור יקנעם, טבעון והסביבה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "88": {
+   "name": "אזור דרום הר חברון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "89": {
+   "name": "אזור הר הנגב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "9": {
+   "name": "אזור ראשון לציון והסביבה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "90": {
+   "name": "אזור מעלה אדומים והסביבה",
+   "regionId": "4",
+   "topAreaId": "100"
+  },
+  "91": {
+   "name": "אזור נצרת - שפרעם והסביבה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "92": {
+   "name": "אזור עמק איילון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "93": {
+   "name": "אזור עמק בית שאן",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "96": {
+   "name": "אזור ראש פינה ועמק החולה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "97": {
+   "name": "אזור רמות מנשה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "98": {
+   "name": "אזור שוהם והסביבה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "99": {
+   "name": "אזור השפלה",
+   "regionId": "2",
+   "topAreaId": "41"
+  }
+ },
+ "cities": {
+  "0007": {
+   "areaId": "72",
+   "name": "שחר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0010": {
+   "areaId": "69",
+   "name": "תירוש",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0013": {
+   "areaId": "24",
+   "name": "חצבה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0022": {
+   "areaId": "11",
+   "name": "מקווה ישראל",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "0023": {
+   "areaId": "72",
+   "name": "אמציה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0024": {
+   "areaId": "72",
+   "name": "לכיש",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0026": {
+   "areaId": "96",
+   "name": "ראש פינה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0028": {
+   "areaId": "12",
+   "name": "מזכרת בתיה",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0029": {
+   "areaId": "96",
+   "name": "יסוד המעלה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0031": {
+   "areaId": "85",
+   "name": "אופקים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0033": {
+   "areaId": "67",
+   "name": "בת שלמה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0036": {
+   "areaId": "72",
+   "name": "שדה דוד",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0038": {
+   "areaId": "96",
+   "name": "כרי דשא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0039": {
+   "areaId": "69",
+   "name": "גפן",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0041": {
+   "areaId": "70",
+   "name": "אליכין",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0043": {
+   "areaId": "96",
+   "name": "מטולה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0044": {
+   "areaId": "72",
+   "name": "זוהר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0046": {
+   "areaId": "74",
+   "name": "יבנאל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0047": {
+   "areaId": "74",
+   "name": "כפר תבור",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0048": {
+   "areaId": "14",
+   "name": "מנחמיה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0052": {
+   "areaId": "69",
+   "name": "לוזית",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0053": {
+   "areaId": "67",
+   "name": "עתלית",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0057": {
+   "areaId": "14",
+   "name": "כינרת קבוצה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0058": {
+   "areaId": "74",
+   "name": "מצפה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0062": {
+   "areaId": "14",
+   "name": "דגניה א'",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0063": {
+   "areaId": "14",
+   "name": "כינרת מושבה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0065": {
+   "areaId": "14",
+   "name": "מגדל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0066": {
+   "areaId": "13",
+   "name": "מרחביה קיבוץ",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0067": {
+   "areaId": "99",
+   "name": "אור הנר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0070": {
+   "areaId": "21",
+   "name": "אשדוד",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0074": {
+   "areaId": "67",
+   "name": "עין הוד",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0076": {
+   "areaId": "96",
+   "name": "כפר גלעדי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0078": {
+   "areaId": "86",
+   "name": "קרית ענבים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0079": {
+   "areaId": "14",
+   "name": "דגניה ב'",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0080": {
+   "areaId": "13",
+   "name": "נהלל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0085": {
+   "areaId": "13",
+   "name": "כפר יחזקאל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0090": {
+   "areaId": "13",
+   "name": "חפצי בה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0094": {
+   "areaId": "13",
+   "name": "בלפוריה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0096": {
+   "areaId": "87",
+   "name": "יגור",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0097": {
+   "areaId": "13",
+   "name": "מרחביה מושב",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0098": {
+   "areaId": "54",
+   "name": "כפר מל\"ל",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0099": {
+   "areaId": "89",
+   "name": "מצפה רמון",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0103": {
+   "areaId": "13",
+   "name": "תל עדשים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0104": {
+   "areaId": "13",
+   "name": "מזרע",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0106": {
+   "areaId": "13",
+   "name": "כפר גדעון",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0107": {
+   "areaId": "99",
+   "name": "כפר סילבר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0112": {
+   "areaId": "87",
+   "name": "כפר חסידים א'",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0115": {
+   "areaId": "70",
+   "name": "חופית",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0122": {
+   "areaId": "87",
+   "name": "רמת ישי",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0126": {
+   "areaId": "13",
+   "name": "שריד",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0127": {
+   "areaId": "86",
+   "name": "רמת רחל",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0128": {
+   "areaId": "4",
+   "name": "גת רימון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0134": {
+   "areaId": "13",
+   "name": "יפעת",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0135": {
+   "areaId": "13",
+   "name": "רמת דוד",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0141": {
+   "areaId": "13",
+   "name": "ברק",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0143": {
+   "areaId": "14",
+   "name": "בית זרע",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0145": {
+   "areaId": "13",
+   "name": "גדיש",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0147": {
+   "areaId": "12",
+   "name": "גבעת ברנר",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0154": {
+   "areaId": "70",
+   "name": "תל מונד",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0155": {
+   "areaId": "99",
+   "name": "באר טוביה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0157": {
+   "areaId": "70",
+   "name": "עין ורד",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0158": {
+   "areaId": "12",
+   "name": "נען",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0159": {
+   "areaId": "9",
+   "name": "בית חנן",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0160": {
+   "areaId": "92",
+   "name": "חולדה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0162": {
+   "areaId": "70",
+   "name": "חרות",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0163": {
+   "areaId": "99",
+   "name": "תימורים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0164": {
+   "areaId": "13",
+   "name": "מלאה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0165": {
+   "areaId": "13",
+   "name": "ניר יפה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0166": {
+   "areaId": "52",
+   "name": "גן יבנה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0168": {
+   "areaId": "70",
+   "name": "כפר יונה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0171": {
+   "areaId": "70",
+   "name": "פרדסיה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0174": {
+   "areaId": "9",
+   "name": "נטעים",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0182": {
+   "areaId": "70",
+   "name": "אבן יהודה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0183": {
+   "areaId": "54",
+   "name": "ירקונה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0184": {
+   "areaId": "81",
+   "name": "רמת הכובש",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0186": {
+   "areaId": "70",
+   "name": "נעורים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0187": {
+   "areaId": "70",
+   "name": "כפר הס",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0188": {
+   "areaId": "14",
+   "name": "אשדות יעקב מאוחד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0189": {
+   "areaId": "15",
+   "name": "כפר פינס",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0190": {
+   "areaId": "70",
+   "name": "כפר ויתקין",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0191": {
+   "areaId": "70",
+   "name": "הדר עם",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0192": {
+   "areaId": "91",
+   "name": "כפר החורש",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0195": {
+   "areaId": "70",
+   "name": "קדימה צורן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0200": {
+   "areaId": "70",
+   "name": "בית ינאי",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0202": {
+   "areaId": "9",
+   "name": "בית עובד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0205": {
+   "areaId": "70",
+   "name": "חגלה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0206": {
+   "areaId": "54",
+   "name": "רמות השבים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0218": {
+   "areaId": "54",
+   "name": "גני עם",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0219": {
+   "areaId": "70",
+   "name": "חיבת ציון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0224": {
+   "areaId": "17",
+   "name": "שושנת העמקים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0229": {
+   "areaId": "10",
+   "name": "גני תקווה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0230": {
+   "areaId": "4",
+   "name": "מעש",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0232": {
+   "areaId": "70",
+   "name": "שפיים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0233": {
+   "areaId": "70",
+   "name": "כפר ידידיה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0235": {
+   "areaId": "17",
+   "name": "חבצלת השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0239": {
+   "areaId": "42",
+   "name": "גן חיים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0240": {
+   "areaId": "87",
+   "name": "יקנעם עילית",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0241": {
+   "areaId": "87",
+   "name": "יקנעם",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0246": {
+   "areaId": "85",
+   "name": "נתיבות",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0247": {
+   "areaId": "70",
+   "name": "רשפון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0248": {
+   "areaId": "87",
+   "name": "בית שערים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0249": {
+   "areaId": "4",
+   "name": "כפר סירקין",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0250": {
+   "areaId": "87",
+   "name": "הזורע",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0252": {
+   "areaId": "70",
+   "name": "ביתן אהרן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0255": {
+   "areaId": "74",
+   "name": "כפר חיטים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0256": {
+   "areaId": "93",
+   "name": "ניר דוד",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0267": {
+   "areaId": "18",
+   "name": "כפר שמריהו",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0273": {
+   "areaId": "14",
+   "name": "עין גב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0276": {
+   "areaId": "70",
+   "name": "צור משה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0281": {
+   "areaId": "20",
+   "name": "פקיעין חדשה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0282": {
+   "areaId": "68",
+   "name": "שבי ציון",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0284": {
+   "areaId": "81",
+   "name": "שדה ורבורג",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0286": {
+   "areaId": "86",
+   "name": "מעלה החמישה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0287": {
+   "areaId": "70",
+   "name": "תל יצחק",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0288": {
+   "areaId": "70",
+   "name": "בית יהושע",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0289": {
+   "areaId": "68",
+   "name": "עין המפרץ",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0292": {
+   "areaId": "74",
+   "name": "שרונה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0294": {
+   "areaId": "20",
+   "name": "אילון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0297": {
+   "areaId": "68",
+   "name": "כפר מסריק",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0300": {
+   "areaId": "97",
+   "name": "דליה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0302": {
+   "areaId": "96",
+   "name": "דפנה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0303": {
+   "areaId": "96",
+   "name": "דן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0305": {
+   "areaId": "93",
+   "name": "גשר",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0306": {
+   "areaId": "74",
+   "name": "שדמות דבורה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0307": {
+   "areaId": "74",
+   "name": "הזורעים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0308": {
+   "areaId": "96",
+   "name": "מחניים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0309": {
+   "areaId": "72",
+   "name": "נהורה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0310": {
+   "areaId": "15",
+   "name": "כפר גליקסון",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0311": {
+   "areaId": "9",
+   "name": "גן שורק",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0312": {
+   "areaId": "67",
+   "name": "נווה ים",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0313": {
+   "areaId": "68",
+   "name": "אפק",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0315": {
+   "areaId": "99",
+   "name": "נגבה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0316": {
+   "areaId": "70",
+   "name": "כפר נטר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0320": {
+   "areaId": "99",
+   "name": "כפר ורבורג",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0322": {
+   "areaId": "96",
+   "name": "בית הלל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0324": {
+   "areaId": "96",
+   "name": "שאר ישוב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0326": {
+   "areaId": "70",
+   "name": "בית יצחק שער חפר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0329": {
+   "areaId": "96",
+   "name": "שדה נחמיה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0331": {
+   "areaId": "51",
+   "name": "ניר צבי",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0334": {
+   "areaId": "52",
+   "name": "קבוצת יבנה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0339": {
+   "areaId": "13",
+   "name": "רמת צבי",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0340": {
+   "areaId": "99",
+   "name": "גת",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0343": {
+   "areaId": "93",
+   "name": "חמדיה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0345": {
+   "areaId": "96",
+   "name": "כפר סאלד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0346": {
+   "areaId": "18",
+   "name": "גליל ים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0348": {
+   "areaId": "99",
+   "name": "ניר עם",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0351": {
+   "areaId": "21",
+   "name": "ניצן",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0353": {
+   "areaId": "87",
+   "name": "בית זיד",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0354": {
+   "areaId": "89",
+   "name": "רביבים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0357": {
+   "areaId": "96",
+   "name": "כפר בלום",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0358": {
+   "areaId": "99",
+   "name": "יד מרדכי",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0362": {
+   "areaId": "99",
+   "name": "רוחמה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0365": {
+   "areaId": "74",
+   "name": "בית קשת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0367": {
+   "areaId": "97",
+   "name": "עין העמק",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0370": {
+   "areaId": "92",
+   "name": "גזר",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0371": {
+   "areaId": "74",
+   "name": "כדורי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0372": {
+   "areaId": "20",
+   "name": "רמות נפתלי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0373": {
+   "areaId": "70",
+   "name": "בית הלוי",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0375": {
+   "areaId": "15",
+   "name": "מגל",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0376": {
+   "areaId": "68",
+   "name": "עברון",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0377": {
+   "areaId": "70",
+   "name": "המעפיל",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0379": {
+   "areaId": "70",
+   "name": "גאולים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0380": {
+   "areaId": "96",
+   "name": "להבות הבשן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0382": {
+   "areaId": "70",
+   "name": "מכמורת",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0386": {
+   "areaId": "70",
+   "name": "בני דרור",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0388": {
+   "areaId": "74",
+   "name": "כפר קיש",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0389": {
+   "areaId": "70",
+   "name": "בצרה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0390": {
+   "areaId": "68",
+   "name": "רגבה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0396": {
+   "areaId": "22",
+   "name": "נבטים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0405": {
+   "areaId": "86",
+   "name": "נווה אילן",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0406": {
+   "areaId": "99",
+   "name": "חצור אשדוד",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0407": {
+   "areaId": "13",
+   "name": "דברת",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0408": {
+   "areaId": "96",
+   "name": "נאות מרדכי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0409": {
+   "areaId": "20",
+   "name": "יחיעם",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0413": {
+   "areaId": "85",
+   "name": "צאלים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0414": {
+   "areaId": "85",
+   "name": "קלחים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0417": {
+   "areaId": "70",
+   "name": "יקום",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0418": {
+   "areaId": "70",
+   "name": "בני ציון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0419": {
+   "areaId": "85",
+   "name": "סעד",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0422": {
+   "areaId": "70",
+   "name": "חרב לאת",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0425": {
+   "areaId": "70",
+   "name": "משמרת",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0429": {
+   "areaId": "91",
+   "name": "אלוני אבא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0430": {
+   "areaId": "91",
+   "name": "בית לחם הגלילית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0431": {
+   "areaId": "20",
+   "name": "דלתון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0433": {
+   "areaId": "67",
+   "name": "נחשולים",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0434": {
+   "areaId": "67",
+   "name": "החותרים",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0435": {
+   "areaId": "12",
+   "name": "נצר סרני",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0436": {
+   "areaId": "13",
+   "name": "עין דור",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0437": {
+   "areaId": "93",
+   "name": "רשפים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0440": {
+   "areaId": "52",
+   "name": "יסודות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0442": {
+   "areaId": "13",
+   "name": "גדעונה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0443": {
+   "areaId": "96",
+   "name": "כפר הנשיא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0444": {
+   "areaId": "97",
+   "name": "רגבים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0448": {
+   "areaId": "98",
+   "name": "בני עטרות",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0449": {
+   "areaId": "4",
+   "name": "נחלים",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0452": {
+   "areaId": "13",
+   "name": "יזרעאל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0454": {
+   "areaId": "68",
+   "name": "סער",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0456": {
+   "areaId": "86",
+   "name": "שורש",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0457": {
+   "areaId": "13",
+   "name": "גזית",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0460": {
+   "areaId": "86",
+   "name": "רמת רזיאל",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0462": {
+   "areaId": "69",
+   "name": "טל שחר",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0463": {
+   "areaId": "20",
+   "name": "געתון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0466": {
+   "areaId": "9",
+   "name": "בית דגן",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0469": {
+   "areaId": "12",
+   "name": "קרית עקרון",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0472": {
+   "areaId": "86",
+   "name": "אבו גוש",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0473": {
+   "areaId": "68",
+   "name": "אבו סנאן",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0475": {
+   "areaId": "13",
+   "name": "דחי",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0478": {
+   "areaId": "91",
+   "name": "אכסאל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0490": {
+   "areaId": "20",
+   "name": "דייר אל אסד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0492": {
+   "areaId": "53",
+   "name": "דייר חנא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0494": {
+   "areaId": "87",
+   "name": "דאלית אל כרמל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0497": {
+   "areaId": "13",
+   "name": "א טייבה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0498": {
+   "areaId": "91",
+   "name": "טורעאן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0504": {
+   "areaId": "91",
+   "name": "כאבול",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0505": {
+   "areaId": "91",
+   "name": "כאוכב אבו אל היגא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0507": {
+   "areaId": "68",
+   "name": "כפר יאסיף",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0508": {
+   "areaId": "74",
+   "name": "כפר כמא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0509": {
+   "areaId": "91",
+   "name": "כפר כנא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0517": {
+   "areaId": "68",
+   "name": "מזרעה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0521": {
+   "areaId": "86",
+   "name": "עין נקובא",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0525": {
+   "areaId": "53",
+   "name": "סאג'ור",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0526": {
+   "areaId": "13",
+   "name": "סולם שונם",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0527": {
+   "areaId": "53",
+   "name": "שזור",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0529": {
+   "areaId": "91",
+   "name": "אעבלין",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0531": {
+   "areaId": "91",
+   "name": "עראבה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0534": {
+   "areaId": "87",
+   "name": "עספיא",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0535": {
+   "areaId": "20",
+   "name": "פסוטה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0536": {
+   "areaId": "20",
+   "name": "פקיעין",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0541": {
+   "areaId": "15",
+   "name": "ג'סר א זרקא",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0546": {
+   "areaId": "20",
+   "name": "עין אל אסד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0547": {
+   "areaId": "13",
+   "name": "טמרה יזרעאל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0549": {
+   "areaId": "70",
+   "name": "גנות הדר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0559": {
+   "areaId": "68",
+   "name": "בוסתן הגליל",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0563": {
+   "areaId": "92",
+   "name": "משמר דוד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0564": {
+   "areaId": "99",
+   "name": "רבדים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0565": {
+   "areaId": "11",
+   "name": "אזור",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "0566": {
+   "areaId": "69",
+   "name": "גבעת שמש",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0567": {
+   "areaId": "69",
+   "name": "צרעה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0571": {
+   "areaId": "52",
+   "name": "בית גמליאל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0574": {
+   "areaId": "68",
+   "name": "גשר הזיו",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0575": {
+   "areaId": "68",
+   "name": "יסעור",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0576": {
+   "areaId": "68",
+   "name": "כברי",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0577": {
+   "areaId": "52",
+   "name": "יד בנימין",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0578": {
+   "areaId": "20",
+   "name": "סאסא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0579": {
+   "areaId": "68",
+   "name": "כפר ראש הנקרה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0580": {
+   "areaId": "67",
+   "name": "כרם מהר\"ל",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0582": {
+   "areaId": "9",
+   "name": "כפר הנגיד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0584": {
+   "areaId": "99",
+   "name": "זיקים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0587": {
+   "areaId": "10",
+   "name": "סביון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0589": {
+   "areaId": "68",
+   "name": "בצת",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0591": {
+   "areaId": "52",
+   "name": "עשרת",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0592": {
+   "areaId": "52",
+   "name": "בני דרום",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0593": {
+   "areaId": "99",
+   "name": "ערוגות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0594": {
+   "areaId": "10",
+   "name": "צפריה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0595": {
+   "areaId": "68",
+   "name": "לוחמי הגיטאות",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0596": {
+   "areaId": "20",
+   "name": "מלכיה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0597": {
+   "areaId": "9",
+   "name": "פלמחים",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0598": {
+   "areaId": "85",
+   "name": "בית קמה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0599": {
+   "areaId": "20",
+   "name": "פרוד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0604": {
+   "areaId": "98",
+   "name": "בית עריף",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0606": {
+   "areaId": "4",
+   "name": "מזור",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0609": {
+   "areaId": "20",
+   "name": "ספסופה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0610": {
+   "areaId": "12",
+   "name": "סתריה",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0612": {
+   "areaId": "67",
+   "name": "צרופה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0615": {
+   "areaId": "52",
+   "name": "קדרון",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0616": {
+   "areaId": "4",
+   "name": "רינתיה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0618": {
+   "areaId": "98",
+   "name": "חדיד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0633": {
+   "areaId": "71",
+   "name": "כפר ברא",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0634": {
+   "areaId": "71",
+   "name": "כפר קאסם",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0636": {
+   "areaId": "13",
+   "name": "צנדלה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0638": {
+   "areaId": "70",
+   "name": "קלנסווה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0654": {
+   "areaId": "97",
+   "name": "כפר קרע",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0658": {
+   "areaId": "20",
+   "name": "שייח' דנון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0661": {
+   "areaId": "70",
+   "name": "שער אפרים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0662": {
+   "areaId": "20",
+   "name": "חוסן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0663": {
+   "areaId": "98",
+   "name": "טירת יהודה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0664": {
+   "areaId": "20",
+   "name": "כרם בן זמרה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0666": {
+   "areaId": "22",
+   "name": "עומר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0668": {
+   "areaId": "99",
+   "name": "מפלסים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0672": {
+   "areaId": "86",
+   "name": "בית נקופה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0673": {
+   "areaId": "98",
+   "name": "כפר טרומן",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0674": {
+   "areaId": "68",
+   "name": "לימן",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0675": {
+   "areaId": "67",
+   "name": "הבונים",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0677": {
+   "areaId": "91",
+   "name": "הסוללים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0681": {
+   "areaId": "78",
+   "name": "גבעת שמואל",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0684": {
+   "areaId": "13",
+   "name": "היוגב",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0686": {
+   "areaId": "54",
+   "name": "נווה ימין",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0688": {
+   "areaId": "20",
+   "name": "עלמה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0689": {
+   "areaId": "67",
+   "name": "מגדים",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0690": {
+   "areaId": "99",
+   "name": "כפר אחים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0693": {
+   "areaId": "69",
+   "name": "נתיב הל\"ה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0696": {
+   "areaId": "9",
+   "name": "כפר חב\"ד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0697": {
+   "areaId": "70",
+   "name": "בארותיים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0698": {
+   "areaId": "70",
+   "name": "בורגתה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0699": {
+   "areaId": "99",
+   "name": "ניר ישראל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0700": {
+   "areaId": "99",
+   "name": "חצב",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0702": {
+   "areaId": "14",
+   "name": "האון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0703": {
+   "areaId": "13",
+   "name": "גבעת עוז",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0706": {
+   "areaId": "99",
+   "name": "גיאה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0707": {
+   "areaId": "8",
+   "name": "כפר דניאל",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0709": {
+   "areaId": "85",
+   "name": "תפרח",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0710": {
+   "areaId": "86",
+   "name": "בית זית",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0711": {
+   "areaId": "92",
+   "name": "עזריה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0712": {
+   "areaId": "68",
+   "name": "בן עמי",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0713": {
+   "areaId": "85",
+   "name": "רעים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0715": {
+   "areaId": "15",
+   "name": "להבות חביבה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0717": {
+   "areaId": "54",
+   "name": "חגור",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0719": {
+   "areaId": "14",
+   "name": "תל קציר",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0720": {
+   "areaId": "52",
+   "name": "ניר גלים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0722": {
+   "areaId": "4",
+   "name": "מגשימים",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0723": {
+   "areaId": "85",
+   "name": "בית הגדי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0726": {
+   "areaId": "99",
+   "name": "הודיה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0727": {
+   "areaId": "99",
+   "name": "תלמי יחיאל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0729": {
+   "areaId": "9",
+   "name": "משמר השבעה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0731": {
+   "areaId": "52",
+   "name": "מישר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0732": {
+   "areaId": "96",
+   "name": "משמר הירדן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0734": {
+   "areaId": "70",
+   "name": "גן יאשיה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0735": {
+   "areaId": "12",
+   "name": "רמות מאיר",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0736": {
+   "areaId": "85",
+   "name": "גילת",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0737": {
+   "areaId": "70",
+   "name": "עולש",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0738": {
+   "areaId": "67",
+   "name": "דור",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0742": {
+   "areaId": "69",
+   "name": "מסילת ציון",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0744": {
+   "areaId": "99",
+   "name": "תלמי יפה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0745": {
+   "areaId": "8",
+   "name": "גמזו",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0747": {
+   "areaId": "99",
+   "name": "בית שיקמה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0748": {
+   "areaId": "85",
+   "name": "מסלול",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0749": {
+   "areaId": "85",
+   "name": "פטיש",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0750": {
+   "areaId": "85",
+   "name": "פדויים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0751": {
+   "areaId": "86",
+   "name": "בית מאיר",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0752": {
+   "areaId": "69",
+   "name": "תעוז",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0753": {
+   "areaId": "70",
+   "name": "ינוב",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0756": {
+   "areaId": "99",
+   "name": "בית עזרא",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0757": {
+   "areaId": "51",
+   "name": "מצליח",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0758": {
+   "areaId": "70",
+   "name": "יד חנה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0759": {
+   "areaId": "12",
+   "name": "יציץ",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "0760": {
+   "areaId": "52",
+   "name": "בן זכאי",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0762": {
+   "areaId": "85",
+   "name": "בטחה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0763": {
+   "areaId": "99",
+   "name": "שתולים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0765": {
+   "areaId": "52",
+   "name": "משגב דב",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0766": {
+   "areaId": "99",
+   "name": "קוממיות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0767": {
+   "areaId": "70",
+   "name": "פורת",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0769": {
+   "areaId": "67",
+   "name": "ניר עציון",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "0771": {
+   "areaId": "86",
+   "name": "מבוא ביתר",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0772": {
+   "areaId": "99",
+   "name": "אמונים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0773": {
+   "areaId": "97",
+   "name": "עמיקם",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0775": {
+   "areaId": "72",
+   "name": "יד נתן",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0776": {
+   "areaId": "69",
+   "name": "מחסיה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0778": {
+   "areaId": "69",
+   "name": "תרום",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0779": {
+   "areaId": "86",
+   "name": "עמינדב",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0783": {
+   "areaId": "86",
+   "name": "אבן ספיר",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0784": {
+   "areaId": "98",
+   "name": "בית נחמיה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0788": {
+   "areaId": "51",
+   "name": "זיתן",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0789": {
+   "areaId": "85",
+   "name": "רנן",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0792": {
+   "areaId": "68",
+   "name": "נתיב השיירה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0794": {
+   "areaId": "69",
+   "name": "עגור",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0796": {
+   "areaId": "69",
+   "name": "צלפון",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0797": {
+   "areaId": "51",
+   "name": "אחיעזר",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0798": {
+   "areaId": "51",
+   "name": "יגל",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0799": {
+   "areaId": "69",
+   "name": "זכריה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0801": {
+   "areaId": "10",
+   "name": "חמד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0804": {
+   "areaId": "51",
+   "name": "אחיסמך",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0806": {
+   "areaId": "24",
+   "name": "עין יהב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0807": {
+   "areaId": "70",
+   "name": "חניאל",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0811": {
+   "areaId": "99",
+   "name": "יכיני",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0812": {
+   "areaId": "68",
+   "name": "שלומי",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "0815": {
+   "areaId": "99",
+   "name": "זבדיאל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0816": {
+   "areaId": "69",
+   "name": "זנוח",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0817": {
+   "areaId": "99",
+   "name": "עזריקם",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0818": {
+   "areaId": "99",
+   "name": "זרחיה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0820": {
+   "areaId": "99",
+   "name": "חלץ",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0822": {
+   "areaId": "86",
+   "name": "מטע",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0824": {
+   "areaId": "99",
+   "name": "כוכב מיכאל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0825": {
+   "areaId": "86",
+   "name": "נס הרים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0828": {
+   "areaId": "51",
+   "name": "ישרש",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0831": {
+   "areaId": "89",
+   "name": "ירוחם",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0838": {
+   "areaId": "92",
+   "name": "פדיה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0839": {
+   "areaId": "92",
+   "name": "פתחיה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0840": {
+   "areaId": "85",
+   "name": "כיסופים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0842": {
+   "areaId": "70",
+   "name": "געש",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0844": {
+   "areaId": "99",
+   "name": "נחל עוז",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "0846": {
+   "areaId": "20",
+   "name": "שפר",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0849": {
+   "areaId": "22",
+   "name": "דבירה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0851": {
+   "areaId": "70",
+   "name": "ניצני עוז",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0853": {
+   "areaId": "9",
+   "name": "גאליה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0854": {
+   "areaId": "93",
+   "name": "רחוב",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0858": {
+   "areaId": "54",
+   "name": "נווה ירק",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0859": {
+   "areaId": "86",
+   "name": "כסלון",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "0861": {
+   "areaId": "96",
+   "name": "שדה אליעזר",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0864": {
+   "areaId": "92",
+   "name": "בקוע",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "0865": {
+   "areaId": "85",
+   "name": "שיבולים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0866": {
+   "areaId": "24",
+   "name": "יטבתה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0872": {
+   "areaId": "70",
+   "name": "גאולי תימן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0874": {
+   "areaId": "91",
+   "name": "מגדל העמק",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0875": {
+   "areaId": "70",
+   "name": "כפר עבודה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0880": {
+   "areaId": "70",
+   "name": "עין שריד",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0885": {
+   "areaId": "89",
+   "name": "שדה בוקר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0889": {
+   "areaId": "87",
+   "name": "כפר חסידים ב'",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0892": {
+   "areaId": "20",
+   "name": "עבדון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0897": {
+   "areaId": "70",
+   "name": "המרכז האקדמי רופין",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "0917": {
+   "areaId": "91",
+   "name": "עצמון שגב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0922": {
+   "areaId": "87",
+   "name": "רכסים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "0944": {
+   "areaId": "91",
+   "name": "בסמת טבעון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0962": {
+   "areaId": "96",
+   "name": "טובא זנגריה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0964": {
+   "areaId": "22",
+   "name": "קודייראת א צאנה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0970": {
+   "areaId": "22",
+   "name": "תראבין א צאנה שבט",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "0978": {
+   "areaId": "91",
+   "name": "כעביה טבאש חג'אג'רה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "0994": {
+   "areaId": "91",
+   "name": "מנשית זבדה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1015": {
+   "areaId": "86",
+   "name": "מבשרת ציון",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1020": {
+   "areaId": "16",
+   "name": "אור עקיבא",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "1024": {
+   "areaId": "70",
+   "name": "חרוצים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1031": {
+   "areaId": "99",
+   "name": "שדרות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1034": {
+   "areaId": "99",
+   "name": "קרית מלאכי",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "103P": {
+   "areaId": "79",
+   "name": "מצוקי דרגות",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "1045": {
+   "areaId": "20",
+   "name": "שתולה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1047": {
+   "areaId": "74",
+   "name": "חזון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "104P": {
+   "areaId": "69",
+   "name": "פארק צרעה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1050": {
+   "areaId": "92",
+   "name": "בית חשמונאי",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1052": {
+   "areaId": "24",
+   "name": "קטורה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1056": {
+   "areaId": "86",
+   "name": "עין כרם בי\"ס חקלאי",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1057": {
+   "areaId": "82",
+   "name": "נווה זוהר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1059": {
+   "areaId": "22",
+   "name": "כסיפה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1060": {
+   "areaId": "22",
+   "name": "לקיה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1061": {
+   "areaId": "91",
+   "name": "נצרת עילית / נוף הגליל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1063": {
+   "areaId": "20",
+   "name": "מעלות תרשיחא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1064": {
+   "areaId": "20",
+   "name": "אמירים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1065": {
+   "areaId": "85",
+   "name": "זמרת",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1066": {
+   "areaId": "52",
+   "name": "בני עי\"ש",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1069": {
+   "areaId": "13",
+   "name": "רם און",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1071": {
+   "areaId": "69",
+   "name": "נווה מיכאל",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1076": {
+   "areaId": "81",
+   "name": "בית ברל",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1077": {
+   "areaId": "70",
+   "name": "גבעת שפירא",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1079": {
+   "areaId": "69",
+   "name": "צפרירים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1080": {
+   "areaId": "85",
+   "name": "מבועים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1083": {
+   "areaId": "85",
+   "name": "תושיה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1098": {
+   "areaId": "99",
+   "name": "מרכז שפירא",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1104": {
+   "areaId": "14",
+   "name": "פוריה כפר עבודה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1105": {
+   "areaId": "14",
+   "name": "פוריה נווה עובד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "110P": {
+   "areaId": "74",
+   "name": "כפר נהר הירדן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1110": {
+   "areaId": "13",
+   "name": "חבר",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1113": {
+   "areaId": "86",
+   "name": "צור הדסה",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1114": {
+   "areaId": "69",
+   "name": "שריגים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1124": {
+   "areaId": "82",
+   "name": "נאות הכיכר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1128": {
+   "areaId": "97",
+   "name": "מי עמי",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1129": {
+   "areaId": "24",
+   "name": "גרופית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1130": {
+   "areaId": "20",
+   "name": "זרעית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1132": {
+   "areaId": "96",
+   "name": "שניר",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1137": {
+   "areaId": "86",
+   "name": "קרית יערים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1139": {
+   "areaId": "53",
+   "name": "כרמיאל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1140": {
+   "areaId": "89",
+   "name": "מדרשת בן גוריון",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1143": {
+   "areaId": "68",
+   "name": "נס עמים",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "1149": {
+   "areaId": "99",
+   "name": "עזר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1151": {
+   "areaId": "24",
+   "name": "פארן",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1152": {
+   "areaId": "89",
+   "name": "אשלים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1153": {
+   "areaId": "20",
+   "name": "כישור",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1155": {
+   "areaId": "13",
+   "name": "מגן שאול",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1156": {
+   "areaId": "24",
+   "name": "סמר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1158": {
+   "areaId": "24",
+   "name": "יהל",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1160": {
+   "areaId": "91",
+   "name": "שכניה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1161": {
+   "areaId": "22",
+   "name": "רהט",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1165": {
+   "areaId": "8",
+   "name": "שילת",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1166": {
+   "areaId": "8",
+   "name": "כפר רות",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1167": {
+   "areaId": "16",
+   "name": "קיסריה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "1171": {
+   "areaId": "53",
+   "name": "לוטם",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1172": {
+   "areaId": "20",
+   "name": "תובל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1173": {
+   "areaId": "20",
+   "name": "לפידות",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1174": {
+   "areaId": "91",
+   "name": "מנוף",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1176": {
+   "areaId": "24",
+   "name": "ספיר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1179": {
+   "areaId": "91",
+   "name": "קורנית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1181": {
+   "areaId": "20",
+   "name": "טל אל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1183": {
+   "areaId": "20",
+   "name": "כליל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1184": {
+   "areaId": "20",
+   "name": "מתת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1185": {
+   "areaId": "20",
+   "name": "פלך",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1186": {
+   "areaId": "91",
+   "name": "הושעיה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1191": {
+   "areaId": "20",
+   "name": "בר יוחאי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1195": {
+   "areaId": "89",
+   "name": "ניצנה קהילה חינוכית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1196": {
+   "areaId": "22",
+   "name": "לב יתיר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1197": {
+   "areaId": "24",
+   "name": "נאות סמדר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1199": {
+   "areaId": "91",
+   "name": "עדי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1200": {
+   "areaId": "8",
+   "name": "מודיעין מכבים רעות",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1201": {
+   "areaId": "53",
+   "name": "כמון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1202": {
+   "areaId": "53",
+   "name": "מכמנים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1204": {
+   "areaId": "53",
+   "name": "גילון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1205": {
+   "areaId": "20",
+   "name": "מנות",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1207": {
+   "areaId": "20",
+   "name": "לבון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1208": {
+   "areaId": "20",
+   "name": "הילה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1210": {
+   "areaId": "20",
+   "name": "כחל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1214": {
+   "areaId": "74",
+   "name": "טפחות",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1219": {
+   "areaId": "20",
+   "name": "גורנות הגליל",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1222": {
+   "areaId": "91",
+   "name": "מצפה אבי\"ב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1224": {
+   "areaId": "81",
+   "name": "כוכב יאיר / צור יגאל",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1225": {
+   "areaId": "74",
+   "name": "רביד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1226": {
+   "areaId": "91",
+   "name": "יובלים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1227": {
+   "areaId": "85",
+   "name": "יתד",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1228": {
+   "areaId": "91",
+   "name": "רקפת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1229": {
+   "areaId": "74",
+   "name": "כלנית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1230": {
+   "areaId": "74",
+   "name": "לבנים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1231": {
+   "areaId": "85",
+   "name": "פרי גן",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1233": {
+   "areaId": "72",
+   "name": "שקף",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1234": {
+   "areaId": "22",
+   "name": "קבועה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1236": {
+   "areaId": "54",
+   "name": "נירית",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1238": {
+   "areaId": "85",
+   "name": "סופה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1240": {
+   "areaId": "85",
+   "name": "עין הבשור",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1241": {
+   "areaId": "85",
+   "name": "דקל",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1243": {
+   "areaId": "97",
+   "name": "קציר",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1244": {
+   "areaId": "91",
+   "name": "תמרת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1245": {
+   "areaId": "53",
+   "name": "סלמה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1247": {
+   "areaId": "97",
+   "name": "חריש",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1251": {
+   "areaId": "82",
+   "name": "עין תמר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1252": {
+   "areaId": "96",
+   "name": "כורזים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1253": {
+   "areaId": "96",
+   "name": "אמנון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1254": {
+   "areaId": "86",
+   "name": "נטף",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1256": {
+   "areaId": "68",
+   "name": "אשרת",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "1258": {
+   "areaId": "74",
+   "name": "מסד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1260": {
+   "areaId": "89",
+   "name": "כפר רתמים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1261": {
+   "areaId": "22",
+   "name": "הר עמשא",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1263": {
+   "areaId": "20",
+   "name": "כפר ורדים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1264": {
+   "areaId": "92",
+   "name": "כרמי יוסף",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1266": {
+   "areaId": "24",
+   "name": "שחרות",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1268": {
+   "areaId": "22",
+   "name": "מיתר / כרמית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1271": {
+   "areaId": "22",
+   "name": "להבים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1272": {
+   "areaId": "20",
+   "name": "חלוץ",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1274": {
+   "areaId": "13",
+   "name": "גן נר",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1280": {
+   "areaId": "89",
+   "name": "ניצני סיני",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1283": {
+   "areaId": "93",
+   "name": "תל תאומים",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1284": {
+   "areaId": "91",
+   "name": "נופית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1286": {
+   "areaId": "22",
+   "name": "שגב שלום",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1287": {
+   "areaId": "22",
+   "name": "שני ליבנה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1290": {
+   "areaId": "70",
+   "name": "זמר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1291": {
+   "areaId": "89",
+   "name": "כמהין",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1293": {
+   "areaId": "74",
+   "name": "גבעת אבני",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1296": {
+   "areaId": "20",
+   "name": "כיסרא סומיע",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1304": {
+   "areaId": "98",
+   "name": "שוהם",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1309": {
+   "areaId": "71",
+   "name": "אלעד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1310": {
+   "areaId": "8",
+   "name": "לפיד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1313": {
+   "areaId": "14",
+   "name": "פוריה עילית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1314": {
+   "areaId": "20",
+   "name": "נווה זיו",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1315": {
+   "areaId": "54",
+   "name": "מתן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1317": {
+   "areaId": "91",
+   "name": "דמיידה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1319": {
+   "areaId": "70",
+   "name": "בת חפר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1323": {
+   "areaId": "99",
+   "name": "בת הדר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1324": {
+   "areaId": "70",
+   "name": "ארסוף",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1325": {
+   "areaId": "69",
+   "name": "כפר זוהרים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1326": {
+   "areaId": "97",
+   "name": "בסמ\"ה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1329": {
+   "areaId": "22",
+   "name": "יתיר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1330": {
+   "areaId": "13",
+   "name": "אחוזת ברק",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1336": {
+   "areaId": "9",
+   "name": "אירוס",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1341": {
+   "areaId": "89",
+   "name": "רוח מדבר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1344": {
+   "areaId": "22",
+   "name": "גבעות בר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1345": {
+   "areaId": "81",
+   "name": "צור יצחק",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1346": {
+   "areaId": "22",
+   "name": "תראבין א צאנה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1347": {
+   "areaId": "22",
+   "name": "קסר א סיר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1358": {
+   "areaId": "22",
+   "name": "אבו כף אום בטין",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1361": {
+   "areaId": "70",
+   "name": "בת חן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1364": {
+   "areaId": "85",
+   "name": "שלומית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1368": {
+   "areaId": "72",
+   "name": "בני דקלים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1369": {
+   "areaId": "72",
+   "name": "נטע",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1371": {
+   "areaId": "52",
+   "name": "גני טל",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1372": {
+   "areaId": "52",
+   "name": "נצר חזני",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1373": {
+   "areaId": "89",
+   "name": "שלווה במדבר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1374": {
+   "areaId": "72",
+   "name": "כרמי קטיף",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1376": {
+   "areaId": "21",
+   "name": "באר גנים",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "140P": {
+   "areaId": "70",
+   "name": "מרכז קהילתי יכון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "141P": {
+   "areaId": "85",
+   "name": "עלה נגב נחלת ערן",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1701": {
+   "areaId": "69",
+   "name": "מפעלי נחם הר טוב",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "1707": {
+   "areaId": "96",
+   "name": "תל חי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1709": {
+   "areaId": "20",
+   "name": "פארק תעשיות רמת דלתון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1711": {
+   "areaId": "14",
+   "name": "מפעלים אזוריים צמח",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1713": {
+   "areaId": "74",
+   "name": "מרכז אזורי כדורי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1716": {
+   "areaId": "13",
+   "name": "אזור תעשייה אלון התבור",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1718": {
+   "areaId": "13",
+   "name": "מפעלי גלבוע",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1719": {
+   "areaId": "93",
+   "name": "מפעלי שאן",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "1722": {
+   "areaId": "20",
+   "name": "מגדל תפן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1724": {
+   "areaId": "91",
+   "name": "אזור תעסוקה משגב / תרדיון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1725": {
+   "areaId": "68",
+   "name": "בי\"ס אזורי מקיף מטה אשר",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "1726": {
+   "areaId": "68",
+   "name": "אזור תעשייה אכזיב מילואות",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "1728": {
+   "areaId": "53",
+   "name": "תעשיון בר לב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "1739": {
+   "areaId": "15",
+   "name": "מפעלי גרנות",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "1745": {
+   "areaId": "70",
+   "name": "פארק תעשיות עמק חפר",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "1746": {
+   "areaId": "98",
+   "name": "קרית שדה התעופה / איירפורט סיטי",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1748": {
+   "areaId": "10",
+   "name": "נמל תעופה בן גוריון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "1753": {
+   "areaId": "99",
+   "name": "מפעלי כנות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1754": {
+   "areaId": "99",
+   "name": "פארק תעשיות ראם",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1762": {
+   "areaId": "99",
+   "name": "עד הלום",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "1766": {
+   "areaId": "85",
+   "name": "קרית חינוך שדות נגב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1772": {
+   "areaId": "82",
+   "name": "ים המלח בתי מלון",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "1792": {
+   "areaId": "45",
+   "name": "תעשיון שח\"ק / פארק תעשייה שחק",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "2002": {
+   "areaId": "70",
+   "name": "תנובות",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2003": {
+   "areaId": "15",
+   "name": "תלמי אלעזר",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "2006": {
+   "areaId": "99",
+   "name": "כנות",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2008": {
+   "areaId": "15",
+   "name": "שדה יצחק",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "2011": {
+   "areaId": "99",
+   "name": "ינון",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2013": {
+   "areaId": "51",
+   "name": "בן שמן",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "2015": {
+   "areaId": "54",
+   "name": "שדי חמד",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2023": {
+   "areaId": "22",
+   "name": "להב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2024": {
+   "areaId": "97",
+   "name": "אום אל קוטוף",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2029": {
+   "areaId": "13",
+   "name": "מדרך עוז",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2033": {
+   "areaId": "52",
+   "name": "בית חלקיה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2034": {
+   "areaId": "96",
+   "name": "חצור הגלילית",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "2035": {
+   "areaId": "54",
+   "name": "עדנים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2043": {
+   "areaId": "70",
+   "name": "בחן",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2046": {
+   "areaId": "99",
+   "name": "סגולה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2048": {
+   "areaId": "85",
+   "name": "ניר עקיבא",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2049": {
+   "areaId": "85",
+   "name": "שדה צבי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "204P": {
+   "areaId": "13",
+   "name": "מכללת עמק יזרעאל ע\"ש מקס שטרן",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2051": {
+   "areaId": "72",
+   "name": "רווחה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2053": {
+   "areaId": "13",
+   "name": "פרזון",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2055": {
+   "areaId": "15",
+   "name": "מאור",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "2057": {
+   "areaId": "93",
+   "name": "שדי תרומות",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2059": {
+   "areaId": "85",
+   "name": "פעמי תש\"ז",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2061": {
+   "areaId": "85",
+   "name": "תדהר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2062": {
+   "areaId": "85",
+   "name": "תאשור",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2063": {
+   "areaId": "20",
+   "name": "דישון",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "2064": {
+   "areaId": "85",
+   "name": "זרועה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2100": {
+   "areaId": "5",
+   "name": "טירת כרמל",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "214P": {
+   "areaId": "85",
+   "name": "טל אור",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2200": {
+   "areaId": "89",
+   "name": "דימונה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "223P": {
+   "areaId": "85",
+   "name": "חוות יזרעם",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "228P": {
+   "areaId": "70",
+   "name": "כפר הנוער הציוני נווה הדסה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2300": {
+   "areaId": "87",
+   "name": "קרית טבעון",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "233P": {
+   "areaId": "97",
+   "name": "פארק מדע ותעשייה מבוא כרמל",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2400": {
+   "areaId": "10",
+   "name": "אור יהודה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "2500": {
+   "areaId": "5",
+   "name": "נשר",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "2530": {
+   "areaId": "9",
+   "name": "באר יעקב",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "2550": {
+   "areaId": "52",
+   "name": "גדרה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2560": {
+   "areaId": "22",
+   "name": "ערד",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2600": {
+   "areaId": "24",
+   "name": "אילת",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2610": {
+   "areaId": "69",
+   "name": "בית שמש",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "2620": {
+   "areaId": "10",
+   "name": "קרית אונו",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "2630": {
+   "areaId": "72",
+   "name": "קרית גת",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2640": {
+   "areaId": "71",
+   "name": "ראש העין",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "2650": {
+   "areaId": "18",
+   "name": "רמת השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2660": {
+   "areaId": "52",
+   "name": "יבנה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "2710": {
+   "areaId": "97",
+   "name": "אום אל פחם",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "2720": {
+   "areaId": "70",
+   "name": "טירה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2730": {
+   "areaId": "70",
+   "name": "טייבה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "2742": {
+   "areaId": "22",
+   "name": "זבארגה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "2800": {
+   "areaId": "96",
+   "name": "קרית שמונה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "3000": {
+   "areaId": "7",
+   "name": "ירושלים",
+   "regionId": "6",
+   "topAreaId": "100"
+  },
+  "324P": {
+   "areaId": "67",
+   "name": "גבעת וולפסון",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "326P": {
+   "areaId": "97",
+   "name": "דאר אל חנון",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "331P": {
+   "areaId": "20",
+   "name": "חמדת ימים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "3488": {
+   "areaId": "80",
+   "name": "כפר עציון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3557": {
+   "areaId": "77",
+   "name": "קדומים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3558": {
+   "areaId": "79",
+   "name": "תומר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3560": {
+   "areaId": "77",
+   "name": "אלקנה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3563": {
+   "areaId": "80",
+   "name": "תקוע",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3565": {
+   "areaId": "77",
+   "name": "רימונים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3567": {
+   "areaId": "77",
+   "name": "סלעית",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3568": {
+   "areaId": "45",
+   "name": "ריחן",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3570": {
+   "areaId": "77",
+   "name": "אריאל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3571": {
+   "areaId": "77",
+   "name": "שבי שומרון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3572": {
+   "areaId": "77",
+   "name": "כפר תפוח",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3573": {
+   "areaId": "77",
+   "name": "נווה צוף - חלמיש",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3574": {
+   "areaId": "77",
+   "name": "בית אל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3578": {
+   "areaId": "79",
+   "name": "שדמות מחולה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3599": {
+   "areaId": "79",
+   "name": "מחולה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3601": {
+   "areaId": "79",
+   "name": "קליה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3603": {
+   "areaId": "80",
+   "name": "הר גילה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3604": {
+   "areaId": "80",
+   "name": "אלון שבות",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3607": {
+   "areaId": "79",
+   "name": "ייט\"ב",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3608": {
+   "areaId": "79",
+   "name": "מעלה אפרים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3610": {
+   "areaId": "79",
+   "name": "מצפה שלם",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3611": {
+   "areaId": "88",
+   "name": "קרית ארבע",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3612": {
+   "areaId": "79",
+   "name": "בקעות",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3615": {
+   "areaId": "79",
+   "name": "פצאל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3616": {
+   "areaId": "90",
+   "name": "מעלה אדומים",
+   "regionId": "4",
+   "topAreaId": "100"
+  },
+  "3617": {
+   "areaId": "77",
+   "name": "עפרה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3638": {
+   "areaId": "77",
+   "name": "כפר אדומים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3640": {
+   "areaId": "77",
+   "name": "קרני שומרון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3641": {
+   "areaId": "77",
+   "name": "שילה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3644": {
+   "areaId": "77",
+   "name": "גבעון החדשה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3647": {
+   "areaId": "77",
+   "name": "יקיר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3648": {
+   "areaId": "77",
+   "name": "מתתיהו",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3649": {
+   "areaId": "45",
+   "name": "שקד",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3650": {
+   "areaId": "80",
+   "name": "אפרת",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3651": {
+   "areaId": "77",
+   "name": "מעלה מכמש",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3652": {
+   "areaId": "77",
+   "name": "בית אריה / עופרים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3655": {
+   "areaId": "77",
+   "name": "ניל\"י",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3658": {
+   "areaId": "77",
+   "name": "עטרת",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3659": {
+   "areaId": "77",
+   "name": "פסגות",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3660": {
+   "areaId": "77",
+   "name": "עמנואל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3709": {
+   "areaId": "77",
+   "name": "מבוא חורון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3712": {
+   "areaId": "45",
+   "name": "ענב",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3713": {
+   "areaId": "79",
+   "name": "נעמי",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3715": {
+   "areaId": "77",
+   "name": "עלמון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3720": {
+   "areaId": "77",
+   "name": "שערי תקווה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3723": {
+   "areaId": "88",
+   "name": "פני חבר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3724": {
+   "areaId": "88",
+   "name": "נגוהות",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3725": {
+   "areaId": "80",
+   "name": "נווה דניאל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3727": {
+   "areaId": "77",
+   "name": "עלי זהב",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3730": {
+   "areaId": "77",
+   "name": "גבעת זאב",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3743": {
+   "areaId": "88",
+   "name": "טנא",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3745": {
+   "areaId": "88",
+   "name": "מצדות יהודה / בית יתיר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3746": {
+   "areaId": "77",
+   "name": "קרית נטפים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3748": {
+   "areaId": "88",
+   "name": "עתניאל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3750": {
+   "areaId": "77",
+   "name": "אלפי מנשה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3752": {
+   "areaId": "77",
+   "name": "מעלה לבונה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3754": {
+   "areaId": "80",
+   "name": "אספר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3756": {
+   "areaId": "88",
+   "name": "סוסיה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3763": {
+   "areaId": "77",
+   "name": "אדם - גבע בנימין",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3764": {
+   "areaId": "88",
+   "name": "חגי",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3765": {
+   "areaId": "77",
+   "name": "עלי",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3768": {
+   "areaId": "77",
+   "name": "פדואל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3769": {
+   "areaId": "77",
+   "name": "הר אדר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3770": {
+   "areaId": "77",
+   "name": "חשמונאים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3777": {
+   "areaId": "88",
+   "name": "סנסנה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3778": {
+   "areaId": "77",
+   "name": "עץ אפרים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3779": {
+   "areaId": "77",
+   "name": "כוכב יעקב",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3780": {
+   "areaId": "80",
+   "name": "ביתר עילית",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3781": {
+   "areaId": "80",
+   "name": "קדר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3787": {
+   "areaId": "77",
+   "name": "נעלה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3788": {
+   "areaId": "77",
+   "name": "טלמון",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3793": {
+   "areaId": "45",
+   "name": "אבני חפץ",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3795": {
+   "areaId": "77",
+   "name": "רבבה",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3796": {
+   "areaId": "77",
+   "name": "כפר האורנים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3797": {
+   "areaId": "77",
+   "name": "מודיעין עילית",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3822": {
+   "areaId": "77",
+   "name": "רחלים",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "3823": {
+   "areaId": "77",
+   "name": "גני מודיעין",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "4000": {
+   "areaId": "5",
+   "name": "חיפה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "4001": {
+   "areaId": "83",
+   "name": "בוקעתא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4002": {
+   "areaId": "83",
+   "name": "אלי עד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4003": {
+   "areaId": "83",
+   "name": "אל רום",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4005": {
+   "areaId": "83",
+   "name": "חספין",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4006": {
+   "areaId": "83",
+   "name": "קשת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4008": {
+   "areaId": "83",
+   "name": "מעלה גמלא",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4012": {
+   "areaId": "83",
+   "name": "אניעם",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4017": {
+   "areaId": "83",
+   "name": "אלוני הבשן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4022": {
+   "areaId": "83",
+   "name": "גשור",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4024": {
+   "areaId": "83",
+   "name": "קלע",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4025": {
+   "areaId": "83",
+   "name": "קדמת צבי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4026": {
+   "areaId": "83",
+   "name": "חד נס",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4028": {
+   "areaId": "83",
+   "name": "כנף",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4035": {
+   "areaId": "83",
+   "name": "נמרוד",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "409P": {
+   "areaId": "89",
+   "name": "קציעות",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "4100": {
+   "areaId": "83",
+   "name": "קצרין",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4101": {
+   "areaId": "83",
+   "name": "מרום גולן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "410P": {
+   "areaId": "22",
+   "name": "חש'ם זנה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "411P": {
+   "areaId": "70",
+   "name": "מועצה אזורית לב השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "412P": {
+   "areaId": "99",
+   "name": "מועצה אזורית באר טוביה",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "414P": {
+   "areaId": "85",
+   "name": "שבי דרום",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "415P": {
+   "areaId": "9",
+   "name": "פארק תעשיות פלמחים",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "4204": {
+   "areaId": "83",
+   "name": "מבוא חמה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4303": {
+   "areaId": "83",
+   "name": "נווה אטי\"ב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4304": {
+   "areaId": "83",
+   "name": "נוב",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "4551": {
+   "areaId": "83",
+   "name": "נאות גולן",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "5000": {
+   "areaId": "1",
+   "name": "תל אביב יפו",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "567P": {
+   "areaId": "22",
+   "name": "אזור תעשייה רמת בקע",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "601P": {
+   "areaId": "20",
+   "name": "עין כמונים",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "602P": {
+   "areaId": "67",
+   "name": "ימין אורד",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "6100": {
+   "areaId": "78",
+   "name": "בני ברק",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "613P": {
+   "areaId": "22",
+   "name": "א זיאדנה צפונית לרהט",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "617P": {
+   "areaId": "22",
+   "name": "אבו סבית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6200": {
+   "areaId": "11",
+   "name": "בת ים",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "620P": {
+   "areaId": "22",
+   "name": "אבו סבית מזרחית לנבטים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "624P": {
+   "areaId": "22",
+   "name": "אבו קרינאת מערבית לערערה בנגב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "625P": {
+   "areaId": "22",
+   "name": "אבו קרינאת מערבית לדימונה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "628P": {
+   "areaId": "22",
+   "name": "עזאזמה דרומית לשגב שלום",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6300": {
+   "areaId": "3",
+   "name": "גבעתיים",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "630P": {
+   "areaId": "22",
+   "name": "עזאזמה מזרחית לנאות חובב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "632P": {
+   "areaId": "22",
+   "name": "אבו קוידר אל עפאוי דרומית לנבטים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "638P": {
+   "areaId": "22",
+   "name": "אל וקילי אבו סקיק",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6400": {
+   "areaId": "18",
+   "name": "הרצליה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "6500": {
+   "areaId": "15",
+   "name": "חדרה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "650P": {
+   "areaId": "22",
+   "name": "אל אעסם א נבארי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "651P": {
+   "areaId": "22",
+   "name": "אל וכילי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "652P": {
+   "areaId": "22",
+   "name": "אל רפאיעה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "654P": {
+   "areaId": "22",
+   "name": "אבו זקיקה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "656P": {
+   "areaId": "22",
+   "name": "אל הוואשלי אל חריזי מזרח לנבטים",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6600": {
+   "areaId": "11",
+   "name": "חולון",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "661P": {
+   "areaId": "22",
+   "name": "אל קסאסי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "664P": {
+   "areaId": "22",
+   "name": "אבו רביעה צפונית לכסיפה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "666P": {
+   "areaId": "22",
+   "name": "אבו אל קיעאן",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6700": {
+   "areaId": "14",
+   "name": "טבריה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "672P": {
+   "areaId": "22",
+   "name": "אבו סלב מערבית לערערה בנגב",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6800": {
+   "areaId": "6",
+   "name": "קרית אתא",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "685P": {
+   "areaId": "22",
+   "name": "אל מחד'י צפונית לדימונה",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "6900": {
+   "areaId": "42",
+   "name": "כפר סבא",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "691P": {
+   "areaId": "22",
+   "name": "א דנפירי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "694P": {
+   "areaId": "22",
+   "name": "קשכר נבארי",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "7000": {
+   "areaId": "51",
+   "name": "לוד",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "700P": {
+   "areaId": "22",
+   "name": "אל קשכר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "703P": {
+   "areaId": "89",
+   "name": "אל בקאר",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "7100": {
+   "areaId": "21",
+   "name": "אשקלון",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "712P": {
+   "areaId": "85",
+   "name": "מרכז חקלאי אזורי גילת",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "7200": {
+   "areaId": "12",
+   "name": "נס ציונה",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "724P": {
+   "areaId": "99",
+   "name": "מכללת ספיר",
+   "regionId": "2",
+   "topAreaId": "41"
+  },
+  "7300": {
+   "areaId": "91",
+   "name": "נצרת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "732P": {
+   "areaId": "15",
+   "name": "מרכז קניות גן שמואל",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "734P": {
+   "areaId": "70",
+   "name": "מרכז קניות חוצות שפיים",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "7400": {
+   "areaId": "17",
+   "name": "נתניה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "7500": {
+   "areaId": "91",
+   "name": "סח'נין",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "7600": {
+   "areaId": "68",
+   "name": "עכו",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "7700": {
+   "areaId": "13",
+   "name": "עפולה",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "776P": {
+   "areaId": "22",
+   "name": "אבו סבייח",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "778P": {
+   "areaId": "92",
+   "name": "מנזר לטרון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "7800": {
+   "areaId": "15",
+   "name": "פרדס חנה כרכור",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "782P": {
+   "areaId": "24",
+   "name": "מיכרות תמנע",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "785P": {
+   "areaId": "89",
+   "name": "ראם תשלובת חקלאית",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "7900": {
+   "areaId": "4",
+   "name": "פתח תקווה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "8000": {
+   "areaId": "20",
+   "name": "צפת",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "801P": {
+   "areaId": "88",
+   "name": "מצפה יאיר",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "802P": {
+   "areaId": "88",
+   "name": "עשהאל",
+   "regionId": "4",
+   "topAreaId": "75"
+  },
+  "8200": {
+   "areaId": "6",
+   "name": "קרית מוצקין",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "8300": {
+   "areaId": "9",
+   "name": "ראשון לציון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "8400": {
+   "areaId": "12",
+   "name": "רחובות",
+   "regionId": "1",
+   "topAreaId": "41"
+  },
+  "8500": {
+   "areaId": "51",
+   "name": "רמלה",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "8600": {
+   "areaId": "3",
+   "name": "רמת גן",
+   "regionId": "3",
+   "topAreaId": "2"
+  },
+  "8700": {
+   "areaId": "42",
+   "name": "רעננה",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "8900": {
+   "areaId": "91",
+   "name": "טמרה",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "9000": {
+   "areaId": "22",
+   "name": "באר שבע",
+   "regionId": "2",
+   "topAreaId": "43"
+  },
+  "902P": {
+   "areaId": "96",
+   "name": "גן התעשייה תל חי",
+   "regionId": "7",
+   "topAreaId": "25"
+  },
+  "9100": {
+   "areaId": "68",
+   "name": "נהריה",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "9200": {
+   "areaId": "93",
+   "name": "בית שאן",
+   "regionId": "7",
+   "topAreaId": "101"
+  },
+  "9300": {
+   "areaId": "67",
+   "name": "זכרון יעקב",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "9400": {
+   "areaId": "10",
+   "name": "יהוד מונוסון",
+   "regionId": "1",
+   "topAreaId": "2"
+  },
+  "9500": {
+   "areaId": "6",
+   "name": "קרית ביאליק",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "9600": {
+   "areaId": "6",
+   "name": "קרית ים",
+   "regionId": "5",
+   "topAreaId": "25"
+  },
+  "9700": {
+   "areaId": "54",
+   "name": "הוד השרון",
+   "regionId": "1",
+   "topAreaId": "19"
+  },
+  "9800": {
+   "areaId": "15",
+   "name": "בנימינה גבעת עדה",
+   "regionId": "5",
+   "topAreaId": "101"
+  },
+  "9981": {
+   "areaId": "9",
+   "name": "צריפין",
+   "regionId": "1",
+   "topAreaId": "2"
+  }
+ },
+ "generated": "2026-07-15",
+ "regions": {
+  "1": "מרכז והשרון",
+  "2": "דרום",
+  "3": "תל אביב והסביבה",
+  "4": "יהודה, שומרון ובקעת הירדן",
+  "5": "מישור החוף הצפוני",
+  "6": "ירושלים והסביבה",
+  "7": "צפון והעמקים",
+  "8": "ירושלים"
+ },
+ "source": "yad2 address-autocomplete 2-letter+3-letter prefix sweep (660 queries)"
+}

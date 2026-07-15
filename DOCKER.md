@@ -1,15 +1,28 @@
 # Docker
 
-The bot image is Yad2-only and uses the current active Krayot locations from `shared_scrapers_config.py`.
+Multi-user apartment bot. Each Telegram chat adds its own **saved searches**
+(any Yad2 location, picked via fuzzy Hebrew search, with per-search price / rooms
+/ size / mamad / elevator filters) and is notified only about **new** listings.
+For Tel Aviv searches, `rentlyfly.ai` (Facebook Groups) is layered on top of Yad2.
 
-Active filters:
-- Max price: `5800`
-- Rooms: `3.5` to `4.0`
-- Minimum size for Yad2: `65`
-- Mamad required: `True`
-- Elevator required: `True`
+State (users, searches, seen listings, enrichment cache) is stored in a SQLite
+database at `out/bot.db`, persisted via the `./out` volume.
 
-## Build On This Machine
+## Image
+
+A multi-stage build on `python:3.12-slim` (Debian 12). Dependencies are installed
+in a builder stage and copied into the runtime stage, so no build toolchain ships
+in the final image. All dependencies (`python-telegram-bot`, `aiohttp`,
+`aiosqlite`, `rapidfuzz`, `beautifulsoup4`, `Brotli`, APScheduler) ship prebuilt
+wheels for `linux/amd64` and `linux/arm64`, so builds need no compiler.
+
+Check the built size:
+
+```bash
+docker images apt-apt-telegram-bot:latest
+```
+
+## Build
 
 ```bash
 ./build-docker.sh
@@ -17,44 +30,34 @@ Active filters:
 
 ## Run
 
-Create `.env` from `.env.example` and set `TELEGRAM_BOT_TOKEN`, then run:
+Create `.env` from `.env.example` and set `TELEGRAM_BOT_TOKEN` (see `.env.example`
+for optional `CHECK_INTERVAL_SECONDS`, `DB_PATH`, `ENABLE_RENTLYFLY`), then:
 
 ```bash
 ./run-docker.sh
 ```
 
-The container writes persistent state and logs to `./out`.
-
-## Build On Raspberry Pi
-
-Copy this project folder to the Raspberry Pi and run:
-
-```bash
-./build-docker.sh
-./run-docker.sh
-```
-
-The `python:3.12-slim` base image supports Raspberry Pi architectures, so building directly on the Pi is the simplest path.
-
-To stop the running bot:
+The container writes the SQLite DB and logs to `./out`. Stop with:
 
 ```bash
 ./stop-docker.sh
 ```
 
-`docker-compose.yml` is included for machines that have Docker Compose installed, but the shell scripts above only require plain Docker.
+`docker-compose.yml` is provided as an alternative to the shell scripts.
 
-## Export / Import An Image
+## Raspberry Pi
 
-If you build on a Raspberry Pi and want to move the image elsewhere:
+The `python:3.12-slim` base and all wheels support Pi (arm64), so building on the
+Pi works directly:
+
+```bash
+./build-docker.sh && ./run-docker.sh
+```
+
+## Export / Import / Cross-build
 
 ```bash
 docker save apt-apt-telegram-bot:latest -o apt-apt-telegram-bot.tar
 docker load -i apt-apt-telegram-bot.tar
-```
-
-For cross-building from another machine, use Docker Buildx with the Pi platform, for example:
-
-```bash
 docker buildx build --platform linux/arm64 -t apt-apt-telegram-bot:pi --load .
 ```
