@@ -1,0 +1,13 @@
+# Test-only dependencies for the APT-APT suite. Install into a venv:
+#   python -m venv /tmp/aptvenv && /tmp/aptvenv/bin/pip install -r requirements-dev.txt
+# These are NOT needed to run the bot itself (see requirements.txt for that);
+# they are kept out of the app image on purpose.
+pytest>=8
+pytest-asyncio>=0.23
+
+# The app's own runtime deps, repeated here so a bare test venv can import the
+# modules under test.
+aiohttp
+aiosqlite
+rapidfuzz
+brotli

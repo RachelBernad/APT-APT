@@ -13,12 +13,6 @@ from typing import Any, Dict, Optional
 import config
 from models import FEATURES
 
-_SOURCE_LABELS = {
-    "yad2": "Yad2",
-    "rentlyfly": "Rentlyfly (Facebook groups)",
-    "facebook groups": "Rentlyfly (Facebook groups)",  # legacy label compat
-}
-
 
 def _html_value(value: Any) -> str:
     return html.escape(str(value), quote=False)
@@ -66,14 +60,13 @@ def format_apartment_message(apt: Dict[str, Any]) -> str:
         or "N/A"
     )
     url = html.escape(str(apt.get("apartment_page_url", "N/A")), quote=True)
-    source = _SOURCE_LABELS.get(apt.get("type", ""), apt.get("type", "Unknown"))
 
-    # Only include fields we actually know. Yad2 markers carry no description /
+    # Only include fields we actually know. Some sources carry no description /
     # tags / mamad and only known-elevator, so printing "Unknown"/"N/A" for them
-    # reads as broken; rentlyfly listings do carry these and will show them.
+    # reads as broken; richer listings do carry these and will show them.
+    # The source is intentionally NOT shown to the user.
     lines = [
         "<b>🏠 Apartment Found!</b>",
-        f"<b>Source:</b> {_html_value(source)}",
         f"<b>Price:</b> {_format_price(apt.get('price', 'N/A'))}",
         f"<b>Location:</b> {location}",
     ]

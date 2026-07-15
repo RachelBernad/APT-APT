@@ -57,8 +57,8 @@ def bar_keyboard() -> ReplyKeyboardMarkup:
 
 HELP_TEXT = (
     "<b>🏠 Apartment Finder</b>\n"
-    "I watch Yad2 (all of Israel) and Rentlyfly (Tel Aviv) and ping you when a "
-    "<b>new</b> rental that matches your monitor is posted.\n\n"
+    "I watch rental listings across <b>all of Israel</b> and ping you when a "
+    "<b>new</b> one that matches your monitor is posted.\n\n"
     "<b>How it works</b>\n"
     "• A <b>monitor</b> = one or more <b>areas</b> + your filters.\n"
     "• Start by choosing a <b>city</b> (type any city, or tap a popular one), then "
@@ -124,10 +124,6 @@ def _add_location(draft: dict, target: LocationTarget) -> bool:
     if not draft["label"]:
         draft["label"] = target.display_name
     return True
-
-
-def _is_tlv(draft: dict) -> bool:
-    return any(t.city_id == config.TEL_AVIV_CITY_ID for t in draft["locations"])
 
 
 # --- screen renderers ---
@@ -267,8 +263,6 @@ def _render_card(draft: dict) -> tuple:
     cond_label = PROPERTY_CONDITIONS.get(cond, "Any") if cond else "Any"
     feats = draft["features"]
     feats_label = "None" if not feats else ", ".join(feature_label(k) for k in feats)
-    src = draft["source_mode"]
-    src_label = "Yad2 + Rentlyfly" if src == "auto" else "Yad2 only"
 
     text = (
         f"<b>🎛 Monitor filters</b>\n"
@@ -281,8 +275,6 @@ def _render_card(draft: dict) -> tuple:
         f"🛠 Condition: <b>{cond_label}</b>\n"
         f"✨ Features: <b>{feats_label}</b>\n"
     )
-    if _is_tlv(draft):
-        text += f"🔗 Source: <b>{src_label}</b>\n"
     text += "\nAdjust anything, then <b>Save</b>."
 
     rows = [
@@ -295,8 +287,6 @@ def _render_card(draft: dict) -> tuple:
         [InlineKeyboardButton("✨ Features", callback_data="wz:feats"),
          InlineKeyboardButton(f"📍 Areas ({len(locs)})", callback_data="az:home")],
     ]
-    if _is_tlv(draft):
-        rows.append([InlineKeyboardButton(f"🔗 Source: {src_label}", callback_data="wz:toggle:src")])
     # In edit mode, offer "Back" (to the monitor list) instead of a destructive
     # Cancel; when adding, keep Cancel (there's no list to go back to yet).
     if draft.get("edit_id"):
@@ -570,9 +560,7 @@ class BotHandlers:
             return AREAS
         if parts[0] == "rng":
             return await self._range_cb(query, context, draft, parts)
-        if data == "wz:toggle:src":
-            draft["source_mode"] = "yad2" if draft["source_mode"] == "auto" else "auto"
-        elif data == "wz:types":
+        if data == "wz:types":
             return await self._show_types(query, draft)
         elif data == "wz:cond":
             return await self._show_cond(query, draft)

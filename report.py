@@ -9,12 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from models import FEATURES
 
-_SOURCE_BADGE = {
-    "yad2": ("Yad2", "#e6007e"),
-    "rentlyfly": ("Rentlyfly", "#6c5ce7"),
-    "facebook groups": ("Rentlyfly", "#6c5ce7"),
-}
-
 
 def _esc(v: Any) -> str:
     return html.escape(str(v if v is not None else ""), quote=True)
@@ -54,9 +48,6 @@ def _card(listing: Dict) -> str:
     images = listing.get("images") or []
     if images:
         img = f'<div class="thumb" style="background-image:url(\'{_esc(images[0])}\')"></div>'
-    src = listing.get("type", "yad2")
-    badge_text, badge_color = _SOURCE_BADGE.get(src, ("", "#888"))
-    badge = f'<span class="badge" style="background:{badge_color}">{_esc(badge_text)}</span>' if badge_text else ""
 
     loc = _esc(listing.get("location") or listing.get("hood") or listing.get("city") or "")
     meta = []
@@ -77,7 +68,7 @@ def _card(listing: Dict) -> str:
         '<article class="card">'
         f'{img}'
         '<div class="body">'
-        f'<div class="row"><span class="price">{_price_label(listing)}</span>{badge}</div>'
+        f'<div class="row"><span class="price">{_price_label(listing)}</span></div>'
         f'<div class="loc">📍 {loc}</div>'
         + (f'<div class="meta">{meta_html}</div>' if meta_html else "")
         + (f'<div class="chips">{chips}</div>' if chips else "")
@@ -147,6 +138,6 @@ def render(listings: List[Dict], when: str, title: str = "הדירות שלי ה
   <main class="wrap">
     {cards if cards else '<p style="text-align:center;color:#888">אין תוצאות כרגע.</p>'}
   </main>
-  <footer>נוצר על ידי בוט הדירות · הנתונים מ-Yad2 ו-Rentlyfly</footer>
+  <footer>נוצר על ידי בוט הדירות</footer>
 </body>
 </html>"""
