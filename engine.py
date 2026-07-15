@@ -26,13 +26,14 @@ import rentlyfly
 import yad2_gateway
 from db import Database
 from formatting import (format_apartment_message, format_backfill_intro,
-                       format_monitor_started_empty, format_price_change)
+                       format_monitor_started_empty, format_price_change,
+                       main_image)
 from models import (GatewayFilters, LocationSignature, LocationTarget,
                    SavedSearch, normalize_name)
 
 logger = logging.getLogger(__name__)
 
-Sender = Callable[[int, str], Awaitable[bool]]
+Sender = Callable[..., Awaitable[bool]]   # (chat_id, text, photo=None) -> bool
 
 # group key = (scrape signature, required-feature set)
 GroupKey = Tuple[LocationSignature, FrozenSet[str]]
@@ -273,7 +274,7 @@ async def route_notifications(
                 uid = listing["uid"]
                 if uid in chat_seen:
                     continue
-                if await send(s.chat_id, format_apartment_message(listing)):
+                if await send(s.chat_id, format_apartment_message(listing), main_image(listing)):
                     chat_seen.add(uid)
                     await _pace()
         else:
@@ -289,7 +290,7 @@ async def route_notifications(
         if uid not in seen:
             if uid in chat_seen:
                 to_insert.append((uid, price))
-            elif await send(s.chat_id, format_apartment_message(listing)):
+            elif await send(s.chat_id, format_apartment_message(listing), main_image(listing)):
                 chat_seen.add(uid)
                 to_insert.append((uid, price))
                 await _pace()
@@ -297,7 +298,7 @@ async def route_notifications(
         elif seen[uid] != price and price is not None:
             if uid in chat_seen:
                 await db.update_seen_price(s.id, uid, price)
-            elif await send(s.chat_id, format_price_change(listing, seen[uid])):
+            elif await send(s.chat_id, format_price_change(listing, seen[uid]), main_image(listing)):
                 chat_seen.add(uid)
                 await db.update_seen_price(s.id, uid, price)
                 await _pace()

@@ -53,6 +53,29 @@ def _blank(value: Any) -> bool:
     return value in (None, "", "N/A")
 
 
+def main_image(apt: Dict[str, Any]) -> Optional[str]:
+    """First usable http(s) image URL for a listing, or None (both Yad2 &
+    rentlyfly populate ``images``). Used to send the message as a photo preview."""
+    for url in apt.get("images") or []:
+        if isinstance(url, str) and url.startswith("http"):
+            return url
+    return None
+
+
+def photo_caption(text: str, limit: int = 1024) -> str:
+    """Trim a rendered message to Telegram's photo-caption limit on whole-line
+    boundaries, so the HTML stays valid (we only ever drop trailing lines)."""
+    if len(text) <= limit:
+        return text
+    out, total = [], 0
+    for line in text.split("\n"):
+        if total + len(line) + 1 > limit - 24:      # margin for safety
+            break
+        out.append(line)
+        total += len(line) + 1
+    return "\n".join(out)
+
+
 def format_apartment_message(apt: Dict[str, Any]) -> str:
     location = _html_value(
         apt.get("location")

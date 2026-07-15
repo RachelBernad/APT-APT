@@ -54,22 +54,25 @@ def make_listing(uid: str, price: Optional[int] = 5000, order_id: Optional[int] 
 class FakeSender:
     """Stand-in for the Telegram send callable used by the router.
 
-    Records every (chat_id, text) pair. By default every send succeeds; pass
-    ``fail=True`` to simulate a transient delivery failure (the router must then
-    NOT record the listing as seen).
+    Records every (chat_id, text, photo) triple. By default every send succeeds;
+    pass ``fail=True`` to simulate a transient delivery failure (the router must
+    then NOT record the listing as seen).
     """
 
     def __init__(self, fail: bool = False):
         self.fail = fail
         self.sent: List[tuple] = []
 
-    async def __call__(self, chat_id: int, text: str) -> bool:
-        self.sent.append((chat_id, text))
+    async def __call__(self, chat_id: int, text: str, photo: Optional[str] = None) -> bool:
+        self.sent.append((chat_id, text, photo))
         return not self.fail
+
+    def photos(self) -> List[Optional[str]]:
+        return [p for _, _, p in self.sent]
 
     # convenience views over what was sent
     def texts(self) -> List[str]:
-        return [t for _, t in self.sent]
+        return [t for _, t, _ in self.sent]
 
     def count(self, needle: str) -> int:
         return sum(1 for t in self.texts() if needle in t)

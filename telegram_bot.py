@@ -16,6 +16,7 @@ from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
 
 import config
 import engine
+import formatting
 from db import Database
 from handlers import BAR_HELP, BAR_LIST, BAR_REPORT, BotHandlers
 
@@ -36,7 +37,37 @@ class Bot:
         self.http: aiohttp.ClientSession | None = None
         self.handlers: BotHandlers | None = None
 
-    async def send(self, chat_id: int, text: str) -> bool:
+    async def send(self, chat_id: int, text: str, photo: str | None = None) -> bool:
+        """Deliver a message. When ``photo`` is given, send it as a photo with the
+        message as caption (image preview); on any photo failure — bad/expired image
+        URL, caption too long, CDN blocking Telegram — fall back to an HTML text
+        message so the listing is never lost. Handles flood-control + blocked users."""
+        if photo:
+            caption = formatting.photo_caption(text)
+            try:
+                await self.application.bot.send_photo(
+                    chat_id=chat_id, photo=photo, caption=caption, parse_mode="HTML")
+                return True
+            except RetryAfter as exc:
+                wait = int(getattr(exc, "retry_after", 5)) + random.randint(1, 5)
+                logger.info("Flood control (photo): waiting %ss for chat %s", wait, chat_id)
+                await asyncio.sleep(wait)
+                try:
+                    await self.application.bot.send_photo(
+                        chat_id=chat_id, photo=photo, caption=caption, parse_mode="HTML")
+                    return True
+                except TelegramError:
+                    pass  # fall through to text
+            except Forbidden:
+                logger.info("Chat %s blocked/removed the bot; deactivating.", chat_id)
+                await self.db.set_user_active(chat_id, False)
+                return False
+            except TelegramError as exc:
+                logger.info("Photo send failed for chat %s (%s); sending text instead.",
+                            chat_id, exc)
+        return await self._send_text(chat_id, text)
+
+    async def _send_text(self, chat_id: int, text: str) -> bool:
         """Send an HTML message with flood-control + blocked-user handling."""
         try:
             await self.application.bot.send_message(
