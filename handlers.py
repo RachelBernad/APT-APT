@@ -228,8 +228,11 @@ def _hoods_screen(draft: dict, rid: int, cid: int, q_idx: int) -> tuple:
         count += 1 if on else 0
         rows.append([InlineKeyboardButton(f"{'✅' if on else '➕'} {hood}",
                                          callback_data=f"az:h:{rid}:{cid}:{q_idx}:{h_idx}")])
-    rows.append([InlineKeyboardButton("↩ Quarters", callback_data=f"az:city:{rid}:{cid}"),
-                InlineKeyboardButton("✔ Done", callback_data="az:home")])
+    nav = [InlineKeyboardButton("↩ Quarters", callback_data=f"az:city:{rid}:{cid}")]
+    if draft["locations"]:
+        nav.append(InlineKeyboardButton(
+            f"✅ Done ({len(draft['locations'])})", callback_data="az:done"))
+    rows.append(nav)
     return (f"<b>{quarter['name']}</b> — tap to add/remove ({count} selected here):",
             InlineKeyboardMarkup(rows))
 
@@ -244,8 +247,11 @@ def _flat_hoods_screen(draft: dict, browse: dict) -> tuple:
         f"{'✅' if normalize_name(h) in chosen else '➕'} {h}", callback_data=f"az:bh:{i}")]
         for i, h in enumerate(hoods)]
     total_sel = sum(1 for h in hoods if normalize_name(h) in chosen)
-    done_label = f"✅ Done ({total_sel})" if total_sel else "↩ Back"
-    rows.append([InlineKeyboardButton(done_label, callback_data="az:home")])
+    nav = [InlineKeyboardButton("↩ Back", callback_data="az:home")]
+    if draft["locations"]:
+        nav.append(InlineKeyboardButton(
+            f"✅ Done ({len(draft['locations'])})", callback_data="az:done"))
+    rows.append(nav)
     return (f"<b>{name}</b> — watch the whole city, or tap specific neighborhoods "
             f"({total_sel} selected):", InlineKeyboardMarkup(rows))
 
