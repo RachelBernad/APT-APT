@@ -371,3 +371,76 @@ async def test_run_cycle_empty_scrape_does_not_prime(db, monkeypatch):
     await engine.run_cycle(sender, db, http=None)
     assert sender.sent == []
     assert (await db.get_search(s.id)).is_primed is False
+
+
+# --- run_cycle logging: quiet unless it delivered or broke ------------------
+
+def _engine_info(caplog):
+    return [r.getMessage() for r in caplog.records
+            if r.name == "engine" and r.levelname == "INFO"]
+
+
+async def test_uneventful_cycle_logs_nothing_at_info(db, monkeypatch, caplog):
+    """The whole point of the change: a healthy cycle with nothing new must not
+    write a single INFO line (it used to write ~4 every 15 minutes)."""
+    s = await _seed_search(db, primed=True)
+    await db.bulk_upsert_seen(s.id, [("yad2:old", 5000)])
+
+    async def fake_fetch_map(http, sig, f):
+        return [{"token": "old", "price": 5000, "address": {"city": {"text": "תל אביב"}},
+                 "additionalDetails": {"roomsCount": 3}, "metaData": {}, "orderId": 1}]
+
+    async def fake_rl(http, f):
+        return []
+
+    monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
+    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
+
+    sender = FakeSender()
+    with caplog.at_level("DEBUG", logger="engine"):
+        await engine.run_cycle(sender, db, http=None)
+    assert sender.sent == []          # nothing new to send
+    assert _engine_info(caplog) == []  # ...so nothing said about it
+    # the work still happened, just at DEBUG
+    assert any("Scraped" in r.getMessage() for r in caplog.records)
+
+
+async def test_cycle_that_sends_logs_one_summary(db, monkeypatch, caplog):
+    s = await _seed_search(db, primed=True)
+    await db.bulk_upsert_seen(s.id, [("yad2:old", 5000)])
+
+    async def fake_fetch_map(http, sig, f):
+        return [{"token": "fresh", "price": 6000, "address": {"city": {"text": "תל אביב"}},
+                 "additionalDetails": {"roomsCount": 3}, "metaData": {}, "orderId": 2}]
+
+    async def fake_rl(http, f):
+        return []
+
+    monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
+    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
+
+    sender = FakeSender()
+    with caplog.at_level("INFO", logger="engine"):
+        await engine.run_cycle(sender, db, http=None)
+    summaries = [m for m in _engine_info(caplog) if m.startswith("Cycle:")]
+    assert len(summaries) == 1
+    assert "sent 1 message(s) to 1 chat(s)" in summaries[0]
+
+
+async def test_failed_cycle_still_reports(db, monkeypatch, caplog):
+    """'Only when there was a problem' — a broken scrape must stay visible."""
+    await _seed_search(db, primed=True)
+
+    async def empty_fetch_map(http, sig, f):
+        return []
+
+    async def fake_rl(http, f):
+        return []
+
+    monkeypatch.setattr(yad2_gateway, "fetch_map", empty_fetch_map)
+    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
+
+    with caplog.at_level("INFO", logger="engine"):
+        await engine.run_cycle(FakeSender(), db, http=None)
+    assert any("bad scrape" in m for m in _engine_info(caplog))
+    assert any(r.levelname == "WARNING" for r in caplog.records)

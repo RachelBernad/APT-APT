@@ -704,6 +704,8 @@ class BotHandlers:
                 f"✅ <b>Monitor updated</b> — {areas}.\n"
                 f"🔎 Fetching a fresh sample now, then I'll keep watching every {interval} minutes…",
                 parse_mode=ParseMode.HTML)
+            logger.info("chat %s UPDATED monitor #%s (%d area%s): %s",
+                       chat_id, draft["edit_id"], n, "" if n == 1 else "s", areas)
             self._scan_soon(draft["edit_id"])
         else:
             await self.db.upsert_user(chat_id, update.effective_user.username if update.effective_user else None)
@@ -722,6 +724,8 @@ class BotHandlers:
                 f"🔎 Fetching a <b>sample of current matches</b> now… then I'll check "
                 f"<b>every {interval} minutes</b> and alert you about new listings. 🎯",
                 parse_mode=ParseMode.HTML)
+            logger.info("chat %s CREATED monitor #%s (%d area%s): %s",
+                       chat_id, new_id, n, "" if n == 1 else "s", areas)
             self._scan_soon(new_id)
         context.user_data.clear()
         return ConversationHandler.END
@@ -784,6 +788,7 @@ class BotHandlers:
                              f"Open it on your phone 📱 — tap any card to view the listing."),
                     parse_mode=ParseMode.HTML)
             await self.db.set_meta(f"last_report:{chat_id}", datetime.datetime.utcnow().isoformat())
+            logger.info("chat %s received a daily report (%d listings)", chat_id, len(listings))
             try:
                 await status.delete()
             except Exception:

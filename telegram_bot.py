@@ -9,11 +9,12 @@ import logging
 import random
 
 import aiohttp
-from telegram import BotCommand
+from telegram import BotCommand, Update
 from telegram.error import Forbidden, RetryAfter, TelegramError
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
-                          MessageHandler, filters)
+                          MessageHandler, TypeHandler, filters)
 
+import activity
 import config
 import engine
 import formatting
@@ -63,8 +64,10 @@ class Bot:
                 await self.db.set_user_active(chat_id, False)
                 return False
             except TelegramError as exc:
-                logger.info("Photo send failed for chat %s (%s); sending text instead.",
-                            chat_id, exc)
+                # Self-healing (we fall back to text) and fires per dead image URL,
+                # so it's cycle noise rather than a problem worth surfacing.
+                logger.debug("Photo send failed for chat %s (%s); sending text instead.",
+                             chat_id, exc)
         return await self._send_text(chat_id, text)
 
     async def _send_text(self, chat_id: int, text: str) -> bool:
@@ -114,6 +117,11 @@ class Bot:
 
     def _register_handlers(self):
         h = self.handlers
+        # Group -1: passive observer that logs every user action (and new users)
+        # before the real handlers run. PTB runs one handler per group, so this
+        # never consumes the update.
+        self.application.add_handler(
+            TypeHandler(Update, activity.make_logger(self.db)), group=-1)
         # Conversation first: owns /add, the ➕ Add monitor bar button, home:add
         # and the ms:edit entry.
         self.application.add_handler(h.build_conversation())

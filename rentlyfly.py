@@ -168,5 +168,5 @@ async def fetch_tel_aviv(http: aiohttp.ClientSession, f: GatewayFilters) -> List
         results.extend(normalize(item) for item in data)
         if not (payload.get("pagination", {}) or {}).get("hasMore", False):
             break
-    logger.info("rentlyfly returned %d Tel Aviv listings", len(results))
+    logger.debug("rentlyfly returned %d Tel Aviv listings", len(results))
     return results

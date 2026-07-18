@@ -25,6 +25,8 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     chat_id    INTEGER PRIMARY KEY,
     username   TEXT,
+    first_name TEXT,
+    last_name  TEXT,
     is_active  INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
 );
@@ -204,6 +206,7 @@ class Database:
         await self._conn.executescript(_SCHEMA)
         await self._repair_seen_fk()
         await self._migrate_city_id_text()
+        await self._migrate_user_names()
         await self._conn.execute(
             "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
             (SCHEMA_VERSION,),
@@ -285,6 +288,21 @@ class Database:
         await self._conn.commit()
         logger.warning("search_locations.city_id migrated to TEXT.")
 
+    async def _migrate_user_names(self) -> None:
+        """Add ``first_name``/``last_name`` to an older ``users`` table.
+
+        Telegram only gives a ``username`` when the user set one (most don't), so
+        without these the DB can't say who is actually using the bot. Additive
+        ALTERs: existing rows stay valid and backfill themselves as users interact.
+        """
+        if not await self._table_exists("users"):
+            return
+        cols = await self._columns("users")
+        for col in ("first_name", "last_name"):
+            if col not in cols:
+                await self._conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+                logger.warning("Added users.%s column.", col)
+
     async def _maybe_migrate_v1(self) -> None:
         """Migrate a v1 (single-location) saved_searches into v2 in place."""
         if not await self._table_exists("saved_searches"):
@@ -342,15 +360,30 @@ class Database:
             self._conn = None
 
     # --- users ---
-    async def upsert_user(self, chat_id: int, username: Optional[str]) -> None:
+    async def upsert_user(self, chat_id: int, username: Optional[str],
+                         first_name: Optional[str] = None,
+                         last_name: Optional[str] = None) -> bool:
+        """Record/refresh a user. Returns True if this chat was seen for the FIRST
+        time (used to log "a new user started a chat").
+
+        Names are COALESCE-d so a caller that only knows the username can't wipe a
+        name we already captured.
+        """
         async with self._write_lock:
+            cur = await self._conn.execute(
+                "SELECT 1 FROM users WHERE chat_id=?", (chat_id,))
+            is_new = await cur.fetchone() is None
             await self._conn.execute(
-                "INSERT INTO users(chat_id, username, is_active, created_at) "
-                "VALUES (?, ?, 1, ?) "
-                "ON CONFLICT(chat_id) DO UPDATE SET username=excluded.username",
-                (chat_id, username, _now()),
+                "INSERT INTO users(chat_id, username, first_name, last_name, is_active, created_at) "
+                "VALUES (?, ?, ?, ?, 1, ?) "
+                "ON CONFLICT(chat_id) DO UPDATE SET "
+                "  username=excluded.username, "
+                "  first_name=COALESCE(excluded.first_name, users.first_name), "
+                "  last_name=COALESCE(excluded.last_name, users.last_name)",
+                (chat_id, username, first_name, last_name, _now()),
             )
             await self._conn.commit()
+            return is_new
 
     async def set_user_active(self, chat_id: int, active: bool) -> None:
         async with self._write_lock:
