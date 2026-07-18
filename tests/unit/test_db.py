@@ -167,6 +167,75 @@ async def test_repair_seen_listings_dangling_fk(tmp_path):
         await db.close()
 
 
+# --- users: new-user detection + name capture -----------------------------
+
+async def test_upsert_user_reports_first_contact_only_once(db):
+    assert await db.upsert_user(1234, "handle", "Netneal") is True
+    assert await db.upsert_user(1234, "handle", "Netneal") is False
+
+
+async def test_upsert_user_stores_names(db):
+    await db.upsert_user(1234, "handle", "Shahar", "Ohava")
+    cur = await db._conn.execute(
+        "SELECT username, first_name, last_name FROM users WHERE chat_id=1234")
+    row = await cur.fetchone()
+    assert (row["username"], row["first_name"], row["last_name"]) == \
+        ("handle", "Shahar", "Ohava")
+
+
+async def test_two_arg_upsert_does_not_wipe_a_known_name(db):
+    """Legacy call sites pass only a username; the COALESCE must keep the name."""
+    await db.upsert_user(1234, "handle", "Shahar", "Ohava")
+    await db.upsert_user(1234, "handle")          # old-style call
+    cur = await db._conn.execute(
+        "SELECT first_name, last_name FROM users WHERE chat_id=1234")
+    row = await cur.fetchone()
+    assert (row["first_name"], row["last_name"]) == ("Shahar", "Ohava")
+
+
+# --- migration: users gains first_name/last_name ---------------------------
+
+async def test_migrate_adds_user_name_columns(tmp_path):
+    """A deployed DB predates the name columns; CREATE TABLE IF NOT EXISTS won't
+    add them, so the guarded ALTER must — without losing the existing rows."""
+    path = str(tmp_path / "old_users.db")
+    con = sqlite3.connect(path)
+    con.executescript(
+        "CREATE TABLE users (chat_id INTEGER PRIMARY KEY, username TEXT,"
+        " is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);"
+    )
+    con.execute("INSERT INTO users(chat_id, username, is_active, created_at) "
+                "VALUES (735551731, NULL, 1, '2026-07-15T07:55:52')")
+    con.commit()
+    con.close()
+
+    db = await Database(path).connect()
+    try:
+        assert {"first_name", "last_name"} <= await db._columns("users")
+        cur = await db._conn.execute(
+            "SELECT username, first_name, is_active, created_at FROM users "
+            "WHERE chat_id=735551731")
+        row = await cur.fetchone()
+        assert row is not None                       # pre-existing row survived
+        assert row["first_name"] is None             # backfills when they next act
+        assert row["created_at"] == "2026-07-15T07:55:52"
+        # An existing user must not be reported as brand new after the migration.
+        assert await db.upsert_user(735551731, None, "Shahar", "Ohava") is False
+    finally:
+        await db.close()
+
+
+async def test_migration_is_idempotent(tmp_path):
+    path = str(tmp_path / "twice.db")
+    db = await Database(path).connect()
+    await db.close()
+    db = await Database(path).connect()              # re-running must be a no-op
+    try:
+        assert {"first_name", "last_name"} <= await db._columns("users")
+    finally:
+        await db.close()
+
+
 # --- migration: v1 (single-location) -> v2 --------------------------------
 
 async def test_migrate_v1_to_v2(tmp_path):

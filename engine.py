@@ -209,7 +209,8 @@ async def scrape_group(
         for listing in await rentlyfly.fetch_tel_aviv(http, f):
             listings.setdefault(listing["uid"], listing)
 
-    logger.info(
+    # Routine per-cycle bookkeeping: DEBUG, so a healthy cycle stays silent.
+    logger.debug(
         "Scraped %d listings for region=%s area=%s city=%s features=%s (watchers=%d)",
         len(listings), sig.region_id, sig.area_id, sig.city_id, f.features, len(members),
     )
@@ -372,12 +373,12 @@ async def scan_search(send: Sender, db: Database, http: aiohttp.ClientSession,
 async def run_cycle(send: Sender, db: Database, http: aiohttp.ClientSession) -> None:
     searches = await db.get_active_searches()
     if not searches:
-        logger.info("No active searches; skipping cycle.")
+        logger.debug("No active searches; skipping cycle.")
         return
 
     groups = group_searches(searches)
-    logger.info("Running cycle: %d active searches in %d scrape groups",
-                len(searches), len(groups))
+    logger.debug("Running cycle: %d active searches in %d scrape groups",
+                 len(searches), len(groups))
 
     # Scrape groups CONCURRENTLY (bounded), then accumulate each search's matches
     # across all the groups it spans — a search with targets in several cities/
@@ -385,6 +386,21 @@ async def run_cycle(send: Sender, db: Database, http: aiohttp.ClientSession) -> 
     search_obj: Dict[int, SavedSearch] = {}
     search_finals: Dict[int, Dict[str, Dict]] = defaultdict(dict)  # sid -> uid -> listing
     failed: set = set()  # searches whose scrape (any group) failed — skip to avoid flood
+
+    # Count what actually reached a user, so a cycle that did nothing logs nothing.
+    # Wrapping the sender keeps route_notifications untouched.
+    sent = 0
+    chats: set = set()
+    bad_groups = 0
+    route_errors = 0
+
+    async def counting_send(chat_id, text, photo=None) -> bool:
+        nonlocal sent
+        ok = await send(chat_id, text, photo)
+        if ok:
+            sent += 1
+            chats.add(chat_id)
+        return ok
 
     sem = asyncio.Semaphore(max(1, config.SCRAPE_CONCURRENCY))
 
@@ -407,6 +423,7 @@ async def run_cycle(send: Sender, db: Database, http: aiohttp.ClientSession) -> 
             # don't prime on a partial view and flood on the next successful cycle.
             logger.warning("Empty scrape for region=%s area=%s city=%s features=%s.",
                           sig.region_id, sig.area_id, sig.city_id, list(feats))
+            bad_groups += 1
             for s, _ in members:
                 failed.add(s.id)
             continue
@@ -423,6 +440,19 @@ async def run_cycle(send: Sender, db: Database, http: aiohttp.ClientSession) -> 
             logger.warning("Skipping search #%s this cycle — a scrape group failed.", sid)
             continue
         try:
-            await route_notifications(send, db, s, list(search_finals[sid].values()), notified)
+            await route_notifications(counting_send, db, s, list(search_finals[sid].values()), notified)
         except Exception as exc:
+            route_errors += 1
             logger.error("Routing failed for search #%s: %s", s.id, exc)
+
+    # Only speak up when the cycle delivered something or hit trouble; a healthy,
+    # uneventful cycle is silent at INFO (it used to log ~4 lines every 15 min).
+    if sent or bad_groups or failed or route_errors:
+        logger.info(
+            "Cycle: sent %d message(s) to %d chat(s) across %d searches/%d groups"
+            " — %d bad scrape(s), %d search(es) skipped, %d routing error(s).",
+            sent, len(chats), len(searches), len(groups),
+            bad_groups, len(failed), route_errors)
+    else:
+        logger.debug("Cycle clean: nothing new (%d searches, %d groups).",
+                     len(searches), len(groups))

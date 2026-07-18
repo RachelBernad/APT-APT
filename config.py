@@ -127,10 +127,13 @@ def setup_logging() -> logging.Logger:
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
-    # Quiet down noisy libraries.
+    # Quiet down noisy libraries. apscheduler logs an "Added job"/"Removed job"
+    # pair for every conversation-timeout reschedule — i.e. two lines per button
+    # tap — which would drown the activity log it sits next to.
     logging.getLogger("telegram").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
     return logging.getLogger(__name__)
 
