@@ -1,4 +1,3 @@
-# activity.py
 """One log line per user action.
 
 Registered as a ``TypeHandler(Update, ...)`` in **group -1**, so it observes every

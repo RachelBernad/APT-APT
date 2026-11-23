@@ -1,4 +1,3 @@
-# telegram_bot.py
 """Entry point: a multi-user apartment bot.
 
 Runs a python-telegram-bot polling app (per-user saved searches) and, in the

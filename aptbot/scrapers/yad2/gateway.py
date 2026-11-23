@@ -1,4 +1,3 @@
-# yad2_gateway.py
 """Client for the Yad2 gateway (gw.yad2.co.il).
 
 The ``/realestate-feed/rent/map`` endpoint applies price/rooms/sqm/floor/elevator

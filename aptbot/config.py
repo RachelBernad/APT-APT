@@ -1,4 +1,3 @@
-# config.py
 """Central, environment-driven configuration for the apartment bot.
 
 Every setting is overridable via environment variables so the same image can be

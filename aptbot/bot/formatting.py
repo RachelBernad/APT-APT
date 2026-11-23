@@ -1,4 +1,3 @@
-# formatting.py
 """Render normalized listing dicts into Telegram HTML messages.
 
 New-listing, price-change and monitor-started messages, plus the photo-preview

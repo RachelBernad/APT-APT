@@ -1,4 +1,3 @@
-# locations.py
 """Resolve user input into Yad2 location targets, and browse a bundled catalog.
 
 Two ways to pick an area:

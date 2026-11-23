@@ -1,4 +1,4 @@
-"""yad2_gateway.py: param building (string city id!), challenge detection,
+"""aptbot.scrapers.yad2.gateway: param building (string city id!), challenge detection,
 marker normalization, and the 200-cap price-bisection recovery (offline).
 
 INVARIANT #4: fetch_map bisects the price interval whenever a scope returns

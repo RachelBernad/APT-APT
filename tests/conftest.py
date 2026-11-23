@@ -1,7 +1,7 @@
 """Shared fixtures + helpers for the APT-APT test suite.
 
 Unit tests (tests/unit) are fully offline: any HTTP is monkeypatched and SQLite
-uses temp files. Live tests (tests/live) hit the real Yad2 / rentlyfly APIs and
+uses temp files. Live tests (tests/live) hit the real Yad2 gateway and
 are opt-in via `-m live`.
 """
 from __future__ import annotations

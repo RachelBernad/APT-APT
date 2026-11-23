@@ -75,7 +75,7 @@ Field notes:
 - Keep the full candidate object (all ids) server-side; reference it by index in callback data.
 - `locations.batch_autocomplete(terms)` unions candidates across several queries (dedup by
   level+ids) to beat the ~5-per-category cap — implemented and available, but currently unused:
-  no handler calls it, and `scripts/harvest_locations.py`'s own sweep hits the endpoint directly
+  no handler calls it, and `harvest_locations.py`'s own sweep hits the endpoint directly
   rather than going through it.
 - Results are cached in-process (`_AC_CACHE`, keyed by the normalized Hebrew query text) since
   location text → candidates is stable. Capped at 2000 entries with no eviction — once full, new

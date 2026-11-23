@@ -30,7 +30,7 @@ GET https://gw.yad2.co.il/realestate-feed/rent/map?region=<id>&<narrowers>&<filt
 
 > **How the bot actually uses `property` vs. `propertyCondition`:** the bot pushes `property`
 > server-side (unioned across a scrape group's watchers — see [README](./README.md#how-the-bot-uses-this)),
-> but **never sends `propertyCondition` to the gateway** — `yad2_gateway._build_params()` has no
+> but **never sends `propertyCondition` to the gateway** — `gateway._build_params()` has no
 > handling for it and `engine.union_filters()` never populates `GatewayFilters.property_condition`.
 > Condition is instead matched **locally** against each marker's `additionalDetails.propertyCondition.id`
 > (`engine.matches_non_amenity()`). The param is real and gateway-honored (confirmed live), the bot
@@ -180,7 +180,7 @@ The side lists (re-checked 2026-11-23, Florentin):
 
 - **`token`** is the listing id. Item page: `https://www.yad2.co.il/realestate/item/<token>`
   (Radware-blocked — do **not** rely on it for enrichment; see [anti-bot](./anti-bot-radware.md)).
-- Markers carry **no tags/description and no `mamad`/`elevator` flags** — those live only on the
+- Markers carry **no description and no amenity (`shelter`/`elevator`/…) flags** — those live only on the
   (blocked) item page.
 
 ## Caveats
@@ -191,14 +191,14 @@ The feed returns **at most 200 markers**, with no pagination and no total. A tig
 location has more matches. Mitigations:
 
 - **Price-band bisection** — split `[minPrice,maxPrice]` recursively until each band returns < 200.
-  The bot (`yad2_gateway.fetch_map`) bisects until the band is done, hits `config.MAP_MAX_REQUESTS`
+  The bot (`gateway.fetch_map`) bisects until the band is done, hits `config.MAP_MAX_REQUESTS`
   (default 16 requests per scrape group, to bound load), or narrows below `config.MAP_MIN_PRICE_BAND`
   (default ₪250) — whichever comes first. Hitting either bound logs a warning that the scope may still
   be truncated ("tighten the search filters").
 - **`bBox` tiling** — pan a grid of bounding boxes over the area (used to harvest the
   [Tel Aviv hood catalog](./tel-aviv-neighborhoods.md) — 4–7 tiles yielded 1,400 markers / 97 hoods).
   Note: the bot's live scrape path (`fetch_map`) only does price bisection, never `bBox` tiling —
-  tiling is a harvest-time technique (`scripts/harvest_locations.py`), not part of the regular scrape.
+  tiling is a harvest-time technique (`harvest_locations.py`), not part of the regular scrape.
 
 ### Hoods have no id on markers
 Only `region` echoes an id. City/area/hood are text. → The bot scrapes by `region`(+`city`) and

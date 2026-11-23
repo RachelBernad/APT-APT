@@ -72,13 +72,13 @@ headers — see [anti-bot](./anti-bot-radware.md)). Run them either:
 
 ### Implemented artifact
 
-`scripts/harvest_locations.py` **exists and runs both methods**: Method 1 (2-letter + 3-letter
+`harvest_locations.py` **exists and runs both methods**: Method 1 (2-letter + 3-letter
 prefix sweep) writes `data/il_locations.json` (regions/areas/cities with id chains); Method 2
 (`bBox` tiling, hard-coded to the 10 Tel Aviv tiles) writes the hood list printed for
 `data/hoods/5000.json` (the quarter grouping inside it stays hand-curated — the script prints hood
 names for review, it does not overwrite the curated file automatically).
 
-Run `python scripts/harvest_locations.py` (full sweep + Tel Aviv hoods) or
+Run `python -m aptbot.scrapers.yad2.harvest_locations` (full sweep + Tel Aviv hoods) or
 `--skip-sweep` (Tel Aviv hoods only, faster). It hard-codes a `REGION_NAMES` map of all
 **8 region ids** (autocomplete rarely echoes `regionHeb` for every region on its own), which is the
 source-of-truth region table reflected in [location-taxonomy.md](./location-taxonomy.md#regions-מחוזות).

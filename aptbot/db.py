@@ -1,4 +1,3 @@
-# db.py
 """Async SQLite persistence layer (aiosqlite).
 
 A saved search = one filter set + a *list* of area targets

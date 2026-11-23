@@ -1,4 +1,3 @@
-# engine.py
 """Scrape-once-per-location, match-per-user, route pipeline.
 
 A saved search holds many area targets + one filter set. We collect the distinct

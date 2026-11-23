@@ -35,7 +35,7 @@ The gateway rejects "naked" requests. To succeed:
 4. **Detect the challenge**: if a response is HTML / redirects to `validate.perfdrive.com` (or a
    `Verifying your browser` body), treat it as a challenge, refresh the session, and retry with backoff.
 
-The bot's `yad2_gateway.gateway_headers()` implements (1); `_is_challenge()` (checks for
+The bot's `gateway.gateway_headers()` implements (1); `_is_challenge()` (checks for
 `perfdrive`/`__uzdbm`/`captcha`/an HTML doctype in a non-JSON response, or HTTP 403) plus
 `_get_markers()`'s retry loop implement (4): **up to 4 attempts**, backing off ~1s × attempt number
 on a detected challenge/403, exponential (`2**attempt`, capped at 3s) on a 5xx, and exponential

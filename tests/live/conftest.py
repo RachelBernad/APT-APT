@@ -1,4 +1,4 @@
-"""Fixtures for the live smoke tests (real network to Yad2 + rentlyfly).
+"""Fixtures for the live smoke tests (real network to the Yad2 gateway).
 
 Live tests are opt-in (`-m live`) and skip gracefully on network failure or a
 bot-challenge — they verify reality, they are not CI gates.

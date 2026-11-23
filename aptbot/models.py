@@ -1,4 +1,3 @@
-# models.py
 """Typed data structures shared across the scraping/matching/routing pipeline."""
 from __future__ import annotations
 
@@ -161,7 +160,7 @@ LISTING_KEYS = (
 )
 
 
-# Verified Yad2 property-type ids -> Hebrew label (see api_docs/yad2).
+# Verified Yad2 property-type ids -> Hebrew label (see scrapers/yad2/docs/).
 PROPERTY_TYPES: Dict[int, str] = {
     1: "דירה",
     3: "דירת גן",

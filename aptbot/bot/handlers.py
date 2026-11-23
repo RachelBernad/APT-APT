@@ -1,4 +1,3 @@
-# handlers.py
 """Telegram command + conversation handlers.
 
 UX: a persistent tap-bar (Add monitor / My searches / Help) drives an inline

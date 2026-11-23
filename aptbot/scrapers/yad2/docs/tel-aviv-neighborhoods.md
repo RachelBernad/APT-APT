@@ -102,7 +102,7 @@ For a tap-to-browse UI, the flat 56 are best grouped into ~6 geographic quarters
 
 ## Re-harvesting
 
-Run `python scripts/harvest_locations.py --skip-sweep` — it re-tiles the same 10 hard-coded
+Run `python -m aptbot.scrapers.yad2.harvest_locations --skip-sweep` — it re-tiles the same 10 hard-coded
 `TLV_TILES` bounding boxes (`region=3&city=5000&bBox=<lat1,lng1,lat2,lng2>&zoom=14`, covering
 32.01–32.16 N × 34.74–34.85 E) and prints the current distinct `neighborhood.text` list filtered to
 `city.text == "תל אביב יפו"` for review. It deliberately does **not** overwrite `data/hoods/5000.json`

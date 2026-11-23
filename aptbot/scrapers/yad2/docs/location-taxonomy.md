@@ -60,7 +60,7 @@ Captured live from autocomplete + feed responses:
 ## Regions (מחוזות)
 
 **8 region ids the bot's code knows about**, per the bundled catalog (`data/il_locations.json`, built
-by `scripts/harvest_locations.py`'s nationwide autocomplete sweep) and its `REGION_NAMES` map. Regions
+by `harvest_locations.py`'s nationwide autocomplete sweep) and its `REGION_NAMES` map. Regions
 1–7 were all confirmed by the sweep tying at least one live city/area to that `regionId`; region 8 is
 a name-only fallback (see note below) — not independently confirmed:
 
@@ -76,7 +76,7 @@ a name-only fallback (see note below) — not independently confirmed:
 | 8 | ירושלים |
 
 > **Region 8 (`ירושלים`) is unconfirmed live** — it only appears in the bundled catalog because
-> `scripts/harvest_locations.py` hard-codes a `REGION_NAMES` fallback map (used to name any region id
+> `harvest_locations.py` hard-codes a `REGION_NAMES` fallback map (used to name any region id
 > the sweep observed without a `regionHeb`) and unconditionally seeds all 8 of its entries into the
 > catalog. **Zero cities or areas in the sweep actually resolved to region 8** — the real city of
 > Jerusalem (`cityId=3000`) sits under **region 6** (`ירושלים והסביבה`, `areaId=7`) instead. Until an

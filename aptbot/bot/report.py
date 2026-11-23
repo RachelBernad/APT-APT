@@ -1,4 +1,3 @@
-# report.py
 """Render a user's current apartment matches into a self-contained, mobile-first
 HTML page (RTL-aware, inline CSS/images-by-URL). Used by the daily report feature.
 """

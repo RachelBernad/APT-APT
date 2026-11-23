@@ -1,57 +1,59 @@
-# Docker
+# Deploy (Docker)
 
-Multi-user apartment bot. Each Telegram chat adds its own **saved searches**
-(any Yad2 location, picked via fuzzy Hebrew search, with per-search price / rooms
-/ size / mamad / elevator filters) and is notified only about **new** listings.
-For Tel Aviv searches, `rentlyfly.ai` (Facebook Groups) is layered on top of Yad2.
-
-State (users, searches, seen listings, enrichment cache) is stored in a SQLite
-database at `out/bot.db`, persisted via the `./out` volume.
+Everything deployment-related lives in this folder. The scripts `cd` to the repo
+root themselves, so run them from anywhere. **`.env`, `out/` and `.dockerignore`
+stay at the repo root**: the build context is the root, and `.dockerignore` has to
+sit at the context root, since the Pi's older Docker has no BuildKit and so no
+per-Dockerfile ignore files.
 
 ## Image
 
-A multi-stage build on `python:3.12-slim` (Debian 12). Dependencies are installed
-in a builder stage and copied into the runtime stage, so no build toolchain ships
-in the final image. All dependencies (`python-telegram-bot`, `aiohttp`,
-`aiosqlite`, `rapidfuzz`, `beautifulsoup4`, `Brotli`, APScheduler) ship prebuilt
-wheels for `linux/amd64` and `linux/arm64`, so builds need no compiler.
+A multi-stage build on `python:3.12-slim` (Debian 12). Dependencies (`requirements.txt`:
+`python-telegram-bot[job-queue]`, `aiohttp`, `aiosqlite`, `rapidfuzz`, `Brotli`) are
+installed in a builder stage and copied into the runtime stage, so no build toolchain
+ships. All of them have prebuilt wheels for `linux/amd64` and `linux/arm64`.
 
-Check the built size:
-
-```bash
-docker images apt-apt-telegram-bot:latest
-```
+Only the `aptbot/` package is copied into the image, including its bundled Yad2
+location catalog at `aptbot/scrapers/yad2/data`. Entrypoint: `python -m aptbot`.
 
 ## Build
 
 ```bash
-./build-docker.sh
+deploy/build-docker.sh          # = docker build -f deploy/Dockerfile -t apt-apt-telegram-bot:latest .
+docker images apt-apt-telegram-bot:latest
 ```
 
 ## Run
 
-Create `.env` from `.env.example` and set `TELEGRAM_BOT_TOKEN` (see `.env.example`
-for optional `CHECK_INTERVAL_SECONDS`, `DB_PATH`, `ENABLE_RENTLYFLY`), then:
+Create `.env` at the repo root from `.env.example` and set `TELEGRAM_BOT_TOKEN`
+(optional: `CHECK_INTERVAL_SECONDS`, `DB_PATH`, `BACKFILL_CAP`; every other setting
+in `aptbot/config.py` can be overridden the same way). Then:
 
 ```bash
-./run-docker.sh
+deploy/run-docker.sh            # (re)creates the container, tails its logs
+deploy/stop-docker.sh
 ```
 
-The container writes the SQLite DB and logs to `./out`. Stop with:
+The container writes the SQLite DB (`out/bot.db`) and rotating logs (`out/bot.log`)
+to the repo-root `out/` volume.
+
+**Fresh-start DB policy:** there are no in-place migrations. If `out/bot.db` comes
+from a different schema version, the bot renames it to `out/bot.db.old-<timestamp>`
+on startup and creates a clean one, so users have to re-create their monitors.
+
+Alternative to the scripts:
 
 ```bash
-./stop-docker.sh
+docker compose -f deploy/docker-compose.yml up -d --build
 ```
-
-`docker-compose.yml` is provided as an alternative to the shell scripts.
 
 ## Raspberry Pi
 
-The `python:3.12-slim` base and all wheels support Pi (arm64), so building on the
-Pi works directly:
+The `python:3.12-slim` base and all wheels support the Pi (arm64), so you can
+build directly on it:
 
 ```bash
-./build-docker.sh && ./run-docker.sh
+git pull && deploy/build-docker.sh && deploy/run-docker.sh
 ```
 
 ## Export / Import / Cross-build
@@ -59,5 +61,5 @@ Pi works directly:
 ```bash
 docker save apt-apt-telegram-bot:latest -o apt-apt-telegram-bot.tar
 docker load -i apt-apt-telegram-bot.tar
-docker buildx build --platform linux/arm64 -t apt-apt-telegram-bot:pi --load .
+docker buildx build --platform linux/arm64 -f deploy/Dockerfile -t apt-apt-telegram-bot:pi --load .
 ```
