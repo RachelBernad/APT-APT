@@ -164,3 +164,23 @@ async def test_unsupported_layer_raises_before_any_request():
     with pytest.raises(KeyError):
         await _query(s, "roadworks")
     assert s.calls == []
+
+
+async def test_v2_title_url_tags_flow_through():
+    plan = {"type": "Feature", "id": 7, "geometry": SQUARE,
+            "properties": {"oid_taba": 7, "taba": "4406   ", "shem_taba": "התחדשות ברמת אביב ב",
+                           "t_status_klali": "בתכנון", "t_hekef": "מתחמית", "sug_nose": 'תב"ע',
+                           "url_documents": "https://gisn.tel-aviv.gov.il/tabaot/docs.aspx?id_taba=1"}}
+    s = FakeSession((200, {"features": [plan]}))
+    [f] = await _query(s, "plans", geometry=(32.1, 34.8), distance_m=10)
+    assert s.calls[0][0].endswith("/MapServer/528/query")
+    assert s.calls[0][1]["orderByFields"] == "oid_taba"
+    assert f.kind is Kind.PLAN and f.stage is Stage.PROPOSED and f.severity is Severity.HIGH
+    assert f.title == "4406: התחדשות ברמת אביב ב" and f.url.startswith("https://gisn")
+    assert f.tags == {"urban_renewal"} and f.address is None
+
+
+async def test_v1_feature_gets_v2_defaults():
+    s = FakeSession((200, {"features": [_feature(1)]}))
+    [f] = await _query(s, "permits")
+    assert f.tags == frozenset() and f.title == "בניה חדשה" and f.url is None

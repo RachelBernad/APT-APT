@@ -1,6 +1,6 @@
 # Layer 772: בקשות והיתרי בניה (Building permits and requests)
 
-Last verified: 2026-11-23
+Last verified: 2026-11-23 · Status: **mapped** (`permits`)
 
 - URL: `…/WM/IView2WM/MapServer/772`
 - Geometry: **Polygon** (building footprint/parcel). `outSR=4326` works.
@@ -53,3 +53,6 @@ Also present: `koteret`, `progress` (a sort key, unique per row), `hakala_*` (re
 Kind = building. Stage per the table above. Severity from `sug_bakasha` tokens (see `docs/SPEC.md`),
 bumped to high when `yechidot_diyur ≥ 4`. Address = `addresses`. Dates: requested=`open_request`,
 issued=`permission_date`, expires=`expiry_date`, start=`tr_hathalat_bniya`.
+Title = `sug_bakasha`. URL = `url_hadmaya` (public permit archive, verified 200).
+Tags: `tama38_rebuild` when `sw_tama_38_chadash='כן'` (1565 total), `tama38_addition` when
+`sw_tama_38_tosefet='כן'` (607 total).

@@ -1,6 +1,6 @@
 # Layer 433: רישיונות בביצוע (Street-works licenses in execution)
 
-Last verified: 2026-11-23
+Last verified: 2026-11-23 · Status: **mapped** (`street_licenses`)
 
 - URL: `…/WM/IView2WM/MapServer/433`
 - Geometry: **Polygon** (street segment being dug up). OID field: `oid`. Count: 2563. Refresh: nightly.
@@ -22,3 +22,4 @@ Kind = infrastructure. Severity = medium. Stage by date: start = `tr_tchilat_avo
 `tr_tokef_rishayon_me`; end = `tr_sium_avoda_metuchnan` or `tr_tokef_rishayon_ad`.
 now < start → permitted; start ≤ now ≤ end → active; end < now → completed.
 Address = `t_rechov`.
+Title = `ms_rishayon` (license number).

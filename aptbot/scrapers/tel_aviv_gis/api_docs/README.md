@@ -34,7 +34,9 @@ Each `services/<Service>/layers/<id>-<slug>.md` has these sections:
 | REST root | `https://gisn.tel-aviv.gov.il/arcgis/rest/services` (folders: OpenData, Test, Utilities, WM) |
 | Main MapServer (Web Mercator) | `…/WM/IView2WM/MapServer` |
 | Same layers in ITM (EPSG:2039) | `…/IView2/MapServer` |
+| Master plan תא/5500 | `…/WM/TA5500WM2026/MapServer` (and the older `…/WM/TA5500WM`) |
 | Viewer metadata | `https://gisn.tel-aviv.gov.il/metadata/*.json` |
+| Public documents | plan docs `gisn.tel-aviv.gov.il/tabaot/docs.aspx`, policy PDFs `gisn.tel-aviv.gov.il/taba_raster/`, permit archive `archive-binyan.tel-aviv.gov.il`, national `mavat.iplan.gov.il` |
 
 We query in WGS84 (`inSR=4326&outSR=4326`), so the native SR doesn't matter to callers.
 
@@ -48,3 +50,13 @@ We query in WGS84 (`inSR=4326&outSR=4326`), so the native SR doesn't matter to c
   - [layers/433-street-works-licenses.md](services/IView2WM/layers/433-street-works-licenses.md)
   - [layers/858-night-works-public.md](services/IView2WM/layers/858-night-works-public.md)
   - [layers/479-night-works-sites.md](services/IView2WM/layers/479-night-works-sites.md)
+  - [layers/528-town-plans.md](services/IView2WM/layers/528-town-plans.md)
+  - [layers/591-dangerous-buildings.md](services/IView2WM/layers/591-dangerous-buildings.md)
+  - [layers/801-tama38-zones.md](services/IView2WM/layers/801-tama38-zones.md)
+  - [layers/746-affordable-housing.md](services/IView2WM/layers/746-affordable-housing.md)
+  - reference only (not mapped): [683-city-wide-plans.md](services/IView2WM/layers/683-city-wide-plans.md) ·
+    [852-853-roadworks.md](services/IView2WM/layers/852-853-roadworks.md) ·
+    [760-763-633-954-light-rail-metro.md](services/IView2WM/layers/760-763-633-954-light-rail-metro.md)
+- [services/TA5500WM/README.md](services/TA5500WM/README.md): master plan תא/5500 (zoning, building heights), reference only
+
+Page header convention: `Last verified: <date> · Status: mapped (<key>) | documented, not mapped`.

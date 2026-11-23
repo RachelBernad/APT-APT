@@ -1,6 +1,6 @@
 # Layer 479: עבודות לילה – אתרי בנייה (Night works at building sites)
 
-Last verified: 2026-11-23
+Last verified: 2026-11-23 · Status: **mapped** (`site_night_works`)
 
 - URL: `…/WM/IView2WM/MapServer/479`
 - Geometry: **Polygon**. OID field: `oid_avoda`. Count: 12. Refresh: nightly.
@@ -19,3 +19,4 @@ Last verified: 2026-11-23
 ## Mapping
 Kind = building. Severity = high. Stage by parsed `tr_hatchala`/`tr_siyum` (end date inclusive).
 Address = `ktovet`.
+Title = `mahut` (nature of the work).

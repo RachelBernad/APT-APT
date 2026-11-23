@@ -8,7 +8,8 @@ import math
 import aiohttp
 import pytest
 
-from aptbot.scrapers.tel_aviv_gis import LAYERS, Stage, TelAvivGisClient, TelAvivGisError
+from aptbot.scrapers.tel_aviv_gis import (LAYERS, PLANS_SITE_SCOPED_WHERE, Kind, Stage,
+                                          TelAvivGisClient, TelAvivGisError)
 from aptbot.scrapers.tel_aviv_gis.catalog import main as catalog_main
 
 pytestmark = pytest.mark.live
@@ -39,6 +40,16 @@ async def test_permits_near_point_are_typed_and_nearby(http):
     assert all(f.stage is not Stage.UNKNOWN for f in feats), "new building_stage value: update layers.py"
     # Polygons intersect the radius; their centroids can't be far outside it.
     assert max(_meters(CENTER, f.centroid) for f in feats) < RADIUS_M + 150
+
+
+async def test_site_scoped_plans_near_point_are_typed(http):
+    async with TelAvivGisClient(http) as gis:
+        feats = await _query_or_skip(gis, "plans", geometry=CENTER, distance_m=300,
+                                     where=PLANS_SITE_SCOPED_WHERE, return_geometry=False)
+    assert feats, "central Tel Aviv should always have site-scoped town plans within 300 m"
+    assert all(f.kind is Kind.PLAN for f in feats)
+    assert all(f.stage is not Stage.UNKNOWN for f in feats), "new t_status_klali value: update layers.py"
+    assert all(f.title and f.url for f in feats)
 
 
 async def test_every_supported_layer_answers(http):

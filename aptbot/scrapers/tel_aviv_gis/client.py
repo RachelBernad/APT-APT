@@ -165,14 +165,15 @@ class TelAvivGisClient:
     @staticmethod
     def _to_feature(spec: LayerSpec, f: Dict[str, Any], now: datetime) -> ConstructionFeature:
         attrs = f.get("properties") or {}
-        stage, severity, address, dates = spec.mapper(attrs, now)
+        m = spec.mapper(attrs, now)
         geom = f.get("geometry")
         oid = attrs.get(spec.oid_field, f.get("id"))
         return ConstructionFeature(
             layer=spec.key, layer_id=spec.layer_id,
             object_id=int(oid) if oid is not None else -1,
-            kind=spec.kind, stage=stage, severity=severity, address=address, dates=dates,
-            geometry_wgs84=geom, centroid=centroid(geom), raw_attributes=attrs)
+            kind=spec.kind, stage=m.stage, severity=m.severity, address=m.address,
+            dates=m.dates, geometry_wgs84=geom, centroid=centroid(geom), raw_attributes=attrs,
+            title=m.title, url=m.url, tags=m.tags)
 
 
 async def query(layer: Union[str, int], **kwargs: Any) -> List[ConstructionFeature]:

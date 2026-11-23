@@ -1,6 +1,6 @@
 # Layer 858: עבודות לילה – במרחב הציבורי (Night works in public space)
 
-Last verified: 2026-11-23
+Last verified: 2026-11-23 · Status: **mapped** (`public_night_works`)
 
 - URL: `…/WM/IView2WM/MapServer/858`
 - Geometry: **Polygon** (street stretch). OID field: `OBJECTID`. Count: 234. Refresh: nightly.
@@ -21,3 +21,4 @@ Last verified: 2026-11-23
 ## Mapping
 Kind = infrastructure. Severity = high (night noise). Stage by `tr_avodat_laila_me`/`_ad` dates.
 Address = `t_rechov` (+ ` (t_rechov_me – t_rechov_ad)` when present).
+Title = `display_label` (license number). `natzig` (personal contact data) is only in `raw_attributes`.

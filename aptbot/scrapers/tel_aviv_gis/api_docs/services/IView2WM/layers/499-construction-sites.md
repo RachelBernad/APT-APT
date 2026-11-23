@@ -1,6 +1,6 @@
 # Layer 499: אתרי בניה (Construction sites)
 
-Last verified: 2026-11-23
+Last verified: 2026-11-23 · Status: **mapped** (`sites`)
 
 - URL: `…/WM/IView2WM/MapServer/499`
 - Geometry: **Polygon**. OID field: `oid_site`. Count: 1611. Refresh: nightly.
@@ -38,3 +38,4 @@ Last verified: 2026-11-23
 ## Mapping (in `layers.py`)
 Kind = building. Severity from `sug_bakasha` + `sivug` tokens. Address = `ktovet`.
 Dates: works_approved=`tr_tchilat_avoda`, status=`tr_status_pikuach`.
+Title = `sug_bakasha`. No URL (`url_archion_tik` is intranet-only).
