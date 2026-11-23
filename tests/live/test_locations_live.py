@@ -5,7 +5,7 @@ zero-padded / string value (INVARIANT #1).
 """
 import pytest
 
-import locations
+from aptbot.scrapers.yad2 import locations
 
 pytestmark = pytest.mark.live
 

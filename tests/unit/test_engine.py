@@ -5,10 +5,10 @@ Regression guards for real invariants:
   #5 backfill: unprimed sends <= BACKFILL_CAP newest, records ALL as seen, primes.
 """
 
-import config
-import engine
-import yad2_gateway
-from models import GatewayFilters, LocationSignature, LocationTarget, SavedSearch
+from aptbot import config
+from aptbot import engine
+from aptbot.scrapers.yad2 import gateway as yad2_gateway
+from aptbot.models import GatewayFilters, LocationSignature, LocationTarget, SavedSearch
 from tests.conftest import FakeSender, make_listing
 
 
@@ -166,7 +166,7 @@ async def test_scrape_group_normalizes_and_dedups_yad2_markers(monkeypatch):
 # --- routing: backfill / only-new / price-change --------------------------
 
 async def _seed_search(db, chat_id=100, primed=False, **kw):
-    from models import SavedSearch as SS
+    from aptbot.models import SavedSearch as SS
     await db.upsert_user(chat_id, "t")
     loc = LocationTarget("city", 3, city_id="5000", display_name="תל אביב")
     s = SS(id=0, chat_id=chat_id, label=kw.pop("label", "s"), locations=[loc], **kw)
@@ -320,7 +320,7 @@ async def test_run_cycle_empty_scrape_does_not_prime(db, monkeypatch):
 
 def _engine_info(caplog):
     return [r.getMessage() for r in caplog.records
-            if r.name == "engine" and r.levelname == "INFO"]
+            if r.name == "aptbot.engine" and r.levelname == "INFO"]
 
 
 async def test_uneventful_cycle_logs_nothing_at_info(db, monkeypatch, caplog):
@@ -336,7 +336,7 @@ async def test_uneventful_cycle_logs_nothing_at_info(db, monkeypatch, caplog):
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
 
     sender = FakeSender()
-    with caplog.at_level("DEBUG", logger="engine"):
+    with caplog.at_level("DEBUG", logger="aptbot.engine"):
         await engine.run_cycle(sender, db, http=None)
     assert sender.sent == []          # nothing new to send
     assert _engine_info(caplog) == []  # ...so nothing said about it
@@ -355,7 +355,7 @@ async def test_cycle_that_sends_logs_one_summary(db, monkeypatch, caplog):
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
 
     sender = FakeSender()
-    with caplog.at_level("INFO", logger="engine"):
+    with caplog.at_level("INFO", logger="aptbot.engine"):
         await engine.run_cycle(sender, db, http=None)
     summaries = [m for m in _engine_info(caplog) if m.startswith("Cycle:")]
     assert len(summaries) == 1
@@ -371,7 +371,7 @@ async def test_failed_cycle_still_reports(db, monkeypatch, caplog):
 
     monkeypatch.setattr(yad2_gateway, "fetch_map", empty_fetch_map)
 
-    with caplog.at_level("INFO", logger="engine"):
+    with caplog.at_level("INFO", logger="aptbot.engine"):
         await engine.run_cycle(FakeSender(), db, http=None)
     assert any("bad scrape" in m for m in _engine_info(caplog))
     assert any(r.levelname == "WARNING" for r in caplog.records)

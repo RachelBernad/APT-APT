@@ -1,0 +1,13 @@
+# Alternative to the .sh scripts. Paths are relative to this folder (deploy/):
+#   docker compose -f deploy/docker-compose.yml up -d --build
+services:
+  telegram-bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: apt-apt-telegram-bot:latest
+    restart: unless-stopped
+    # The repo-root .env (see .env.example); unset vars fall back to aptbot/config.py.
+    env_file: ../.env
+    volumes:
+      - ../out:/app/out

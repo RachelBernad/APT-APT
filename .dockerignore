@@ -1,19 +1,21 @@
-__pycache__/
-*.py[cod]
+# Build context is the repo root (see deploy/Dockerfile). Only aptbot/ and
+# requirements.txt are COPY'd, but keep the context small and secret-free.
+**/__pycache__/
+**/*.py[cod]
+**/.DS_Store
 .git/
 .gitignore
-.DS_Store
 .env
 .env.*
 out/
 *.db
 *.db-wal
 *.db-shm
-bot.log
 *.log
-a.jsonl
+*.jsonl
 codedb.snapshot
 copilot-session-*.md
 archive/
 tests/
 .playwright-mcp/
+.pytest_cache/

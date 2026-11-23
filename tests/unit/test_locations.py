@@ -4,8 +4,8 @@ INVARIANT #1: Yad2 city ids are 4-char zero-padded (and sometimes alphanumeric)
 STRINGS. They must never be int()-ed.
 """
 
-import locations
-from models import ResolvedLocation
+from aptbot.scrapers.yad2 import locations
+from aptbot.models import ResolvedLocation
 
 
 # --- _str_id: the string-preserving id coercion ---------------------------
@@ -130,7 +130,7 @@ async def test_batch_autocomplete_unions_and_dedupes(monkeypatch):
 def test_target_from_resolved_hood_sets_normalized_match_name():
     loc = ResolvedLocation(level="hood", display="פלורנטין, תל אביב יפו", region_id=3,
                            area_id=1, city_id="5000", hood_id=1483, match_name="פלורנטין")
-    from models import normalize_name
+    from aptbot.models import normalize_name
     t = locations.target_from_resolved(loc)
     assert t.city_id == "5000"
     assert t.match_name == normalize_name("פלורנטין")

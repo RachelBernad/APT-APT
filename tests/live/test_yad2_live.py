@@ -5,8 +5,8 @@ markers; city=70 (leading zero dropped) returns none.
 """
 import pytest
 
-import yad2_gateway as gw
-from models import GatewayFilters, LocationSignature
+from aptbot.scrapers.yad2 import gateway as gw
+from aptbot.models import GatewayFilters, LocationSignature
 
 pytestmark = pytest.mark.live
 

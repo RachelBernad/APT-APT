@@ -21,13 +21,13 @@ from typing import Awaitable, Callable, Dict, FrozenSet, List, Optional, Tuple
 
 import aiohttp
 
-import config
-import yad2_gateway
-from db import Database
-from formatting import (format_apartment_message, format_backfill_intro,
+from aptbot import config
+from aptbot.scrapers.yad2 import gateway as yad2_gateway
+from aptbot.db import Database
+from aptbot.bot.formatting import (format_apartment_message, format_backfill_intro,
                        format_monitor_started_empty, format_price_change,
                        main_image)
-from models import (GatewayFilters, LocationSignature, LocationTarget,
+from aptbot.models import (GatewayFilters, LocationSignature, LocationTarget,
                    SavedSearch, normalize_name)
 
 logger = logging.getLogger(__name__)

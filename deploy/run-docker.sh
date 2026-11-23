@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+# Works from any directory: .env and out/ live at the repo root.
+cd "$(dirname "$0")/.."
 mkdir -p out
 
 # Run as the host user that owns ./out so the bind-mounted volume is always

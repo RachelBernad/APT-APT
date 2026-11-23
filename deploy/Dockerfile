@@ -1,3 +1,7 @@
+# Build from the REPO ROOT (context = .), e.g. `./deploy/build-docker.sh` or
+#   docker build -f deploy/Dockerfile -t apt-apt-telegram-bot:latest .
+# (.dockerignore lives at the repo root because it must sit at the context root.)
+
 # --- Builder stage: install deps into an isolated prefix ---
 FROM python:3.12-slim AS builder
 
@@ -22,11 +26,11 @@ WORKDIR /app
 RUN groupadd -g 1000 app && useradd -u 1000 -g app -m app
 
 COPY --from=builder /install /usr/local
-COPY *.py ./
-COPY data ./data
+# The package carries its own data (aptbot/scrapers/yad2/data).
+COPY aptbot ./aptbot
 
 RUN mkdir -p /app/out && chown -R app:app /app
 
 USER app
 
-CMD ["python", "telegram_bot.py"]
+CMD ["python", "-m", "aptbot"]

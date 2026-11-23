@@ -95,7 +95,7 @@ class FakeSender:
 @pytest_asyncio.fixture
 async def db(tmp_path):
     """A freshly-connected Database on an isolated temp-file SQLite DB."""
-    from db import Database
+    from aptbot.db import Database
     database = await Database(str(tmp_path / "test_bot.db")).connect()
     try:
         yield database

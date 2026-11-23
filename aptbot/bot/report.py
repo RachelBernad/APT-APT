@@ -7,7 +7,7 @@ from __future__ import annotations
 import html
 from typing import Any, Dict, List, Optional
 
-from models import FEATURES
+from aptbot.models import FEATURES
 
 
 def _esc(v: Any) -> str:

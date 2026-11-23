@@ -1,31 +1,26 @@
-#!/usr/bin/env python3
-"""Reproducibly harvest Yad2's location catalog into ``data/``.
+"""Reproducibly harvest Yad2's location catalog into this package's ``data/``.
 
-Two methods (see api_docs/yad2/harvesting-all-areas.md):
+Two methods (see docs/harvesting-all-areas.md next to this file):
   1. Autocomplete **prefix sweep** (2-letter + 3-letter for truncated parents) →
      nationwide regions / areas / cities with their id chains → data/il_locations.json.
   2. Feed **bBox tiling** for a city → its neighborhood names → data/hoods/<cityId>.json.
 
 Runs on the bot's own cookie'd HTTP path (browser-like headers get past Radware).
 
-Usage:
-    python scripts/harvest_locations.py                 # sweep + Tel Aviv hoods
-    python scripts/harvest_locations.py --skip-sweep    # only re-harvest hoods
+Usage (from the repo root):
+    python -m aptbot.scrapers.yad2.harvest_locations               # sweep + Tel Aviv hoods
+    python -m aptbot.scrapers.yad2.harvest_locations --skip-sweep  # only re-harvest hoods
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
-import sys
-from pathlib import Path
 
 import aiohttp
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import config  # noqa: E402
-from yad2_gateway import _is_challenge, gateway_headers  # noqa: E402
+from aptbot import config
+from aptbot.scrapers.yad2.gateway import _is_challenge, gateway_headers
 
 HEBREW = list("אבגדהוזחטיכלמנסעפצקרשת")
 

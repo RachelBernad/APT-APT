@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import activity
+from aptbot.bot import activity
 
 
 # --- callback data -> human label ------------------------------------------

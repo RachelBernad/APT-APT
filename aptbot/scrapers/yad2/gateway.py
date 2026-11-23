@@ -21,8 +21,8 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-import config
-from models import (PROPERTY_TYPES, GatewayFilters, LocationSignature,
+from aptbot import config
+from aptbot.models import (PROPERTY_TYPES, GatewayFilters, LocationSignature,
                    feature_param)
 
 logger = logging.getLogger(__name__)

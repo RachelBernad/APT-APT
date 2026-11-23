@@ -21,12 +21,12 @@ from telegram.constants import ParseMode
 from telegram.ext import (CallbackQueryHandler, CommandHandler, ContextTypes,
                          ConversationHandler, MessageHandler, filters)
 
-import config
-import engine
-import locations
-import report
-from db import Database
-from models import (FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
+from aptbot import config
+from aptbot import engine
+from aptbot.scrapers.yad2 import locations
+from aptbot.bot import report
+from aptbot.db import Database
+from aptbot.models import (FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
                    LocationTarget, ResolvedLocation, SavedSearch, feature_label)
 
 logger = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ def _quarters_screen(rid: int, cid: int, name: str) -> tuple:
 
 
 def _hoods_screen(draft: dict, rid: int, cid: int, q_idx: int) -> tuple:
-    from models import normalize_name
+    from aptbot.models import normalize_name
     quarters = locations.city_quarters(cid)
     if q_idx >= len(quarters):
         return _quarters_screen(rid, cid, locations.city_name(cid))
@@ -234,7 +234,7 @@ def _hoods_screen(draft: dict, rid: int, cid: int, q_idx: int) -> tuple:
 
 
 def _flat_hoods_screen(draft: dict, browse: dict) -> tuple:
-    from models import normalize_name
+    from aptbot.models import normalize_name
     rid, cid, name = browse["rid"], browse["cid"], browse["name"]
     chosen = _selected_hood_names(draft)
     hoods = browse.get("hoods", [])
@@ -500,7 +500,7 @@ class BotHandlers:
                 browse["rid"], browse["cid"], hood, browse.get("name", "")))
 
     def _remove_hood_if_present(self, draft, hood_name) -> bool:
-        from models import normalize_name
+        from aptbot.models import normalize_name
         norm = normalize_name(hood_name)
         before = len(draft["locations"])
         draft["locations"] = [t for t in draft["locations"]

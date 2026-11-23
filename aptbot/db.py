@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
-from models import LocationTarget, SavedSearch
+from aptbot.models import LocationTarget, SavedSearch
 
 logger = logging.getLogger(__name__)
 

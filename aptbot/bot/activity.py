@@ -17,8 +17,8 @@ from typing import Awaitable, Callable, Dict
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from db import Database
-from handlers import BAR_ADD, BAR_HELP, BAR_LIST, BAR_REPORT
+from aptbot.db import Database
+from aptbot.bot.handlers import BAR_ADD, BAR_HELP, BAR_LIST, BAR_REPORT
 
 logger = logging.getLogger("activity")
 

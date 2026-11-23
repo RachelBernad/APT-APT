@@ -18,8 +18,9 @@ LOG_LEVEL = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INF
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(2 * 1024 * 1024)))  # 2 MB / file
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))             # → ~12 MB max
 
-# Bundled location catalog (harvested nationwide sweep + per-city hood lists).
-DATA_DIR = Path(os.getenv("DATA_DIR", str(Path(__file__).resolve().parent / "data")))
+# Bundled Yad2 location catalog (harvested nationwide sweep + per-city hood lists).
+DATA_DIR = Path(os.getenv(
+    "DATA_DIR", str(Path(__file__).resolve().parent / "scrapers" / "yad2" / "data")))
 IL_LOCATIONS_FILE = DATA_DIR / "il_locations.json"
 HOODS_DIR = DATA_DIR / "hoods"
 

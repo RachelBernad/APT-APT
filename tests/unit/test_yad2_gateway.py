@@ -6,9 +6,9 @@ INVARIANT #4: fetch_map bisects the price interval whenever a scope returns
 """
 import pytest
 
-import config
-import yad2_gateway as gw
-from models import GatewayFilters, LocationSignature
+from aptbot import config
+from aptbot.scrapers.yad2 import gateway as gw
+from aptbot.models import GatewayFilters, LocationSignature
 
 
 # --- _build_params --------------------------------------------------------

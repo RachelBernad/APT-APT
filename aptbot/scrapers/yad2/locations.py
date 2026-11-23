@@ -20,8 +20,8 @@ from typing import Any, Dict, List, Optional
 import aiohttp
 from rapidfuzz import fuzz, process
 
-import config
-from models import LocationTarget, ResolvedLocation, normalize_name
+from aptbot import config
+from aptbot.models import LocationTarget, ResolvedLocation, normalize_name
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ async def autocomplete(http: aiohttp.ClientSession, text_he: str) -> Dict[str, A
     """Call the Yad2 address-autocomplete endpoint (cached). Returns {} on failure."""
     import json as _json
 
-    from yad2_gateway import _is_challenge, gateway_headers
+    from aptbot.scrapers.yad2.gateway import _is_challenge, gateway_headers
 
     if text_he in _AC_CACHE:
         return _AC_CACHE[text_he]
@@ -322,8 +322,8 @@ async def fetch_city_hoods(http: aiohttp.ClientSession, region_id: int, city_id:
     Works for any city in Israel — markers carry the hood name. Capped at 200
     markers, which still surfaces essentially every active neighborhood.
     """
-    import yad2_gateway
-    from models import GatewayFilters, LocationSignature
+    from aptbot.scrapers.yad2 import gateway as yad2_gateway
+    from aptbot.models import GatewayFilters, LocationSignature
     sig = LocationSignature(region_id, None, city_id)
     params = yad2_gateway._build_params(sig, GatewayFilters())
     markers = await yad2_gateway._get_markers(http, params)

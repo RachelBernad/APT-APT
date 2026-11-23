@@ -14,12 +14,12 @@ from telegram.error import Forbidden, RetryAfter, TelegramError
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           MessageHandler, TypeHandler, filters)
 
-import activity
-import config
-import engine
-import formatting
-from db import Database
-from handlers import BAR_HELP, BAR_LIST, BAR_REPORT, BotHandlers
+from aptbot.bot import activity
+from aptbot import config
+from aptbot import engine
+from aptbot.bot import formatting
+from aptbot.db import Database
+from aptbot.bot.handlers import BAR_HELP, BAR_LIST, BAR_REPORT, BotHandlers
 
 config.setup_logging()
 logger = logging.getLogger(__name__)

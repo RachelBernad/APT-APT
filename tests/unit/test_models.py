@@ -1,5 +1,5 @@
 """models.py: feature params, name normalization, filter/target dataclasses."""
-from models import (FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
+from aptbot.models import (FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
                     GatewayFilters, LocationTarget, feature_param, normalize_name)
 
 

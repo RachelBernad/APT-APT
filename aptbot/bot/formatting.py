@@ -9,7 +9,7 @@ from __future__ import annotations
 import html
 from typing import Any, Dict, Optional
 
-from models import FEATURES
+from aptbot.models import FEATURES
 
 
 def _html_value(value: Any) -> str:

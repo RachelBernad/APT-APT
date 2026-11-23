@@ -9,8 +9,8 @@ import sqlite3
 
 import pytest
 
-from db import SCHEMA_VERSION, Database
-from models import LocationTarget, SavedSearch
+from aptbot.db import SCHEMA_VERSION, Database
+from aptbot.models import LocationTarget, SavedSearch
 
 
 # --- helpers to seed a user + search --------------------------------------
