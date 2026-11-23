@@ -67,7 +67,8 @@ async with TelAvivGisClient(session=None) as gis:     # owns a session if none g
         distance_m=200,                # server-side radius; requires geometry
         out_fields=None,               # None = all; mapper/oid fields are always added
         return_geometry=True,
-        now=None,                      # reference time for date-derived stages
+        now=None,                      # reference time for date-derived stages;
+                                       # a naive datetime is taken as Israel local time
     )                                  # -> list[ConstructionFeature], all pages
 
 feats = await query("sites", geometry=(lat, lng), distance_m=150)   # one-shot helper

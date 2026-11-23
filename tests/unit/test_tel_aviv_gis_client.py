@@ -184,3 +184,29 @@ async def test_v1_feature_gets_v2_defaults():
     s = FakeSession((200, {"features": [_feature(1)]}))
     [f] = await _query(s, "permits")
     assert f.tags == frozenset() and f.title == "בניה חדשה" and f.url is None
+
+
+def _window_feature(start_ms, end_ms):
+    return {"type": "Feature", "id": 1, "geometry": None,
+            "properties": {"OBJECTID": 1, "t_rechov": "x",
+                           "tr_avodat_laila_me": start_ms, "tr_avodat_laila_ad": end_ms}}
+
+
+async def test_naive_now_is_israel_local_time_not_typeerror():
+    # Night works on 2026-11-23 only (Israel midnight = 22:00Z the day before).
+    start = int(datetime(2026, 11, 22, 22, tzinfo=timezone.utc).timestamp() * 1000)
+    body = {"features": [_window_feature(start, start)]}
+    async with TelAvivGisClient(FakeSession((200, body), (200, body)), retries=0) as gis:
+        # 23:30 Israel time on the 23rd is still inside the (inclusive) end day...
+        [f] = await gis.query("public_night_works", now=datetime(2026, 11, 23, 23, 30))
+        assert f.stage is Stage.ACTIVE
+        # ...and 00:30 on the 24th is after it. Taken as UTC it would still be active.
+        [f] = await gis.query("public_night_works", now=datetime(2026, 11, 24, 0, 30))
+        assert f.stage is Stage.COMPLETED
+
+
+async def test_aware_now_is_used_as_is():
+    start = int(datetime(2026, 11, 22, 22, tzinfo=timezone.utc).timestamp() * 1000)
+    s = FakeSession((200, {"features": [_window_feature(start, start)]}))
+    [f] = await _query(s, "public_night_works")  # NOW = 2026-11-23 12:00Z
+    assert f.stage is Stage.ACTIVE

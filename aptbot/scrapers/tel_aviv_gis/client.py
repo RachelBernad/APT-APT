@@ -23,7 +23,7 @@ import aiohttp
 
 from aptbot import config
 from aptbot.scrapers.tel_aviv_gis.geometry import centroid
-from aptbot.scrapers.tel_aviv_gis.layers import LayerSpec, get_layer
+from aptbot.scrapers.tel_aviv_gis.layers import ISRAEL_TZ, LayerSpec, get_layer
 from aptbot.scrapers.tel_aviv_gis.models import ConstructionFeature
 
 logger = logging.getLogger(__name__)
@@ -81,12 +81,20 @@ class TelAvivGisClient:
         returns every feature intersecting that radius. ``where`` is passed through as
         ArcGIS SQL over the layer's raw field names (see api_docs layer pages).
         ``now`` fixes the reference time for date-derived stages (default: current time).
+        A naive ``now`` (no tzinfo) is taken as Israel local time.
         """
         spec = get_layer(layer)
         if distance_m is not None and geometry is None:
             raise ValueError("distance_m requires geometry")
         params = self._params(spec, where, geometry, distance_m, out_fields, return_geometry)
-        ref = now or datetime.now(timezone.utc)
+        if now is None:
+            ref = datetime.now(timezone.utc)
+        elif now.tzinfo is None or now.utcoffset() is None:
+            # All parsed GIS dates are tz-aware; comparing with a naive datetime would
+            # raise TypeError, so interpret it the way a Tel Aviv caller means it.
+            ref = now.replace(tzinfo=ISRAEL_TZ)
+        else:
+            ref = now
 
         features: List[ConstructionFeature] = []
         for page in range(self._max_pages):
