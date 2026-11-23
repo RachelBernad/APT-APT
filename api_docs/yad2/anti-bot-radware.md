@@ -42,6 +42,15 @@ on a detected challenge/403, exponential (`2**attempt`, capped at 3s) on a 5xx, 
 (uncapped) on a network/JSON-decode error — giving up and returning an empty result only after the
 4th attempt.
 
+## Re-check 2026-11-23
+
+- The gateway JSON currently answers even a bare `User-Agent: python` request (200 + markers). Keep
+  sending the full header set anyway — this has changed before.
+- `www.yad2.co.il` HTML from aiohttp still gets the Radware challenge page.
+- The Playwright MCP's bundled Chromium **did** pass the challenge this time after ~5–8 s of waiting
+  (title "Radware Page" → real results page), and from that page origin `fetch('/realestate/item/<token>')`
+  returned full item HTML. Still treat item pages as unavailable to the bot.
+
 ## How this reference was captured
 
 The MCP's own bundled Chrome fails the Radware JS challenge (automation fingerprint). Working method

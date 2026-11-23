@@ -179,9 +179,11 @@ PROPERTY_TYPES: Dict[int, str] = {
 # Verified Yad2 property-condition ids -> Hebrew label (from the filters panel;
 # ids observed on markers are 1,2,3,5,6).
 PROPERTY_CONDITIONS: Dict[int, str] = {
+    # Verified 2026-11-23 against Yad2 item pages + the site's filter testids.
+    # (An older version of this table had 2/3/5/6 scrambled.)
     1: "חדש מקבלן",
-    2: "חדש (עד 10 שנים)",
-    3: "משופץ",
-    5: "במצב שמור",
-    6: "דרוש שיפוץ",
+    6: "חדש (עד 10 שנים)",
+    2: "משופץ",
+    3: "במצב שמור",
+    5: "דרוש שיפוץ",
 }

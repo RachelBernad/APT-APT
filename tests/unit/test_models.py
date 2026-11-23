@@ -42,3 +42,13 @@ def test_location_target_city_id_default_is_none_and_stays_string():
 def test_gateway_filters_defaults():
     f = GatewayFilters()
     assert f.features == [] and f.property_ids is None and f.min_price is None
+
+
+def test_property_condition_ids_match_yad2():
+    """Verified 2026-11-23 against Yad2 item pages ("מצב הנכס") — guards the old
+    2/3/5/6 scramble from coming back."""
+    assert PROPERTY_CONDITIONS[1].startswith("חדש מקבלן")
+    assert PROPERTY_CONDITIONS[6].startswith("חדש (")
+    assert PROPERTY_CONDITIONS[2] == "משופץ"
+    assert PROPERTY_CONDITIONS[3] == "במצב שמור"
+    assert PROPERTY_CONDITIONS[5] == "דרוש שיפוץ"

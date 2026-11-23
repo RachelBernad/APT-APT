@@ -47,7 +47,7 @@ Detailed per-topic pages:
 |--------|------|---------|
 | GET | `/address-autocomplete/realestate/v2?text=<he>` | Fuzzy location search → region/area/city/hood/street ids |
 | GET | `/realestate-feed/rent/map?region=…&<filters>` | Listings feed (markers) for a location + filters |
-| GET | `/realestate-feed/rent/list?…` | Paginated list variant (site uses `map`; see notes) |
+| ~~GET~~ | ~~`/realestate-feed/rent/list?…`~~ | 404 — the site's list is server-rendered (see [map feed](./listings-map-feed.md#the-sites-results-list-not-reachable-from-the-bot)) |
 
 Everything location-related on the Yad2 site is powered by just the **autocomplete**
 (to pick a place) and the **map feed** (to fetch listings). **There is no
@@ -101,3 +101,9 @@ Captured **2026-07-15** via the Chrome DevTools Protocol against a real logged-i
 (remote-debugging port 9222): `fetch()` was executed from the `https://www.yad2.co.il`
 page origin (so requests carried the live Radware/session cookie), and responses were read
 back over CDP `Runtime.evaluate`. Marker/response schemas are copied from actual 200 responses.
+
+**Re-validated 2026-11-23** with the bot's own aiohttp + `gateway_headers()` and with the Playwright MCP
+browser on the live site: all filters, the 200-cap, padded city ids (`city=0070` → markers, `city=70` → 0),
+single-id `neighborhood`, the autocomplete shape/limits still hold. Changes and new findings are marked
+inline with that date (condition-id table fixed, markers gained `city.id`/`neighborhood.id`/`tags`, new
+filters `priceDropped`/`settlements`/`minSquareMeterBuild`/`text`, `agencyPromotions`, region-less → 400).
