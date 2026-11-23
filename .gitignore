@@ -5,6 +5,8 @@ subscribers.json
 
 *.html
 *.pyc
+.DS_Store
+.playwright-mcp/
 
 # Stray data dumps / editor session transcripts (not source)
 *.jsonl

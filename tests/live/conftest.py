@@ -4,7 +4,6 @@ Live tests are opt-in (`-m live`) and skip gracefully on network failure or a
 bot-challenge — they verify reality, they are not CI gates.
 """
 import aiohttp
-import pytest
 import pytest_asyncio
 
 

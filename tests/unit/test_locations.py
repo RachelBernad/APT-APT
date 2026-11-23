@@ -3,7 +3,6 @@
 INVARIANT #1: Yad2 city ids are 4-char zero-padded (and sometimes alphanumeric)
 STRINGS. They must never be int()-ed.
 """
-import pytest
 
 import locations
 from models import ResolvedLocation

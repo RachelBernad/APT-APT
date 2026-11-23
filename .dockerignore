@@ -14,3 +14,6 @@ bot.log
 a.jsonl
 codedb.snapshot
 copilot-session-*.md
+archive/
+tests/
+.playwright-mcp/

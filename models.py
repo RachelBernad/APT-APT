@@ -65,7 +65,7 @@ class ResolvedLocation:
 # Verified boolean feature filters on the Yad2 rent feed (param names read straight
 # off the site's own filter URL). key -> (gateway param, Hebrew label, English
 # label, emoji). All are server-side-only (markers don't carry them), so they are
-# part of the scrape group key; rentlyfly reports the overlapping ones inline.
+# part of the scrape group key.
 FEATURES: Dict[str, tuple] = {
     "elevator":         ("elevator",       "מעלית",       "Elevator",        "🛗"),
     "parking":          ("parking",        "חניה",        "Parking",         "🅿"),
@@ -139,7 +139,6 @@ class SavedSearch:
     property_types: Optional[List[int]] = None
     property_condition: Optional[int] = None
     features: List[str] = field(default_factory=list)
-    source_mode: str = "auto"        # 'auto' | 'yad2' | 'yad2+rentlyfly'
     is_active: bool = True
     is_primed: bool = False
     locations: List[LocationTarget] = field(default_factory=list)

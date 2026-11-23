@@ -1,15 +1,12 @@
-"""engine.py: grouping, union filters, local matching, TLV rentlyfly merge, and
-the routing state-machine (capped backfill / only-new / price-change / prime-race).
+"""engine.py: grouping, union filters, local matching, scrape_group, and the
+routing state-machine (capped backfill / only-new / price-change / prime-race).
 
 Regression guards for real invariants:
   #5 backfill: unprimed sends <= BACKFILL_CAP newest, records ALL as seen, primes.
-  #7 TLV-only rentlyfly merge.
 """
-import pytest
 
 import config
 import engine
-import rentlyfly
 import yad2_gateway
 from models import GatewayFilters, LocationSignature, LocationTarget, SavedSearch
 from tests.conftest import FakeSender, make_listing
@@ -126,7 +123,7 @@ def test_matches_non_amenity_price_and_rooms():
 
 def test_matches_non_amenity_size_floor_only_when_reported():
     s = _search(min_sqm=60, min_floor=2)
-    # size/floor unknown (rentlyfly-ish) -> NOT rejected
+    # size/floor unknown -> NOT rejected
     assert engine.matches_non_amenity(make_listing("r:1", size="", floor=""), s)
     # size/floor reported and below threshold -> rejected
     assert not engine.matches_non_amenity(make_listing("y:1", size="50", floor="3"), s)
@@ -150,64 +147,18 @@ def test_matches_features_subset():
     assert not engine.matches_features(make_listing("y:2", features=["elevator"]), s)
 
 
-def test_matches_source_gates_rentlyfly():
-    yad2_only = _search(source_mode="yad2")
-    rl = make_listing("rentlyfly:1", source="rentlyfly")
-    assert not engine.matches_source(rl, yad2_only)
-    assert engine.matches_source(rl, _search(source_mode="auto"))
-    # a yad2 listing is always allowed
-    assert engine.matches_source(make_listing("yad2:1"), yad2_only)
+# --- scrape_group --------------------------------------------------------
 
+async def test_scrape_group_normalizes_and_dedups_yad2_markers(monkeypatch):
+    marker = {"token": "t1", "price": 6000, "address": {}, "additionalDetails": {},
+              "metaData": {}}
 
-# --- scrape_group: TLV-only rentlyfly merge -------------------------------
-
-def _patch_scrapers(monkeypatch, yad2=None, rl=None, rl_should_not_be_called=False):
     async def fake_fetch_map(http, sig, f):
-        return yad2 or []
-
-    async def fake_fetch_tel_aviv(http, f):
-        if rl_should_not_be_called:
-            raise AssertionError("rentlyfly must NOT be fetched for this scope")
-        return rl or []
+        return [marker, dict(marker)]          # same token twice → one listing
 
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_fetch_tel_aviv)
-
-
-async def test_scrape_group_layers_rentlyfly_only_for_tel_aviv(monkeypatch):
-    marker = {"token": "t1", "price": 6000, "address": {}, "additionalDetails": {},
-              "metaData": {}}
-    rl_listing = make_listing("rentlyfly:9", source="rentlyfly")
-    _patch_scrapers(monkeypatch, yad2=[marker], rl=[rl_listing])
-    monkeypatch.setattr(config, "ENABLE_RENTLYFLY", True)
-
-    s = _search(city_id=config.TEL_AVIV_CITY_ID, source_mode="auto")
-    sig = LocationSignature(3, None, config.TEL_AVIV_CITY_ID)
-    listings = await engine.scrape_group(None, sig, GatewayFilters(), [(s, s.locations)])
-    uids = set(listings)
-    assert "yad2:t1" in uids and "rentlyfly:9" in uids
-
-
-async def test_scrape_group_skips_rentlyfly_for_non_tel_aviv(monkeypatch):
-    marker = {"token": "t1", "price": 6000, "address": {}, "additionalDetails": {},
-              "metaData": {}}
-    _patch_scrapers(monkeypatch, yad2=[marker], rl_should_not_be_called=True)
-    monkeypatch.setattr(config, "ENABLE_RENTLYFLY", True)
-
-    s = _search(city_id="0070", region_id=2, source_mode="auto")
-    sig = LocationSignature(2, None, "0070")   # Ashdod, not TLV
-    listings = await engine.scrape_group(None, sig, GatewayFilters(), [(s, s.locations)])
-    assert set(listings) == {"yad2:t1"}
-
-
-async def test_scrape_group_skips_rentlyfly_when_member_is_yad2_only(monkeypatch):
-    marker = {"token": "t1", "price": 6000, "address": {}, "additionalDetails": {},
-              "metaData": {}}
-    _patch_scrapers(monkeypatch, yad2=[marker], rl_should_not_be_called=True)
-    monkeypatch.setattr(config, "ENABLE_RENTLYFLY", True)
-
-    s = _search(city_id=config.TEL_AVIV_CITY_ID, source_mode="yad2")  # opts out of rentlyfly
-    sig = LocationSignature(3, None, config.TEL_AVIV_CITY_ID)
+    s = _search(city_id="0070", region_id=2)
+    sig = LocationSignature(2, None, "0070")
     listings = await engine.scrape_group(None, sig, GatewayFilters(), [(s, s.locations)])
     assert set(listings) == {"yad2:t1"}
 
@@ -340,11 +291,7 @@ async def test_run_cycle_routes_only_new(db, monkeypatch):
                 {"token": "fresh", "price": 6000, "address": {"city": {"text": "תל אביב"}},
                  "additionalDetails": {"roomsCount": 3}, "metaData": {}, "orderId": 2}]
 
-    async def fake_rl(http, f):
-        return []
-
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
 
     sender = FakeSender()
     await engine.run_cycle(sender, db, http=None)
@@ -361,11 +308,7 @@ async def test_run_cycle_empty_scrape_does_not_prime(db, monkeypatch):
     async def empty_fetch_map(http, sig, f):
         return []
 
-    async def fake_rl(http, f):
-        return []
-
     monkeypatch.setattr(yad2_gateway, "fetch_map", empty_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
 
     sender = FakeSender()
     await engine.run_cycle(sender, db, http=None)
@@ -390,11 +333,7 @@ async def test_uneventful_cycle_logs_nothing_at_info(db, monkeypatch, caplog):
         return [{"token": "old", "price": 5000, "address": {"city": {"text": "תל אביב"}},
                  "additionalDetails": {"roomsCount": 3}, "metaData": {}, "orderId": 1}]
 
-    async def fake_rl(http, f):
-        return []
-
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
 
     sender = FakeSender()
     with caplog.at_level("DEBUG", logger="engine"):
@@ -413,11 +352,7 @@ async def test_cycle_that_sends_logs_one_summary(db, monkeypatch, caplog):
         return [{"token": "fresh", "price": 6000, "address": {"city": {"text": "תל אביב"}},
                  "additionalDetails": {"roomsCount": 3}, "metaData": {}, "orderId": 2}]
 
-    async def fake_rl(http, f):
-        return []
-
     monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
 
     sender = FakeSender()
     with caplog.at_level("INFO", logger="engine"):
@@ -434,11 +369,7 @@ async def test_failed_cycle_still_reports(db, monkeypatch, caplog):
     async def empty_fetch_map(http, sig, f):
         return []
 
-    async def fake_rl(http, f):
-        return []
-
     monkeypatch.setattr(yad2_gateway, "fetch_map", empty_fetch_map)
-    monkeypatch.setattr(rentlyfly, "fetch_tel_aviv", fake_rl)
 
     with caplog.at_level("INFO", logger="engine"):
         await engine.run_cycle(FakeSender(), db, http=None)

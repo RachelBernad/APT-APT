@@ -22,7 +22,6 @@ from typing import Awaitable, Callable, Dict, FrozenSet, List, Optional, Tuple
 import aiohttp
 
 import config
-import rentlyfly
 import yad2_gateway
 from db import Database
 from formatting import (format_apartment_message, format_backfill_intro,
@@ -46,10 +45,6 @@ def _to_float(value) -> Optional[float]:
         return float(value) if value not in ("", None) else None
     except (TypeError, ValueError):
         return None
-
-
-def _uses_rentlyfly(s: SavedSearch) -> bool:
-    return s.source_mode in ("auto", "yad2+rentlyfly")
 
 
 # --- grouping & union filters ---
@@ -115,12 +110,6 @@ def _int_or_none(v: Optional[float]) -> Optional[int]:
 
 # --- matching ---
 
-def matches_source(listing: Dict, s: SavedSearch) -> bool:
-    if listing.get("source") == "rentlyfly" and not _uses_rentlyfly(s):
-        return False
-    return True
-
-
 def matches_location(listing: Dict, targets: List[LocationTarget]) -> bool:
     """A listing matches if any target covers it.
 
@@ -150,7 +139,7 @@ def matches_non_amenity(listing: Dict, s: SavedSearch) -> bool:
     if s.max_rooms is not None and (rooms is None or rooms > s.max_rooms):
         return False
 
-    # Size / floor are only known for some sources — only reject when reported.
+    # Size / floor: only reject when the listing reports them.
     size = _to_float(listing.get("size"))
     if s.min_sqm is not None and size is not None and size < s.min_sqm:
         return False
@@ -177,14 +166,13 @@ def matches_non_amenity(listing: Dict, s: SavedSearch) -> bool:
 
 def matches_features(listing: Dict, s: SavedSearch) -> bool:
     # Every required feature must be present. Yad2 listings carry exactly the
-    # features filtered server-side for their group; rentlyfly reports inline.
+    # features filtered server-side for their group.
     return set(s.features or []).issubset(set(listing.get("features") or []))
 
 
 def matches_full(listing: Dict, s: SavedSearch, targets: List[LocationTarget]) -> bool:
     return (
-        matches_source(listing, s)
-        and matches_location(listing, targets)
+        matches_location(listing, targets)
         and matches_non_amenity(listing, s)
         and matches_features(listing, s)
     )
@@ -200,14 +188,6 @@ async def scrape_group(
     for marker in await yad2_gateway.fetch_map(http, sig, f):
         listing = yad2_gateway.normalize_marker(marker, f)
         listings[listing["uid"]] = listing
-
-    if (
-        config.ENABLE_RENTLYFLY
-        and sig.city_id == config.TEL_AVIV_CITY_ID
-        and any(_uses_rentlyfly(s) for s, _ in members)
-    ):
-        for listing in await rentlyfly.fetch_tel_aviv(http, f):
-            listings.setdefault(listing["uid"], listing)
 
     # Routine per-cycle bookkeeping: DEBUG, so a healthy cycle stays silent.
     logger.debug(

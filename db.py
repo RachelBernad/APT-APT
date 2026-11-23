@@ -1,25 +1,28 @@
 # db.py
 """Async SQLite persistence layer (aiosqlite).
 
-Schema v2: a saved search = one filter set + a *list* of area targets
+A saved search = one filter set + a *list* of area targets
 (``search_locations``), so one monitor can watch many areas. Per-search
 ``seen_listings`` drives only-new + capped backfill + price-change with per-user
-isolation. Migrates a v1 (single-location) database in place.
+isolation. No in-place migrations: a database from another schema version is
+moved aside and a fresh one is created (see ``Database._set_aside_foreign_db``).
 """
 from __future__ import annotations
 
 import asyncio
 import datetime
 import logging
+import sqlite3
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
-from models import LocationTarget, SavedSearch, normalize_name as _normalize_name
+from models import LocationTarget, SavedSearch
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -46,7 +49,6 @@ CREATE TABLE IF NOT EXISTS saved_searches (
     property_types     TEXT,
     property_condition INTEGER,
     features           TEXT,
-    source_mode        TEXT NOT NULL DEFAULT 'auto',
     is_active          INTEGER NOT NULL DEFAULT 1,
     is_primed          INTEGER NOT NULL DEFAULT 0,
     created_at         TEXT NOT NULL,
@@ -87,13 +89,13 @@ CREATE TABLE IF NOT EXISTS meta (
 _SEARCH_COLUMNS = (
     "id, chat_id, label, min_price, max_price, min_rooms, max_rooms, min_sqm, "
     "max_sqm, min_floor, max_floor, property_types, property_condition, features, "
-    "source_mode, is_active, is_primed"
+    "is_active, is_primed"
 )
 
 _FILTER_FIELDS = (
     "label", "min_price", "max_price", "min_rooms", "max_rooms", "min_sqm",
     "max_sqm", "min_floor", "max_floor", "property_types", "property_condition",
-    "features", "source_mode",
+    "features",
 )
 
 
@@ -150,7 +152,6 @@ def _row_to_search(row: aiosqlite.Row) -> SavedSearch:
         property_types=_types_from_db(row["property_types"]),
         property_condition=row["property_condition"],
         features=_features_from_db(row["features"]),
-        source_mode=row["source_mode"],
         is_active=bool(row["is_active"]),
         is_primed=bool(row["is_primed"]),
         locations=[],
@@ -178,6 +179,7 @@ class Database:
         self._write_lock = asyncio.Lock()
 
     async def connect(self) -> "Database":
+        self._set_aside_foreign_db()
         self._conn = await aiosqlite.connect(self.path)
         self._conn.row_factory = aiosqlite.Row
         await self._conn.execute("PRAGMA journal_mode=WAL;")
@@ -187,172 +189,44 @@ class Database:
         logger.info("Database connected at %s", self.path)
         return self
 
-    async def _table_exists(self, name: str) -> bool:
-        cur = await self._conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-        )
-        return await cur.fetchone() is not None
-
-    async def _columns(self, table: str) -> set:
-        cur = await self._conn.execute(f"PRAGMA table_info({table})")
-        return {r["name"] for r in await cur.fetchall()}
+    def _set_aside_foreign_db(self) -> None:
+        """Start fresh instead of migrating: if the file holds a database from a
+        different schema version (or none recorded), rename it (and its WAL/SHM
+        files) to ``<path>.old-<timestamp>`` so ``init_schema`` builds a clean one.
+        The old data stays on disk for manual inspection."""
+        path = Path(self.path)
+        if not path.exists() or path.stat().st_size == 0:
+            return
+        version = None
+        try:
+            con = sqlite3.connect(str(path))
+            try:
+                row = con.execute(
+                    "SELECT value FROM meta WHERE key='schema_version'").fetchone()
+                version = row[0] if row else None
+            finally:
+                con.close()
+        except sqlite3.Error:
+            pass  # no meta table / unreadable → treat as foreign
+        if version == SCHEMA_VERSION:
+            return
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        for suffix in ("", "-wal", "-shm"):
+            src = Path(f"{path}{suffix}")
+            if src.exists():
+                src.rename(f"{path}.old-{stamp}{suffix}")
+        logger.warning(
+            "Database at %s had schema version %r (expected %s); moved it aside to "
+            "%s.old-%s and starting fresh.", path, version, SCHEMA_VERSION, path, stamp)
 
     async def init_schema(self) -> None:
         assert self._conn is not None
-        await self._conn.executescript(
-            "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);"
-        )
-        await self._maybe_migrate_v1()
         await self._conn.executescript(_SCHEMA)
-        await self._repair_seen_fk()
-        await self._migrate_city_id_text()
-        await self._migrate_user_names()
         await self._conn.execute(
             "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
             (SCHEMA_VERSION,),
         )
         await self._conn.commit()
-
-    async def _repair_seen_fk(self) -> None:
-        """Self-heal a broken ``seen_listings`` foreign key.
-
-        A subtle v1→v2 migration bug: modern SQLite's ``ALTER TABLE ... RENAME``
-        rewrote the pre-existing ``seen_listings`` FK from ``saved_searches`` to
-        ``saved_searches_v1``; that table was then dropped, leaving a dangling FK so
-        every ``bulk_upsert_seen`` fails with "no such table: saved_searches_v1".
-        Detect it and rebuild the table with the correct FK, preserving rows.
-        """
-        cur = await self._conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='seen_listings'"
-        )
-        row = await cur.fetchone()
-        if not row or not row["sql"] or "saved_searches_v1" not in row["sql"]:
-            return
-        logger.warning("Repairing seen_listings FK (dangling saved_searches_v1)…")
-        await self._conn.commit()
-        await self._conn.execute("PRAGMA foreign_keys=OFF")
-        await self._conn.executescript(
-            "CREATE TABLE seen_listings_fix ("
-            " search_id INTEGER NOT NULL REFERENCES saved_searches(id) ON DELETE CASCADE,"
-            " listing_uid TEXT NOT NULL, last_price INTEGER, first_seen_at TEXT NOT NULL,"
-            " last_notified_at TEXT, PRIMARY KEY (search_id, listing_uid));"
-            "INSERT INTO seen_listings_fix "
-            " SELECT search_id, listing_uid, last_price, first_seen_at, last_notified_at"
-            " FROM seen_listings;"
-            "DROP TABLE seen_listings;"
-            "ALTER TABLE seen_listings_fix RENAME TO seen_listings;"
-        )
-        await self._conn.commit()
-        await self._conn.execute("PRAGMA foreign_keys=ON")
-        await self._conn.commit()
-        logger.warning("seen_listings FK repaired.")
-
-    async def _migrate_city_id_text(self) -> None:
-        """Rebuild search_locations if city_id is an INTEGER column (older schema).
-
-        Yad2 city ids are 4-char zero-padded strings ('0070'); an INTEGER-affinity
-        column silently drops leading zeros on insert ('0070' -> 70), which breaks
-        the feed query and catalog lookup for every leading-zero city (≈half of
-        them). Convert the column to TEXT, recovering padding for any numeric rows.
-        """
-        if not await self._table_exists("search_locations"):
-            return
-        cur = await self._conn.execute("PRAGMA table_info(search_locations)")
-        info = {r["name"]: (r["type"] or "") for r in await cur.fetchall()}
-        if info.get("city_id", "").upper() == "TEXT":
-            return
-        logger.warning("Migrating search_locations.city_id INTEGER -> TEXT …")
-        await self._conn.commit()
-        await self._conn.execute("PRAGMA foreign_keys=OFF")
-        await self._conn.executescript(
-            "CREATE TABLE search_locations_fix ("
-            " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-            " search_id INTEGER NOT NULL REFERENCES saved_searches(id) ON DELETE CASCADE,"
-            " level TEXT NOT NULL, region_id INTEGER NOT NULL, area_id INTEGER,"
-            " city_id TEXT, hood_id INTEGER, street_id INTEGER,"
-            " display_name TEXT, match_name TEXT);"
-            "INSERT INTO search_locations_fix"
-            " (id, search_id, level, region_id, area_id, city_id, hood_id, street_id,"
-            "  display_name, match_name)"
-            " SELECT id, search_id, level, region_id, area_id,"
-            "  CASE WHEN city_id IS NULL THEN NULL"
-            "       WHEN typeof(city_id)='integer' THEN printf('%04d', city_id)"
-            "       ELSE city_id END,"
-            "  hood_id, street_id, display_name, match_name FROM search_locations;"
-            "DROP TABLE search_locations;"
-            "ALTER TABLE search_locations_fix RENAME TO search_locations;"
-            "CREATE INDEX IF NOT EXISTS idx_loc_search ON search_locations(search_id);"
-        )
-        await self._conn.commit()
-        await self._conn.execute("PRAGMA foreign_keys=ON")
-        await self._conn.commit()
-        logger.warning("search_locations.city_id migrated to TEXT.")
-
-    async def _migrate_user_names(self) -> None:
-        """Add ``first_name``/``last_name`` to an older ``users`` table.
-
-        Telegram only gives a ``username`` when the user set one (most don't), so
-        without these the DB can't say who is actually using the bot. Additive
-        ALTERs: existing rows stay valid and backfill themselves as users interact.
-        """
-        if not await self._table_exists("users"):
-            return
-        cols = await self._columns("users")
-        for col in ("first_name", "last_name"):
-            if col not in cols:
-                await self._conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
-                logger.warning("Added users.%s column.", col)
-
-    async def _maybe_migrate_v1(self) -> None:
-        """Migrate a v1 (single-location) saved_searches into v2 in place."""
-        if not await self._table_exists("saved_searches"):
-            return
-        cols = await self._columns("saved_searches")
-        if "region_id" not in cols or await self._table_exists("search_locations"):
-            return  # already v2 (or not a v1 table)
-
-        logger.warning("Migrating database schema v1 -> v2 ...")
-        async with self._write_lock:
-            await self._conn.execute("ALTER TABLE saved_searches RENAME TO saved_searches_v1")
-            await self._conn.executescript(_SCHEMA)
-            cur = await self._conn.execute("SELECT * FROM saved_searches_v1")
-            rows = await cur.fetchall()
-            for r in rows:
-                keys = r.keys()
-
-                def g(k, default=None):
-                    return r[k] if k in keys else default
-
-                features = "elevator" if g("require_elevator") else None
-                await self._conn.execute(
-                    "INSERT INTO saved_searches(id, chat_id, label, min_price, max_price, "
-                    "min_rooms, max_rooms, min_sqm, source_mode, is_active, is_primed, "
-                    "features, created_at, updated_at) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (
-                        g("id"), g("chat_id"), g("label"), g("min_price"), g("max_price"),
-                        g("min_rooms"), g("max_rooms"), g("min_sqm"),
-                        g("source_mode", "auto"), g("is_active", 1), g("is_primed", 0),
-                        features, g("created_at", _now()), g("updated_at", _now()),
-                    ),
-                )
-                await self._conn.execute(
-                    "INSERT INTO search_locations(search_id, level, region_id, area_id, "
-                    "city_id, hood_id, display_name, match_name) VALUES (?,?,?,?,?,?,?,?)",
-                    (
-                        g("id"), g("match_level", "city"), g("region_id"), g("area_id"),
-                        g("city_id"), g("hood_id"), g("location_display", ""),
-                        _normalize_name(g("hood_name") or ""),
-                    ),
-                )
-            # relabel legacy fbgroups: uids -> rentlyfly:
-            await self._conn.execute(
-                "UPDATE seen_listings SET listing_uid = 'rentlyfly:' || substr(listing_uid, 10) "
-                "WHERE listing_uid LIKE 'fbgroups:%'"
-            )
-            await self._conn.execute("DROP TABLE saved_searches_v1")
-            await self._conn.commit()
-        logger.warning("Migration v1 -> v2 complete (%d searches).", len(rows))
 
     async def close(self) -> None:
         if self._conn is not None:
@@ -408,14 +282,14 @@ class Database:
                 "INSERT INTO saved_searches("
                 "chat_id, label, min_price, max_price, min_rooms, max_rooms, min_sqm, "
                 "max_sqm, min_floor, max_floor, property_types, property_condition, "
-                "features, source_mode, is_active, is_primed, created_at, updated_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "features, is_active, is_primed, created_at, updated_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     s.chat_id, s.label, s.min_price, s.max_price, s.min_rooms, s.max_rooms,
                     s.min_sqm, s.max_sqm, s.min_floor, s.max_floor,
                     _types_to_db(s.property_types), s.property_condition,
                     _features_to_db(s.features),
-                    s.source_mode, 1 if s.is_active else 0, 1 if s.is_primed else 0,
+                    1 if s.is_active else 0, 1 if s.is_primed else 0,
                     now, now,
                 ),
             )

@@ -38,8 +38,6 @@ def _feature_chips(listing: Dict) -> str:
         spec = FEATURES.get(key)
         if spec:
             chips.append(f'<span class="chip">{spec[3]} {_esc(spec[2])}</span>')
-    if listing.get("is_mamad") is True and "mamad" not in (listing.get("features") or []):
-        chips.append('<span class="chip">🛡 ממ״ד</span>')
     return "".join(chips)
 
 

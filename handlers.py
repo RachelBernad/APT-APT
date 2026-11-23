@@ -12,7 +12,7 @@ import datetime
 import logging
 import os
 import tempfile
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, List, Optional
 
 import aiohttp
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
@@ -108,7 +108,7 @@ def _new_draft() -> dict:
         "min_sqm": config.DEFAULT_MIN_SQM, "max_sqm": None,
         "min_floor": config.DEFAULT_MIN_FLOOR, "max_floor": config.DEFAULT_MAX_FLOOR,
         "property_types": None, "property_condition": config.DEFAULT_PROPERTY_CONDITION,
-        "features": list(config.DEFAULT_FEATURES), "source_mode": "auto",
+        "features": list(config.DEFAULT_FEATURES),
     }
 
 
@@ -393,7 +393,7 @@ class BotHandlers:
             "min_sqm": search.min_sqm, "max_sqm": search.max_sqm,
             "min_floor": search.min_floor, "max_floor": search.max_floor,
             "property_types": search.property_types, "property_condition": search.property_condition,
-            "features": list(search.features), "source_mode": search.source_mode,
+            "features": list(search.features),
         })
         context.user_data["draft"] = draft
         text, markup = _render_card(draft)
@@ -697,7 +697,7 @@ class BotHandlers:
                 min_sqm=draft["min_sqm"], max_sqm=draft["max_sqm"],
                 min_floor=draft["min_floor"], max_floor=draft["max_floor"],
                 property_types=draft["property_types"], property_condition=draft["property_condition"],
-                features=draft["features"], source_mode=draft["source_mode"])
+                features=draft["features"])
             await self.db.set_search_locations(draft["edit_id"], draft["locations"])
             await self.db.reprime_search(draft["edit_id"])
             await query.edit_message_text(
@@ -716,7 +716,7 @@ class BotHandlers:
                 min_sqm=draft["min_sqm"], max_sqm=draft["max_sqm"],
                 min_floor=draft["min_floor"], max_floor=draft["max_floor"],
                 property_types=draft["property_types"], property_condition=draft["property_condition"],
-                features=draft["features"], source_mode=draft["source_mode"],
+                features=draft["features"],
                 is_active=True, is_primed=False)
             new_id = await self.db.add_search(search, draft["locations"])
             await query.edit_message_text(

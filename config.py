@@ -1,9 +1,8 @@
 # config.py
 """Central, environment-driven configuration for the apartment bot.
 
-Replaces the old ``shared_scrapers_config.py``. Everything that used to be a
-hard-coded module constant is now overridable via environment variables so the
-same image can be deployed with different behaviour.
+Every setting is overridable via environment variables so the same image can be
+deployed with different behaviour.
 """
 import logging
 import os
@@ -41,17 +40,11 @@ BACKFILL_CAP = int(os.getenv("BACKFILL_CAP", "10"))
 # On-demand daily HTML report: minimum hours between reports per user (anti-spam).
 REPORT_COOLDOWN_HOURS = int(os.getenv("REPORT_COOLDOWN_HOURS", "24"))
 
-# --- Sources ---
-ENABLE_RENTLYFLY = os.getenv("ENABLE_RENTLYFLY", "1") == "1"
-# Tel Aviv-Yafo. rentlyfly.ai only covers this city, so it is only layered on
-# top of a Yad2 search whose city matches this id. Yad2 city ids are 4-char,
-# zero-padded strings (e.g. "0070" = Ashdod), so this is kept as a string.
+# --- Locations ---
+# Tel Aviv-Yafo: the default city whose hoods harvest_locations bundles. Yad2 city
+# ids are 4-char, zero-padded strings
+# (e.g. "0070" = Ashdod), so this is kept as a string.
 TEL_AVIV_CITY_ID = os.getenv("TEL_AVIV_CITY_ID", "5000")
-RENTLYFLY_API_URL = os.getenv("RENTLYFLY_API_URL", "https://rentlyfly.ai/api/listings")
-# rentlyfly returns newest-first; only fetch the most recent pages each cycle
-# (the whole dataset is thousands of listings — we only need what is new).
-RENTLYFLY_PAGE_LIMIT = int(os.getenv("RENTLYFLY_PAGE_LIMIT", "50"))
-RENTLYFLY_MAX_PAGES = int(os.getenv("RENTLYFLY_MAX_PAGES", "4"))
 
 # --- Yad2 gateway ---
 YAD2_GATEWAY = os.getenv("YAD2_GATEWAY", "https://gw.yad2.co.il")
@@ -81,7 +74,6 @@ MAX_DELAY_BETWEEN_REQUESTS = float(os.getenv("MAX_DELAY_BETWEEN_REQUESTS", "3.0"
 # --- Message pacing (Telegram anti-flood) ---
 MIN_MESSAGE_DELAY_SECONDS = float(os.getenv("MIN_MESSAGE_DELAY_SECONDS", "0.3"))
 MAX_MESSAGE_DELAY_SECONDS = float(os.getenv("MAX_MESSAGE_DELAY_SECONDS", "1.0"))
-MAX_DESCRIPTION_CHARS = int(os.getenv("MAX_DESCRIPTION_CHARS", "700"))
 
 # --- Default filter seeds for the add-search wizard ---
 # ``None`` means "no constraint". These are just the values a brand-new search
