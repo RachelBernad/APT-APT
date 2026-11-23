@@ -62,6 +62,19 @@ MAP_MAX_REQUESTS = int(os.getenv("MAP_MAX_REQUESTS", "16"))
 # on the gateway while cutting wall-clock time vs. sequential scraping).
 SCRAPE_CONCURRENCY = int(os.getenv("SCRAPE_CONCURRENCY", "5"))
 
+# --- Tel Aviv-Yafo municipal GIS (aptbot/scrapers/tel_aviv_gis) ---
+TLV_GIS_MAPSERVER = os.getenv(
+    "TLV_GIS_MAPSERVER",
+    "https://gisn.tel-aviv.gov.il/arcgis/rest/services/WM/IView2WM/MapServer")
+# Service-wide maxRecordCount is 2000; page size can't exceed it.
+TLV_GIS_PAGE_SIZE = int(os.getenv("TLV_GIS_PAGE_SIZE", "2000"))
+# Parallel in-flight requests to the GIS per client (no rate limit observed; stay polite).
+TLV_GIS_CONCURRENCY = int(os.getenv("TLV_GIS_CONCURRENCY", "4"))
+TLV_GIS_TIMEOUT = int(os.getenv("TLV_GIS_TIMEOUT", "60"))
+TLV_GIS_RETRIES = int(os.getenv("TLV_GIS_RETRIES", "3"))
+# Safety cap on pages per query() so a careless where=1=1 can't page forever.
+TLV_GIS_MAX_PAGES = int(os.getenv("TLV_GIS_MAX_PAGES", "50"))
+
 # --- HTTP ---
 CONNECT_TIMEOUT = int(os.getenv("CONNECT_TIMEOUT", "20"))
 SOCK_READ_TIMEOUT = int(os.getenv("SOCK_READ_TIMEOUT", "120"))
