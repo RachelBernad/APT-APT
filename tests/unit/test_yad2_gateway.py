@@ -193,3 +193,41 @@ async def test_fetch_map_stops_when_band_too_narrow(monkeypatch):
     sig = LocationSignature(region_id=3, area_id=None, city_id="5000")
     got = await gw.fetch_map(None, sig, GatewayFilters(min_price=1000, max_price=1900))
     assert calls["n"] == 1 and len(got) == 3   # gives up gracefully (logs a warning)
+
+
+async def test_fetch_map_without_price_filter_reaches_beyond_the_sample(monkeypatch):
+    """No min/max price (the Tel Aviv default): the capped sample only spans part of the
+    price range, so the outer halves must stay open-ended or the rest is never asked for."""
+    dataset = _dataset(10)                      # prices 1000..1900; the sample = 1000..1200
+    _install_source(monkeypatch, dataset, cap=3)
+    monkeypatch.setattr(config, "MAP_MARKER_CAP", 3)
+    monkeypatch.setattr(config, "MAP_MIN_PRICE_BAND", 10)
+    monkeypatch.setattr(config, "MAP_MAX_REQUESTS", 500)
+
+    sig = LocationSignature(region_id=3, area_id=None, city_id="5000")
+    got = await gw.fetch_map(None, sig, GatewayFilters())
+    assert {m["token"] for m in got} == {m["token"] for m in dataset}
+
+
+async def test_fetch_map_open_range_with_a_dense_price_point(monkeypatch):
+    """Many listings at one price fill the cap: still explore above and below it."""
+    dataset = ([{"token": f"low{i}", "price": 500 + i} for i in range(2)]
+               + [{"token": f"d{i}", "price": 5000} for i in range(5)]
+               + [{"token": f"high{i}", "price": 9000 + i} for i in range(2)])
+
+    async def fake_get_markers(http, params):        # dense block first, like a capped server
+        lo, hi = params.get("minPrice"), params.get("maxPrice")
+        ms = [m for m in dataset
+              if (lo is None or m["price"] >= lo) and (hi is None or m["price"] <= hi)]
+        ms.sort(key=lambda m: (m["price"] != 5000, m["price"]))
+        return ms[:3]
+
+    monkeypatch.setattr(gw, "_get_markers", fake_get_markers)
+    monkeypatch.setattr(config, "MAP_MARKER_CAP", 3)
+    monkeypatch.setattr(config, "MAP_MIN_PRICE_BAND", 10)
+    monkeypatch.setattr(config, "MAP_MAX_REQUESTS", 500)
+
+    got = await gw.fetch_map(None, LocationSignature(region_id=3, area_id=None, city_id="5000"),
+                             GatewayFilters())
+    tokens = {m["token"] for m in got}
+    assert {"low0", "low1", "high0", "high1"} <= tokens      # only the dense block is truncated

@@ -166,9 +166,21 @@ def _max_marker_price(markers: List[dict]) -> Optional[int]:
 async def fetch_map(
     http: aiohttp.ClientSession, sig: LocationSignature, f: GatewayFilters
 ) -> List[dict]:
-    """Fetch markers for a location signature, defeating the 200-cap via bisection."""
+    """Fetch markers for a location signature, defeating the 200-cap via bisection.
+
+    An open bound (no min/max price filter) stays open in the outer halves: the capped
+    sample only spans part of the real price range, so bounding the split by the
+    sample's own min/max would never ask for anything cheaper or pricier than it."""
     collected: Dict[str, dict] = {}
     requests_made = 0
+
+    def _warn(lo_eff, hi_eff) -> None:
+        logger.warning(
+            "Yad2 map still capped at %d for region=%s city=%s hood=%s band=[%s,%s] "
+            "(requests=%d); some listings may be missed — tighten the search filters.",
+            config.MAP_MARKER_CAP, sig.region_id, sig.city_id, sig.neighborhood_id,
+            lo_eff, hi_eff, requests_made,
+        )
 
     async def recurse(lo: Optional[int], hi: Optional[int]) -> None:
         nonlocal requests_made
@@ -187,19 +199,21 @@ async def fetch_map(
         # Cap hit -> we may be truncated. Bisect the price interval if we can.
         lo_eff = lo if lo is not None else _min_marker_price(markers)
         hi_eff = hi if hi is not None else _max_marker_price(markers)
-        if (lo_eff is None or hi_eff is None
-                or hi_eff - lo_eff <= config.MAP_MIN_PRICE_BAND
-                or requests_made >= config.MAP_MAX_REQUESTS):
-            logger.warning(
-                "Yad2 map still capped at %d for region=%s city=%s hood=%s band=[%s,%s] "
-                "(requests=%d); some listings may be missed — tighten the search filters.",
-                config.MAP_MARKER_CAP, sig.region_id, sig.city_id, sig.neighborhood_id,
-                lo_eff, hi_eff, requests_made,
-            )
+        if lo_eff is None or hi_eff is None or requests_made >= config.MAP_MAX_REQUESTS:
+            _warn(lo_eff, hi_eff)
+            return
+        if hi_eff - lo_eff <= config.MAP_MIN_PRICE_BAND:
+            # Too dense to split further. This band stays truncated, but an open side
+            # can still hold listings outside the sample: keep exploring there.
+            _warn(lo_eff, hi_eff)
+            if lo is None and lo_eff > 0:
+                await recurse(None, lo_eff - 1)
+            if hi is None:
+                await recurse(hi_eff + 1, None)
             return
         mid = (lo_eff + hi_eff) // 2
-        await recurse(lo_eff, mid)
-        await recurse(mid + 1, hi_eff)
+        await recurse(lo, mid)          # lo may be None: stays open below the sample
+        await recurse(mid + 1, hi)      # hi may be None: stays open above the sample
 
     await recurse(f.min_price, f.max_price)
     return list(collected.values())

@@ -192,9 +192,14 @@ location has more matches. Mitigations:
 
 - **Price-band bisection** — split `[minPrice,maxPrice]` recursively until each band returns < 200.
   The bot (`gateway.fetch_map`) bisects until the band is done, hits `config.MAP_MAX_REQUESTS`
-  (default 16 requests per scrape group, to bound load), or narrows below `config.MAP_MIN_PRICE_BAND`
+  (default 40 requests per scrape group, to bound load), or narrows below `config.MAP_MIN_PRICE_BAND`
   (default ₪250) — whichever comes first. Hitting either bound logs a warning that the scope may still
   be truncated ("tighten the search filters").
+  **With no price filter, the outer halves stay open-ended** (`minPrice`/`maxPrice` omitted). The capped
+  sample spans only part of the range, so bounding by its own min/max never asks for the rest. A band
+  too dense to split still explores its open side. Measured 2026-11-24, all of Tel Aviv with no filters:
+  2,387 listings in 31 requests (₪0 – ₪72M). With the old sample-bounded split it was 2,372 (it stopped at
+  ₪120k), and with the old cap of 16 requests, 1,277.
 - **`bBox` tiling** — pan a grid of bounding boxes over the area (used to harvest the
   [Tel Aviv hood catalog](./tel-aviv-neighborhoods.md) — 4–7 tiles yielded 1,400 markers / 97 hoods).
   Note: the bot's live scrape path (`fetch_map`) only does price bisection, never `bBox` tiling —

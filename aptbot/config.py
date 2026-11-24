@@ -57,7 +57,9 @@ MAP_MARKER_CAP = int(os.getenv("MAP_MARKER_CAP", "200"))
 MAP_MIN_PRICE_BAND = int(os.getenv("MAP_MIN_PRICE_BAND", "250"))
 # Hard cap on gateway requests per location scrape, so an unfiltered whole-city
 # search can't fire hundreds of requests each cycle (bounds load / bot-detection).
-MAP_MAX_REQUESTS = int(os.getenv("MAP_MAX_REQUESTS", "16"))
+# Unfiltered Tel Aviv needed 31 requests for ~2,390 listings (2026-11-24); 16
+# silently dropped almost half of them.
+MAP_MAX_REQUESTS = int(os.getenv("MAP_MAX_REQUESTS", "40"))
 # How many location groups to scrape concurrently per cycle (bounds parallel load
 # on the gateway while cutting wall-clock time vs. sequential scraping).
 SCRAPE_CONCURRENCY = int(os.getenv("SCRAPE_CONCURRENCY", "5"))
