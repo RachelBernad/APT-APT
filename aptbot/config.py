@@ -46,7 +46,6 @@ FB_GROUP_IDS = _id_list(os.getenv("FB_GROUP_IDS", ",".join([
     "457465901082882",   # דירות בתל אביב ללא תיווך
     "101875683484689",   # דירות מפה לאוזן בתל אביב
     "305724686290054",   # דירות להשכרה בתל אביב
-    "1484784835108605",  # יד 2 - תל אביב והמרכז
 ])))
 FB_MAX_TABS = int(os.getenv("FB_MAX_TABS", "2"))
 # Poll every 20-35 min, jittered (the library's account-safety guidance, SPEC §7).
