@@ -1,0 +1,7 @@
+# Own venv, NOT the bot image:
+#   uv venv ~/.fbgb/venv && uv pip install --python ~/.fbgb/venv/bin/python -r requirements.txt
+patchright==1.64.4
+aiosqlite==0.22.1
+# A/B validation only (explore/validate.py):
+playwright==1.65.2
+zendriver==0.18.0
