@@ -9,7 +9,8 @@ For each supported layer it reports name, geometry, feature count and latest
 updating (see ../CLAUDE.md). An UNAVAILABLE line means the layer's metadata loads but its
 data source fails even a ``1=1`` count (a server-side outage).
 
-Exit codes: 0 = all good, 1 = DRIFT, 2 = no drift but some layer UNAVAILABLE.
+Exit codes: 0 = all good, 1 = DRIFT, 3 = no drift but some layer UNAVAILABLE
+(2 is argparse's usage error).
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ import aiohttp
 from aptbot import config
 from aptbot.scrapers.tel_aviv_gis.layers import all_layers
 
-EXIT_UNAVAILABLE = 2
+EXIT_UNAVAILABLE = 3  # not 2: argparse uses 2 for usage errors
 
 
 async def _get(session: aiohttp.ClientSession, url: str, **params: Any) -> Dict[str, Any]:

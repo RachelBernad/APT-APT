@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -104,8 +105,8 @@ class TelAvivGisClient:
         spec = get_layer(layer)
         if distance_m is not None and geometry is None:
             raise ValueError("distance_m requires geometry")
-        if distance_m is not None and distance_m < 0:
-            raise ValueError("distance_m must be >= 0")
+        if distance_m is not None and not (math.isfinite(distance_m) and distance_m >= 0):
+            raise ValueError(f"distance_m must be a finite number >= 0, got {distance_m!r}")
         params = self._params(spec, where, geometry, distance_m, out_fields, return_geometry)
         if now is None:
             ref = datetime.now(timezone.utc)

@@ -2,7 +2,7 @@
 
 INVARIANTS (api_docs/transport/http-and-auth.md#outages):
 - a layer whose metadata loads but whose `1=1` count fails is UNAVAILABLE, not a crash;
-- exit 0 = clean, 1 = DRIFT (wins over outages), 2 = only UNAVAILABLE layers.
+- exit 0 = clean, 1 = DRIFT (wins over outages), 3 = only UNAVAILABLE layers.
 """
 import pytest
 

@@ -184,9 +184,12 @@ async def test_zero_distance_sends_a_bare_point():
     assert p["geometry"] == "34.78,32.08" and "distance" not in p and "units" not in p
 
 
-async def test_negative_distance_is_rejected():
+@pytest.mark.parametrize("bad", [-1, float("nan"), float("inf")])
+async def test_invalid_distance_is_rejected_locally(bad):
+    s = FakeSession()
     with pytest.raises(ValueError):
-        await _query(FakeSession(), "permits", geometry=(32.08, 34.78), distance_m=-1)
+        await _query(s, "permits", geometry=(32.08, 34.78), distance_m=bad)
+    assert s.calls == []
 
 
 async def test_5xx_is_retried_then_succeeds():

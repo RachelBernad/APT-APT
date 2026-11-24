@@ -19,7 +19,7 @@ Newest first. Each entry: date, what changed, how it was observed, code impact.
   polygons. 591: `t_mimzaim` truncated in 553/577. 801: city-scale zones, so use a bare point.
 - Code impact: `client.py` raises `TelAvivGisQueryError` / `TelAvivGisLayerUnavailable` (probe) and
   sends a bare point for `distance_m=0`; `layers.py` derives the stage of issued 772 rows from their own
-  dates and drops `taarichPticha` from the expected fields; `catalog.py` prints `UNAVAILABLE` (exit 2)
+  dates and drops `taarichPticha` from the expected fields; `catalog.py` prints `UNAVAILABLE` (exit 3)
   instead of crashing.
 
 ## 2026-11-23 (v2: long horizon)

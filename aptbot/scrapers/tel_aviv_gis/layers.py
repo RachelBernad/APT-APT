@@ -125,18 +125,35 @@ _PERMIT_STAGES = {
 }
 
 
+NO_EXPIRY_YEAR = 2900
+_SAME_DAY_SLACK = timedelta(days=1)  # dates are calendar days in different time zones
+
+
+def _on_or_after(when: Optional[datetime], ref: datetime) -> bool:
+    return when is not None and when >= ref - _SAME_DAY_SLACK
+
+
+def _completion(a: Attrs) -> Optional[datetime]:
+    """772 ``finished`` / ``occupation`` are DD/MM/YYYY strings, often empty."""
+    return dmy(a.get("finished")) or dmy(a.get("occupation"))
+
+
 def _map_permits(a: Attrs, now: datetime) -> Mapped:  # layer 772
     stage = _PERMIT_STAGES.get(text(a.get("building_stage")) or "", Stage.UNKNOWN)
     expires = epoch_ms(a.get("expiry_date"))
+    if expires is not None and expires.year >= NO_EXPIRY_YEAR:
+        expires = None  # 2999-12-31 = "no expiry" sentinel (change-of-use permits)
     issued = epoch_ms(a.get("permission_date"))
     start = epoch_ms(a.get("tr_hathalat_bniya"))
     if stage is Stage.REQUESTED and issued is not None:
         # building_stage is the *building's* latest licensing activity, so an issued permit
         # reads "בתהליך היתר" once a newer request is filed on the same building (953 rows on
         # 2026-11-24). Use the record's own dates instead (api_docs 772 page, "Caveats").
-        if text(a.get("finished")) or text(a.get("occupation")):
+        # Start/finish dates are per building: only count them if they come after this permit
+        # was issued (282 of the 953 had a start *before* issue, i.e. earlier works).
+        if _on_or_after(_completion(a), issued):
             stage = Stage.COMPLETED
-        elif start is not None and start <= now:
+        elif start is not None and _on_or_after(start, issued) and start <= now:
             stage = Stage.ACTIVE
         else:
             stage = Stage.PERMITTED

@@ -60,7 +60,9 @@ Not a dataset: no storage, no refresh job, no browser at runtime.
     returns nothing for `distance=0`.
 17. **772 stage from the record's own dates** when `building_stage` (a building-level field) says
     requested but the request was issued: finished/occupation → completed, started → active,
-    otherwise permitted/lapsed.
+    otherwise permitted/lapsed. Start/finish dates are per building, so they only count when on or
+    after this permit's issue date. `expiry_date` 2999-12-31 (the no-expiry sentinel) is dropped
+    from `dates`.
 
 ## Public API
 ```python
@@ -118,7 +120,7 @@ class ConstructionFeature:
 Settings (`aptbot/config.py`): `TLV_GIS_MAPSERVER`, `TLV_GIS_PAGE_SIZE` (≤2000),
 `TLV_GIS_CONCURRENCY` (4), `TLV_GIS_TIMEOUT` (60 s), `TLV_GIS_RETRIES` (3), `TLV_GIS_MAX_PAGES` (50).
 
-Drift check: `python -m aptbot.scrapers.tel_aviv_gis.catalog` (exit 1 on drift, 2 when some layer is
+Drift check: `python -m aptbot.scrapers.tel_aviv_gis.catalog` (exit 1 on drift, 3 when some layer is
 UNAVAILABLE but nothing drifted; `--all` lists every layer).
 
 ## Layer → Kind/Stage/Severity mapping

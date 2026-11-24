@@ -8,6 +8,7 @@ import math
 import aiohttp
 import pytest
 
+from aptbot import config
 from aptbot.scrapers.tel_aviv_gis import (LAYERS, PLANS_SITE_SCOPED_WHERE, Kind, Stage,
                                           TelAvivGisClient, TelAvivGisError,
                                           TelAvivGisLayerUnavailable, TelAvivGisQueryError)
@@ -68,26 +69,42 @@ async def test_every_supported_layer_answers(http, key):
 async def test_bad_field_is_a_query_error_not_an_outage(http):
     # Same error body as an outage; the 1=1 probe must tell them apart.
     async with TelAvivGisClient(http) as gis:
-        with pytest.raises(TelAvivGisQueryError):
-            try:
-                await gis.query("permits", where="no_such_field=1", return_geometry=False)
-            except aiohttp.ClientError as exc:
-                pytest.skip(f"Tel Aviv GIS unreachable ({exc}): smoke skip")
+        try:
+            await gis.query("permits", where="no_such_field=1", return_geometry=False)
+        except TelAvivGisQueryError:
+            return  # expected
+        except (aiohttp.ClientError, TelAvivGisError) as exc:  # network, or 772 itself down
+            pytest.skip(f"Tel Aviv GIS unreachable or layer down ({exc}): smoke skip")
+        pytest.fail("a bad field name should raise TelAvivGisQueryError")
+
+
+async def _raw_count(http, layer_id, lat, lng, **extra):
+    params = {"where": "1=1", "geometry": f"{lng},{lat}", "geometryType": "esriGeometryPoint",
+              "inSR": 4326, "spatialRel": "esriSpatialRelIntersects", "returnCountOnly": "true",
+              "f": "json", **extra}
+    async with http.get(f"{config.TLV_GIS_MAPSERVER.rstrip('/')}/{layer_id}/query",
+                        params=params) as r:
+        return (await r.json(content_type=None)).get("count")
 
 
 async def test_zero_radius_means_contains(http):
-    # Raw distance=0 returns nothing on this server; distance_m=0 must behave like no radius.
+    # The server quirk the client works around: raw distance=0 matches nothing, a bare point
+    # matches the containing polygon. If the server ever fixes this, update query.md.
     # (Centroids of L-shaped lots can fall outside their own polygon, so sample several.)
     async with TelAvivGisClient(http) as gis:
         near = await _query_or_skip(gis, "permits", geometry=CENTER, distance_m=RADIUS_M)
         hits = 0
         for f in near[:6]:
+            lat, lng = f.centroid
+            bare = await _raw_count(http, 772, lat, lng)
+            if not bare:
+                continue
+            assert await _raw_count(http, 772, lat, lng, distance=0,
+                                    units="esriSRUnit_Meter") == 0, "server now honours distance=0"
             zero = await _query_or_skip(gis, "permits", geometry=f.centroid, distance_m=0,
                                         return_geometry=False)
-            bare = await _query_or_skip(gis, "permits", geometry=f.centroid,
-                                        return_geometry=False)
-            assert {x.object_id for x in zero} == {x.object_id for x in bare}
-            hits += bool(zero)
+            assert len(zero) == bare
+            hits += 1
     assert hits, "no sampled centroid fell inside any permit polygon"
 
 

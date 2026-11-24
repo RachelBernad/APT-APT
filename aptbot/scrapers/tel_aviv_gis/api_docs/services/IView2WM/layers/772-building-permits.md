@@ -52,9 +52,14 @@ permit was already issued (often while the work is under way), the older, issued
 and 747 of them also have a start date. For 613 rows that were issued, started and not finished, the matching
 499 site (`heterim` contains the `permission_num`) was mostly under way: earthworks 227,
 works started 190, foundations 39, frame 44. Some were not yet started (file opened, 120) or finished (22).
+The start and finish dates are **per building** too. 282 of the 953 have a start date *before* their
+own `permission_date`, which means earlier works on the building. In a sample of 40 of those, 28 had no 499
+site at all. All 105 `finished` dates are on or after the permit date. `finished`/`occupation` are
+`DD/MM/YYYY` strings (1632 + 980 non-empty values checked, all in that format).
 **Rule:** if `building_stage` is `בתהליך היתר` but the row has a `permission_date`, decide the stage from
-the row's own dates: `finished`/`occupation` set → completed; started (`tr_hathalat_bniya` ≤ now) →
-active; else permitted (lapsed if `expiry_date` passed).
+the row's own dates, counting a start or finish only if it is on or after the permit date (±1 day for
+time zones): finished/occupied → completed; started and start ≤ now → active (even past
+`expiry_date`, as with `בבניה`); else permitted, or lapsed if `expiry_date` has passed.
 
 ### `tochen_bakasha` is semi-structured
 Newline-separated `<heading>: <details>` lines, e.g.
