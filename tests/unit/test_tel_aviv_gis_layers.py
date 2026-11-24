@@ -96,6 +96,42 @@ def test_permit_expired_before_start_is_lapsed():
     assert _map("permits", attrs)[0] is Stage.LAPSED
 
 
+# building_stage is building-level: an issued permit reads "בתהליך היתר" once a newer
+# request is filed on the same building. The record's own dates decide (api_docs 772 page).
+ISSUED_UNDER_NEWER_REQUEST = {**PERMIT, "building_stage": "בתהליך היתר",
+                              "permission_date": MS(2024, 3, 4), "expiry_date": MS(2030, 3, 4)}
+
+
+def test_issued_permit_under_a_newer_request_is_permitted_not_requested():
+    assert _map("permits", ISSUED_UNDER_NEWER_REQUEST).stage is Stage.PERMITTED
+
+
+def test_issued_and_started_permit_under_a_newer_request_is_active():
+    attrs = {**ISSUED_UNDER_NEWER_REQUEST, "tr_hathalat_bniya": MS(2024, 10, 15)}
+    assert _map("permits", attrs).stage is Stage.ACTIVE
+
+
+def test_start_date_in_the_future_is_not_active_yet():
+    attrs = {**ISSUED_UNDER_NEWER_REQUEST, "tr_hathalat_bniya": MS(2027, 1, 1)}
+    assert _map("permits", attrs).stage is Stage.PERMITTED
+
+
+def test_issued_unstarted_expired_permit_under_a_newer_request_is_lapsed():
+    attrs = {**ISSUED_UNDER_NEWER_REQUEST, "expiry_date": MS(2025, 1, 1)}
+    assert _map("permits", attrs).stage is Stage.LAPSED
+
+
+def test_issued_permit_with_completion_under_a_newer_request_is_completed():
+    attrs = {**ISSUED_UNDER_NEWER_REQUEST, "tr_hathalat_bniya": MS(2020, 1, 1),
+             "finished": "01/02/2023"}
+    assert _map("permits", attrs).stage is Stage.COMPLETED
+
+
+def test_unissued_request_stays_requested_even_with_a_building_start_date():
+    attrs = {**PERMIT, "tr_hathalat_bniya": MS(2024, 10, 15)}
+    assert _map("permits", attrs).stage is Stage.REQUESTED
+
+
 def test_active_site_with_past_expiry_stays_active():
     attrs = {**PERMIT, "building_stage": "בבניה", "expiry_date": MS(2025, 1, 1)}
     assert _map("permits", attrs)[0] is Stage.ACTIVE

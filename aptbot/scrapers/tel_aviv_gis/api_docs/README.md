@@ -4,7 +4,7 @@ Observed behavior of the municipal ArcGIS REST API behind gisn.tel-aviv.gov.il.
 Only verified facts go here; inferred items are marked **Unverified**.
 Maintenance rules: `../CLAUDE.md`. History of changes: [CHANGELOG.md](CHANGELOG.md).
 
-Last verified: 2026-11-23
+Last verified: 2026-11-24
 
 ## Layout
 ```
@@ -32,6 +32,7 @@ Each `services/<Service>/layers/<id>-<slug>.md` has these sections:
 | What | URL |
 |---|---|
 | REST root | `https://gisn.tel-aviv.gov.il/arcgis/rest/services` (folders: OpenData, Test, Utilities, WM) |
+| Test copies (same data source as the main service) | `…/WM/IView2WM____test`, `…/IView2____test`, `…/Test/IView_Internet[WM]`. Not a fallback: a layer that's down is down there too |
 | Main MapServer (Web Mercator) | `…/WM/IView2WM/MapServer` |
 | Same layers in ITM (EPSG:2039) | `…/IView2/MapServer` |
 | Master plan תא/5500 | `…/WM/TA5500WM2026/MapServer` (and the older `…/WM/TA5500WM`) |
@@ -41,8 +42,9 @@ Each `services/<Service>/layers/<id>-<slug>.md` has these sections:
 We query in WGS84 (`inSR=4326&outSR=4326`), so the native SR doesn't matter to callers.
 
 ## Page index
-- [transport/http-and-auth.md](transport/http-and-auth.md): no auth, F5 edge, gzip/BOM quirks, errors-as-200, CDN cache
-- [operations/query.md](operations/query.md): query params, server-side radius, paging, output shapes
+- [transport/http-and-auth.md](transport/http-and-auth.md): no auth, F5 edge, gzip/BOM quirks, errors-as-200, CDN cache, **outages**
+- [operations/query.md](operations/query.md): query params, server-side radius, paging, output shapes, **caveats**
+  (`distance=0`, ambiguous error body, statistics cap, centroid vs edge distance, date/empty/255-char quirks)
 - [viewer/iview-network-flow.md](viewer/iview-network-flow.md): what the web viewer loads (layer catalog dumps)
 - [services/IView2WM/README.md](services/IView2WM/README.md): service facts plus the construction-layer candidate table
   - [layers/772-building-permits.md](services/IView2WM/layers/772-building-permits.md)

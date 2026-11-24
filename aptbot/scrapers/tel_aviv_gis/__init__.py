@@ -12,7 +12,9 @@ Everything is labeled; callers pick the layers/stages/severities/tags they care 
 Library contract: ./docs/SPEC.md
 Remote API reference: ./api_docs/README.md
 """
-from aptbot.scrapers.tel_aviv_gis.client import TelAvivGisClient, TelAvivGisError, query
+from aptbot.scrapers.tel_aviv_gis.client import (TelAvivGisClient, TelAvivGisError,
+                                                 TelAvivGisLayerUnavailable, TelAvivGisQueryError,
+                                                 query)
 from aptbot.scrapers.tel_aviv_gis.layers import (LAYERS, PLANS_LIVE_WHERE,
                                                  PLANS_SITE_SCOPED_WHERE, LayerSpec, get_layer)
 from aptbot.scrapers.tel_aviv_gis.models import (TAG_DEMOLITION_ORDER, TAG_IMMEDIATE_ORDER,
@@ -21,7 +23,8 @@ from aptbot.scrapers.tel_aviv_gis.models import (TAG_DEMOLITION_ORDER, TAG_IMMED
                                                  Severity, Stage)
 
 __all__ = [
-    "TelAvivGisClient", "TelAvivGisError", "query",
+    "TelAvivGisClient", "TelAvivGisError", "TelAvivGisQueryError", "TelAvivGisLayerUnavailable",
+    "query",
     "LAYERS", "LayerSpec", "get_layer", "PLANS_SITE_SCOPED_WHERE", "PLANS_LIVE_WHERE",
     "ConstructionFeature", "Kind", "Severity", "Stage",
     "TAG_TAMA38_REBUILD", "TAG_TAMA38_ADDITION", "TAG_URBAN_RENEWAL",

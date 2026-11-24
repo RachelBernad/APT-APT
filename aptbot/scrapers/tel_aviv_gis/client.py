@@ -35,6 +35,19 @@ class TelAvivGisError(RuntimeError):
     """The server answered with an ArcGIS error body (often with HTTP 200), or paging ran away."""
 
 
+class TelAvivGisQueryError(TelAvivGisError):
+    """The server rejected this query (bad ``where``, unknown field name, ...)."""
+
+
+class TelAvivGisLayerUnavailable(TelAvivGisError):
+    """The layer fails even a trivial ``where=1=1`` count: a server-side outage, not our query.
+
+    Seen on layers 528/683 (2026-11-24): metadata loads, every other layer works, but every
+    query on the layer returns the same error body a bad field name gets. See
+    api_docs/transport/http-and-auth.md#outages.
+    """
+
+
 class TelAvivGisClient:
     def __init__(self, session: Optional[aiohttp.ClientSession] = None, *,
                  base_url: str = config.TLV_GIS_MAPSERVER,
@@ -82,10 +95,17 @@ class TelAvivGisClient:
         ArcGIS SQL over the layer's raw field names (see api_docs layer pages).
         ``now`` fixes the reference time for date-derived stages (default: current time).
         A naive ``now`` (no tzinfo) is taken as Israel local time.
+        ``distance_m=0`` (or ``None``) with a geometry means "features containing the point".
+
+        Raises ``TelAvivGisQueryError`` when the server rejects the query, and
+        ``TelAvivGisLayerUnavailable`` when the layer is failing server-side (the two return
+        the same error body; a ``1=1`` count probe tells them apart).
         """
         spec = get_layer(layer)
         if distance_m is not None and geometry is None:
             raise ValueError("distance_m requires geometry")
+        if distance_m is not None and distance_m < 0:
+            raise ValueError("distance_m must be >= 0")
         params = self._params(spec, where, geometry, distance_m, out_fields, return_geometry)
         if now is None:
             ref = datetime.now(timezone.utc)
@@ -98,8 +118,15 @@ class TelAvivGisClient:
 
         features: List[ConstructionFeature] = []
         for page in range(self._max_pages):
-            body = await self._get_json(f"{self._base}/{spec.layer_id}/query",
-                                        {**params, "resultOffset": page * self._page_size})
+            try:
+                body = await self._get_json(f"{self._base}/{spec.layer_id}/query",
+                                            {**params, "resultOffset": page * self._page_size})
+            except TelAvivGisQueryError as exc:
+                if await self._layer_is_down(spec):
+                    raise TelAvivGisLayerUnavailable(
+                        f"layer {spec.layer_id} ({spec.key}) fails even `1=1`: server-side "
+                        f"outage, the query itself is fine ({exc})") from exc
+                raise
             raw = body.get("features") or []
             features.extend(self._to_feature(spec, f, ref) for f in raw)
             more = body.get("exceededTransferLimit") or (body.get("properties") or {}).get(
@@ -111,6 +138,17 @@ class TelAvivGisClient:
             f"narrow the query or raise TLV_GIS_MAX_PAGES")
 
     # --- internals --------------------------------------------------------------
+
+    async def _layer_is_down(self, spec: LayerSpec) -> bool:
+        """True if the layer rejects the most trivial query (a count over ``1=1``)."""
+        try:
+            await self._get_json(f"{self._base}/{spec.layer_id}/query",
+                                 {"where": "1=1", "returnCountOnly": "true", "f": "json"})
+        except TelAvivGisQueryError:
+            return True
+        except TelAvivGisError:
+            return False  # network trouble: can't tell, report the original error
+        return False
 
     def _params(self, spec: LayerSpec, where: str, geometry: Optional[LatLng],
                 distance_m: Optional[float], out_fields: Optional[Sequence[str]],
@@ -132,7 +170,9 @@ class TelAvivGisClient:
             lat, lng = geometry
             p.update({"geometry": f"{lng},{lat}", "geometryType": "esriGeometryPoint",
                       "inSR": 4326, "spatialRel": "esriSpatialRelIntersects"})
-            if distance_m is not None:
+            # The server returns nothing for distance=0, even for a point inside a polygon;
+            # a bare point already means "contains" (api_docs/operations/query.md).
+            if distance_m:
                 p.update({"distance": distance_m, "units": "esriSRUnit_Meter"})
         return p
 
@@ -164,7 +204,7 @@ class TelAvivGisClient:
                 continue
             if isinstance(body, dict) and "error" in body:
                 # ArcGIS reports errors with HTTP 200 + {"error": {...}}.
-                raise TelAvivGisError(f"{url}: {body['error']}")
+                raise TelAvivGisQueryError(f"{url}: {body['error']}")
             if not isinstance(body, dict):
                 raise TelAvivGisError(f"{url}: unexpected response {type(body).__name__}")
             return body

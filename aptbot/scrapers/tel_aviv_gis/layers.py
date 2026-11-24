@@ -128,6 +128,18 @@ _PERMIT_STAGES = {
 def _map_permits(a: Attrs, now: datetime) -> Mapped:  # layer 772
     stage = _PERMIT_STAGES.get(text(a.get("building_stage")) or "", Stage.UNKNOWN)
     expires = epoch_ms(a.get("expiry_date"))
+    issued = epoch_ms(a.get("permission_date"))
+    start = epoch_ms(a.get("tr_hathalat_bniya"))
+    if stage is Stage.REQUESTED and issued is not None:
+        # building_stage is the *building's* latest licensing activity, so an issued permit
+        # reads "בתהליך היתר" once a newer request is filed on the same building (953 rows on
+        # 2026-11-24). Use the record's own dates instead (api_docs 772 page, "Caveats").
+        if text(a.get("finished")) or text(a.get("occupation")):
+            stage = Stage.COMPLETED
+        elif start is not None and start <= now:
+            stage = Stage.ACTIVE
+        else:
+            stage = Stage.PERMITTED
     if stage is Stage.PERMITTED and expires is not None and expires < now:
         stage = Stage.LAPSED
     severity = severity_from_type(a.get("sug_bakasha"))
@@ -140,9 +152,7 @@ def _map_permits(a: Attrs, now: datetime) -> Mapped:  # layer 772
     if _yes(a.get("sw_tama_38_tosefet")):
         tags.add(TAG_TAMA38_ADDITION)
     dates = _dates(requested=epoch_ms(a.get("open_request")),
-                   issued=epoch_ms(a.get("permission_date")),
-                   expires=expires,
-                   start=epoch_ms(a.get("tr_hathalat_bniya")))
+                   issued=issued, expires=expires, start=start)
     return Mapped(stage, severity, text(a.get("addresses")), dates,
                   title=text(a.get("sug_bakasha")), url=url(a.get("url_hadmaya")),
                   tags=frozenset(tags))
@@ -225,6 +235,8 @@ def _map_plans(a: Attrs, now: datetime) -> Mapped:  # layer 528
         severity = Severity.HIGH
     else:
         severity = Severity.MEDIUM  # site scope, or unknown scope (not silently dropped)
+    # taarichPticha was dropped from the layer on 2026-11-24 (api_docs CHANGELOG); still read
+    # if it comes back, but no longer an expected field.
     dates = _dates(opened=epoch_ms(a.get("taarichPticha")),
                    deposited=epoch_ms(a.get("tr_hafkada")),
                    approved=epoch_ms(a.get("tr_matan_tokef")),
@@ -289,6 +301,7 @@ LAYERS: Dict[str, LayerSpec] = {spec.key: spec for spec in (
     LayerSpec("permits", 772, "בקשות והיתרי בניה", Kind.BUILDING, "oid_permit", _map_permits,
               frozenset({"building_stage", "expiry_date", "sug_bakasha", "yechidot_diyur",
                          "open_request", "permission_date", "tr_hathalat_bniya", "addresses",
+                         "finished", "occupation",
                          "sw_tama_38_chadash", "sw_tama_38_tosefet", "url_hadmaya"})),
     LayerSpec("sites", 499, "אתרי בניה", Kind.BUILDING, "oid_site", _map_sites,
               frozenset({"matzav_bniya", "sug_bakasha", "sivug", "tr_tchilat_avoda",
@@ -307,7 +320,7 @@ LAYERS: Dict[str, LayerSpec] = {spec.key: spec for spec in (
               frozenset({"tr_hatchala", "tr_siyum", "ktovet", "mahut"})),
     LayerSpec("plans", 528, "תוכניות בניין עיר", Kind.PLAN, "oid_taba", _map_plans,
               frozenset({"t_status_klali", "t_status", "shem_taba", "taba", "t_hekef",
-                         "sug_nose", "sw_hitchadshut_ironit", "taarichPticha", "tr_hafkada",
+                         "sug_nose", "sw_hitchadshut_ironit", "tr_hafkada",
                          "tr_matan_tokef", "tr_shinuy_status", "url_documents", "url_iplan"})),
     LayerSpec("dangerous_buildings", 591, "מבנים מסוכנים", Kind.HAZARD, "oid_mivne",
               _map_dangerous_buildings, frozenset({"t_tzav", "t_ktovet"})),

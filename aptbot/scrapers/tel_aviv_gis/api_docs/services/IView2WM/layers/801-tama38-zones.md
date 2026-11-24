@@ -1,10 +1,16 @@
 # Layer 801: מדיניות תמ"א 38 – מפתח אזורים (TAMA 38 policy zones)
 
-Last verified: 2026-11-23 · Status: **mapped** (`tama38_zones`)
+Last verified: 2026-11-24 · Status: **mapped** (`tama38_zones`)
 
 - URL: `…/WM/IView2WM/MapServer/801` · DB name `kl_tg_tama38_zones`
-- Geometry: **Polygon** (neighborhood-sized compounds; zone 30 is ~298k m²). OID field: `oid_zone`. Count: 48.
+- Geometry: **Polygon**, from compound-sized (zone 30 is ~298k m²) up to whole quarters (a
+  "quarters 3,4" zone has `Shape_Area` 5.57M and 239 vertices). `Shape_Area`/`Shape_Length` are in
+Web Mercator units, which overstate ground area by about 1.39× at Tel Aviv's latitude (so ~4 km² here). OID field: `oid_zone`. Count: 48.
 - **Stale:** `date_import` is `07/10/2021`. It's a policy map, not a live feed.
+- **Ask "which zone contains the point", not "which zones are near".** Query with a bare point (no
+  `distance`, or `distance_m=0` in the client). A radius returns neighboring zones too, and
+  centroid distances are meaningless at this scale: the containing zone's centroid can be farther
+  than a neighbor's.
 
 ## Fields
 | name | alias | type | notes |
