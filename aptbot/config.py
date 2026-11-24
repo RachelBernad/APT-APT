@@ -75,6 +75,19 @@ REPORT_COOLDOWN_HOURS = int(os.getenv("REPORT_COOLDOWN_HOURS", "24"))
 # ids are 4-char, zero-padded strings
 # (e.g. "0070" = Ashdod), so this is kept as a string.
 TEL_AVIV_CITY_ID = os.getenv("TEL_AVIV_CITY_ID", "5000")
+# Yad2 neighborhoods the /monitor watches (exact names from data/hoods/5000.json, ';'-
+# separated in the env because some names contain commas). Empty = the whole city.
+# Default: לב העיר (the whole center quarter), הצפון הישן, נווה צדק.
+YAD2_HOODS = [h.strip() for h in os.getenv("YAD2_HOODS", ";".join([
+    "לב תל אביב, לב העיר צפון",
+    "כרם התימנים",
+    "מונטיפיורי, הרכבת",
+    "גני שרונה, קרית הממשלה",
+    "מכללת תל אביב יפו, דקר",
+    "הצפון הישן - החלק הצפוני",
+    "הצפון הישן - החלק הדרומי",
+    "נווה צדק",
+])).split(";") if h.strip()]
 
 # --- Yad2 gateway ---
 YAD2_GATEWAY = os.getenv("YAD2_GATEWAY", "https://gw.yad2.co.il")

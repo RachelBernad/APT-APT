@@ -299,6 +299,20 @@ def city_name(city_id: str) -> str:
     return c["name"] if c and c.get("name") else str(city_id)
 
 
+def monitor_targets(city_id: str, hoods: List[str]) -> List[LocationTarget]:
+    """Targets for a monitor: the listed bundled hoods of a city, or the whole city
+    when ``hoods`` is empty. Unknown hood names raise, so a typo can't silently
+    turn into "no matches"."""
+    if not hoods:
+        return [city_target(city_id)]
+    catalog = load_city_hoods(city_id) or {}
+    known = {h for q in catalog.get("quarters", []) for h in q.get("hoods", [])}
+    unknown = [h for h in hoods if h not in known]
+    if unknown:
+        raise KeyError(f"not in the {city_id} hood catalog: {unknown}")
+    return [hood_target(catalog, h, city_name(city_id)) for h in hoods]
+
+
 def city_target(city_id: str) -> LocationTarget:
     """A whole-city target from the bundled catalog (region/area ids + display name)."""
     c = load_catalog().get("cities", {}).get(str(city_id))

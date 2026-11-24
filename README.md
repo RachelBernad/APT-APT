@@ -2,7 +2,8 @@
 
 A Telegram bot that watches **Tel Aviv apartment rentals** on two sources and posts what's new:
 
-- **Yad2**: every rental listing in Tel Aviv. New listings and price changes, each with a photo.
+- **Yad2**: rentals in לב העיר (the whole center quarter), הצפון הישן and נווה צדק. New listings and price
+  changes, each with a photo. The neighborhoods are `YAD2_HOODS` in `aptbot/config.py` (overridable in `.env`).
 - **Facebook groups**: the Tel Aviv rental groups, read through a logged-in browser. Each new post arrives
   with its text and photos, **once**, even if it's cross-posted to several groups. Dedup uses a hash of the
   post text with leading/trailing whitespace stripped.

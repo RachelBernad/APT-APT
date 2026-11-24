@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 MONITOR_LABEL = "תל אביב"
 
 
+def monitor_targets():
+    return locations.monitor_targets(config.TEL_AVIV_CITY_ID, config.YAD2_HOODS)
+
+
+def area_summary() -> str:
+    if not config.YAD2_HOODS:
+        return "all of Tel Aviv"
+    return ", ".join(config.YAD2_HOODS)
+
+
 def _interval_min() -> int:
     return max(1, config.CHECK_INTERVAL_SECONDS // 60)
 
@@ -36,7 +46,7 @@ def help_text(fb_on: bool) -> str:
           "Each post once, with its photos, even if it's cross-posted.\n") if fb_on else ""
     return (
         "<b>🏠 Apartment watcher: Tel Aviv</b>\n\n"
-        f"• <b>Yad2</b>: every rental in Tel Aviv, checked every {_interval_min()} minutes "
+        f"• <b>Yad2</b>: rentals in {area_summary()}, checked every {_interval_min()} minutes "
         "(new listings and price changes).\n"
         f"{fb}\n"
         "/monitor: start watching (you get a short taster of what's there now)\n"
@@ -60,6 +70,19 @@ class SimpleCommands:
         self.fb_state = fb_state
         self.fb_api = fb_api
 
+    async def sync_areas(self) -> int:
+        """At startup: point every existing monitor at the configured Yad2 areas (so an
+        area change in config/.env applies without anyone re-sending /monitor)."""
+        targets = monitor_targets()
+        changed = 0
+        for s in await self.db.get_active_searches():
+            if _loc_keys(s.locations) != _loc_keys(targets):
+                await self.db.set_search_locations(s.id, targets)
+                changed += 1
+        if changed:
+            logger.info("Yad2 areas updated on %d monitor(s): %s", changed, area_summary())
+        return changed
+
     async def _own_search(self, chat_id: int) -> Optional[SavedSearch]:
         searches = await self.db.list_searches(chat_id)
         return searches[0] if searches else None
@@ -76,18 +99,24 @@ class SimpleCommands:
         await self.db.upsert_user(chat.id, user.username if user else None)
         await self.db.set_user_active(chat.id, True)
         s = await self._own_search(chat.id)
+        targets = monitor_targets()
         if s and s.is_active:
+            if _loc_keys(s.locations) != _loc_keys(targets):     # the configured areas changed
+                await self.db.set_search_locations(s.id, targets)
+                await update.effective_message.reply_text(
+                    f"✅ Already watching; Yad2 areas updated to: {area_summary()}.")
+                return
             await update.effective_message.reply_text(
                 "✅ Already watching Tel Aviv. /status shows what's happening.")
             return
         if s:
+            await self.db.set_search_locations(s.id, targets)
             await self.db.set_search_active(s.id, True)
             await self.db.reprime_search(s.id)
             sid = s.id
         else:
-            target = locations.city_target(config.TEL_AVIV_CITY_ID)
             sid = await self.db.add_search(
-                SavedSearch(id=0, chat_id=chat.id, label=MONITOR_LABEL), [target])
+                SavedSearch(id=0, chat_id=chat.id, label=MONITOR_LABEL), targets)
         sources = "Yad2 and Facebook" if self.fb_api is not None else "Yad2"
         await update.effective_message.reply_text(
             f"👀 Watching <b>Tel Aviv</b> on {sources}. A short taster is on its way, "
@@ -105,7 +134,8 @@ class SimpleCommands:
 
     async def status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         s = await self._own_search(update.effective_chat.id)
-        lines = [f"<b>Monitor:</b> {'on' if s and s.is_active else 'off'} (Tel Aviv, no filters)"]
+        lines = [f"<b>Monitor:</b> {'on' if s and s.is_active else 'off'}",
+                 f"<b>Yad2 areas:</b> {area_summary()}"]
         last = await self.db.get_meta("yad2_last_cycle")
         lines.append(f"<b>Yad2:</b> every {_interval_min()} min, last check "
                      f"{_when(datetime.fromisoformat(last)) if last else 'not yet'}")
@@ -125,6 +155,10 @@ class SimpleCommands:
                 pass
             lines.append(f"<b>Facebook:</b> {fb}")
         await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+
+
+def _loc_keys(targets) -> set:
+    return {(t.level, t.city_id, t.match_name) for t in targets}
 
 
 def now_iso() -> str:

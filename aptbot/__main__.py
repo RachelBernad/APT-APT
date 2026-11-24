@@ -206,6 +206,7 @@ class Bot:
         self.fb = await self._open_facebook()
         self.commands = SimpleCommands(self.db, on_started=self.scan_now,
                                        fb_state=self.fb_state, fb_api=self.fb)
+        await self.commands.sync_areas()
         self._register_handlers()
 
         cycle_task = fb_task = None

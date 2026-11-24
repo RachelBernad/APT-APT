@@ -141,3 +141,63 @@ def test_long_post_is_cut_to_the_limit_without_breaking_entities():
     assert formatting.fb_post_fits_caption(_post("short"))
     short = formatting.format_fb_short_caption(_post("x" * 2000))
     assert len(short) < formatting.CAPTION_LIMIT and "fb.test" in short
+
+
+# --- Yad2 area list --------------------------------------------------------
+
+def test_default_yad2_hoods_all_exist_in_the_catalog():
+    from aptbot import config
+    targets = locations.monitor_targets("5000", config.YAD2_HOODS)
+    assert len(targets) == len(config.YAD2_HOODS) > 0
+    assert all(t.level == "hood" and t.city_id == "5000" and t.match_name for t in targets)
+
+
+def test_old_north_uses_the_listing_names_not_the_autocomplete_ones():
+    # Listings say "הצפון הישן - החלק הצפוני"; the short autocomplete name matched 0 of them.
+    names = {h for q in locations.city_quarters("5000") for h in q["hoods"]}
+    assert {"הצפון הישן - החלק הצפוני", "הצפון הישן - החלק הדרומי"} <= names
+    assert "הצפון הישן - צפון" not in names
+
+
+def test_unknown_hood_name_is_an_error_not_silence():
+    with pytest.raises(KeyError):
+        locations.monitor_targets("5000", ["אין שכונה כזאת"])
+
+
+def test_empty_hood_list_means_the_whole_city():
+    (t,) = locations.monitor_targets("5000", [])
+    assert t.level == "city"
+
+
+async def test_monitor_on_an_active_search_applies_changed_areas(db, monkeypatch):
+    from aptbot import config
+
+    async def on_started(sid):
+        return None
+
+    cmds = SimpleCommands(db, on_started=on_started)
+    upd, replies = _update(ALLOWED)
+    monkeypatch.setattr(config, "YAD2_HOODS", ["נווה צדק"])
+    await cmds.monitor(upd, None)
+    monkeypatch.setattr(config, "YAD2_HOODS", ["נווה צדק", "כרם התימנים"])
+    await cmds.monitor(upd, None)
+    (s,) = await db.list_searches(ALLOWED)
+    assert {t.display_name.split(",")[0] for t in s.locations} == {"נווה צדק", "כרם התימנים"}
+    assert "areas updated" in replies[-1]
+
+
+async def test_startup_sync_moves_an_old_whole_city_monitor_to_the_areas(db, monkeypatch):
+    from aptbot import config
+    from aptbot.models import SavedSearch
+    await db.upsert_user(ALLOWED, "u")
+    sid = await db.add_search(SavedSearch(id=0, chat_id=ALLOWED, label="x"),
+                              [locations.city_target("5000")])
+    monkeypatch.setattr(config, "YAD2_HOODS", ["נווה צדק"])
+
+    async def on_started(sid):
+        return None
+
+    cmds = SimpleCommands(db, on_started=on_started)
+    assert await cmds.sync_areas() == 1
+    assert [t.level for t in (await db.get_search(sid)).locations] == ["hood"]
+    assert await cmds.sync_areas() == 0
