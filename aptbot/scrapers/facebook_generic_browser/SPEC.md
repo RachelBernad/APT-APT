@@ -10,7 +10,7 @@ account's groups, pick one by id, read newest posts, stream and poll, search, op
 the cache. It looks like one person and **is fast**, and it serves **many concurrent callers over several tabs of the
 same account**.
 
-Non-goals: any write action (post, comment, react, join, message), scripted login, Marketplace, parsing price/rooms
+Non-goals: any write action (post, comment, react, join, message), stored credentials or automatic re-login, Marketplace, parsing price/rooms
 authoritatively (only `hints`), coupling to `aptbot` (a future adapter will map `Post` → `LISTING_KEYS`).
 
 Risk: against Meta's Terms. The account can be checkpointed or banned. Mitigated by §3, §7 and §8. Use a secondary account.
@@ -22,8 +22,8 @@ Risk: against Meta's Terms. The account can be checkpointed or banned. Mitigated
 | R2 | Human-looking input | `human.py`, attention lock | hovercard queries fire from our pointer path (real-pointer behavior) |
 | R3 | **Fast** | payload-first, request-aware waits, short random gaps | ~76 posts/min in one tab (`api_docs/feed/infinite-scroll.md`) |
 | R4 | Concurrent async callers, multiple tabs, one account | §5 dispatcher + tab workers | 2.05× with 3 tabs live. `tests/unit/test_fbgb_dispatcher.py` |
-| R5 | Raspberry Pi without GUI | headful Chromium under Xvfb + VNC login | designed (`api_docs/stealth/pi-headless.md`), **not run yet** |
-| R6 | No credentials in code/repo | manual login into `~/.fbgb/profile` | `explore/open_profile.py` checks cookie names only |
+| R5 | Raspberry Pi without GUI | headful Chromium under Xvfb + VNC login | **validated in Docker linux/arm64** (`api_docs/stealth/pi-headless.md`), physical Pi not yet |
+| R6 | No credentials stored anywhere | login by hand, or assisted `login --stdin` (memory only) into the profile | `explore/open_profile.py` checks cookie names only. Assisted login verified in Docker |
 | R7 | Account safety first | §7 budgets, §8 breaker | 8 sessions, 0 interstitials |
 | R8 | Easy for future implementers | `docs/` + examples + CLI + docs-sync test | `tests/unit/test_fbgb_docs.py` |
 | R9 | Reusable exploration method | `docs/exploration-playbook.md` + `explore/tools/` | used for every finding here |
@@ -88,9 +88,11 @@ comment_count, reaction_count, comments[Comment]|None, hints{prices, rooms, phon
 
 ## 11. Deployment
 - **Mac (now):** venv `~/.fbgb/venv` (own `requirements.txt`), profile/cache in `~/.fbgb/` (`docs/operations.md`).
-- **Raspberry Pi (next):** Debian Chromium headful under `Xvfb :99` + openbox, `x11vnc -localhost` over an SSH tunnel for
-  the one-time manual login (new device = own profile), Hebrew fonts, `FBGB_BROWSER=/usr/bin/chromium`, `max_tabs=2`.
-  Measure WebGL (llvmpipe) and fix if needed (`api_docs/stealth/pi-headless.md`).
+- **No GUI (Pi), validated in Docker linux/arm64 2026-11-24:** image `deploy/fbgb-headless/`. Debian Chromium headful
+  under Xvfb + openbox (32 px work-area margin) + PulseAudio null sink, custom seccomp (Docker default + namespaces)
+  for the sandbox, Mesa WebGL (`FBGB_CHROME_ARGS`), maximized. Detectors: all green except the "Chromium" brand
+  (unavoidable on Linux ARM). Login: assisted `login --stdin` (verified) or by hand over VNC on 127.0.0.1. Details: `api_docs/stealth/pi-headless.md`.
+  Still to do on the physical Pi: same checks, `max_tabs=2`, optional V3D GPU renderer.
 
 ## 12. Integration with the bot (future phase, designed, NOT built)
 The library runs as **its own process inside the bot's Docker container**, behind an authenticated local service:
@@ -114,6 +116,6 @@ container (supervisord as PID 1)
 2. `last_post_time` exists only for the 10 most active member groups. For more groups, page the rail ("See all")
    or open the group. `new_posts` currently treats unknown as "maybe new" (opens it).
 3. Clicking into groups from the hub rail (SPA) instead of typed URLs, plus switching the sort via its control.
-4. The Pi: run `fbgb validate` under Xvfb, WebGL, manual login over VNC, then a timed run with `max_tabs=2`.
+4. The Pi: run `fbgb validate` under Xvfb, WebGL, login (assisted or VNC), then a timed run with `max_tabs=2`.
 5. A private group where the account is a MEMBER (all 3 private ones are pending). Expected to work like public ones.
 6. Long-term account health under daily polling: watch for "confirm it's you" after day 1.

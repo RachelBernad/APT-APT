@@ -1,5 +1,8 @@
 """Public data types. Plain dataclasses; `to_dict()` gives JSON-safe dicts (datetimes → ISO-8601 UTC).
 
+TIME ZONE: every datetime here is timezone-aware **UTC** (Facebook sends unix seconds). Convert for display,
+e.g. `dt.astimezone(ZoneInfo("Asia/Jerusalem"))`. Never compare against naive datetimes.
+
 Field sources (Facebook payload paths) are documented in docs/data-model.md.
 """
 from __future__ import annotations

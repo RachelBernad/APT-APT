@@ -1,37 +1,50 @@
-# Raspberry Pi (no GUI): headful Chromium under Xvfb
+# No real GUI (Raspberry Pi / Docker): headful Chromium under Xvfb
 
-Last verified: n/a. **Unverified: designed, not yet run on the Pi.** Validate with `explore/validate.py patchright`
-on the Pi before the first Facebook session there, and update this page.
+Last verified: 2026-11-24 in **Docker on the Mac (linux/arm64, the Pi's architecture)**, image `deploy/fbgb-headless/`
+(Debian 13, Chromium 156, patchright 1.64.4). Not yet run on the physical Pi. Facebook was NOT used in this
+validation (detector pages only).
 
 ## Why not headless
-Headless Chrome, even `--headless=new`, is the most widely fingerprinted automation mode (GPU/plugins/UA-CH
-differences, rendering timing). Instead we run the normal headful browser on a **virtual X display**.
+Headless Chrome (even `--headless=new`) is the most fingerprinted automation mode. We run the normal headful
+browser on a **virtual X display** (Xvfb) with a window manager (openbox), so the page sees a desktop.
 
-## Setup (Raspberry Pi OS / Debian bookworm, arm64)
-```bash
-sudo apt install -y chromium xvfb openbox x11vnc fonts-noto fonts-noto-color-emoji fonts-culmus  # Hebrew fonts!
-Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp &       # virtual screen with a realistic resolution
-DISPLAY=:99 openbox &                                 # a window manager: real window decorations, focus, sizes
-DISPLAY=:99 x11vnc -display :99 -localhost -forever -nopw -quiet &   # only reachable through SSH
-export DISPLAY=:99 FBGB_BROWSER=/usr/bin/chromium
-```
-On the Mac: `ssh -L 5900:localhost:5900 pi` and then open `vnc://localhost:5900`. You see the Pi's Chromium
-and can **log in by hand** (`open_profile.py`), watch sessions, and solve a checkpoint yourself.
-
-- Google Chrome has no linux-arm64 build, so this uses Debian's Chromium (`executable_path`). Its UA says `Chromium` in
-  client hints and `X11; Linux aarch64`: an unusual but **consistent** device. Never spoof it to look like a Mac.
-- A Mac profile **can't be copied** to the Pi (cookies are encrypted per OS). The Pi gets its own profile and its own
-  manual login, and Facebook sees it as a new device once.
-- Missing fonts are a fingerprint (and break Hebrew rendering). Install the Noto + Culmus families.
-
-## Known tells to measure on the Pi
-| Tell | Expectation | Mitigation if it matters |
+## Verified setup (all in `deploy/fbgb-headless/`)
+| Piece | Setting | Why (measured) |
 |---|---|---|
-| WebGL renderer under Xvfb | `llvmpipe` / `SwiftShader` (software GL: a VM/bot signal) | try a headless Wayland compositor (`labwc`/`cage` with `WLR_BACKENDS=headless`) using the Pi's V3D GPU, or `xserver-xorg-video-dummy` with glamor |
-| Screen = window size, no taskbar | `screen.availHeight == screen.height` | openbox + a thin panel (`tint2`), or leave as is (Unverified whether FB checks) |
-| Low `hardwareConcurrency` / memory | 4 cores, 4–8 GB: matches a real Pi, fine | none (don't spoof) |
-| Speed | Pi 4/5 Chromium on Facebook is slow; fewer tabs (max 2) | `TabPool(max_tabs=2)` |
+| Browser | Debian `chromium` through its `/usr/bin/chromium` wrapper | Google Chrome has no linux-arm64 build. The wrapper's flags (`--enable-gpu-rasterization`, `--disable-pings`, …) are what every Debian Chromium user has |
+| Display | `Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp` + openbox | headful without a monitor |
+| Sandbox | **custom seccomp** `seccomp-chromium.json` = Docker's default + allow `clone`/`unshare`/`setns` | Docker's default blocks namespaces → Chromium **fails to start** ("Failed to move to new namespace: EPERM"). The setuid helper (`chromium-sandbox`, `--disable-namespace-sandbox`) fails the same way. `--no-sandbox` is never used. No `CAP_SYS_ADMIN`. Result: `chrome://sandbox` "adequately sandboxed" |
+| WebGL | `FBGB_CHROME_ARGS="--use-gl=angle --use-angle=gl --ignore-gpu-blocklist"` | without it: **no WebGL at all** (Chrome ≥137 has no software fallback). `--enable-unsafe-swiftshader` gives "SwiftShader" (a known automation tell). With Mesa through Xvfb's GLX: `ANGLE (Mesa, llvmpipe …)`, i.e. a Linux desktop without GPU drivers. WebGL2 also works |
+| Window | `--start-maximized` | like a real user (otherwise 937×913 on a 1920×1080 screen) |
+| Work area | openbox `rc.xml` margin top 32 px | without it `screen.availHeight == screen.height` (no taskbar: headless/kiosk signal) |
+| Audio | PulseAudio + null sink "Speakers" | without it `enumerateDevices()` is empty. A real desktop/Pi has an audio output |
+| Locale/time | `TZ=Asia/Jerusalem`, `LANG=en_US.UTF-8`, Hebrew fonts (culmus, Noto) | must match the Israeli home IP and render Hebrew |
+| Shared memory | `--shm-size=1g` | Chromium crashes on Docker's 64 MB default under load |
 
-## Running as a service
-Use a systemd user unit that starts Xvfb, openbox and the scraper (`After=network-online.target`), separate from
-the aptbot Docker container. In a container: `--shm-size=1g`, Xvfb inside it, and the profile on a volume.
+## Results (detector run `explore/validate.py patchright`; Mac = real Chrome for comparison)
+| Check | Mac | Docker, no GUI |
+|---|---|---|
+| rebrowser | all green | all green **except `useragent`** (see below) |
+| bot.sannysoft | 0 failed | 0 failed |
+| BrowserScan | Normal | Normal |
+| CreepJS headless / stealth | 0% / 0% | 0% / 0% |
+| CreepJS "like headless" (heuristic) | 31% | 38% (was 50% before the work-area/audio fixes, 44% without WebGL) |
+| hidden-tab throttling | 3 ticks/3 s | 3 ticks/3 s |
+| UA ↔ platform ↔ client hints ↔ worker | consistent | consistent (`X11; Linux x86_64` everywhere: Chrome's frozen Linux UA, also on ARM) |
+
+**Accepted tell, `useragent`:** `userAgentData.brands` says "Chromium", not "Google Chrome". rebrowser warns that this
+*might* be Chrome for Testing. Unavoidable on Linux ARM, and Chromium is Raspberry Pi OS's default browser (common
+for real Pi users).
+**Remaining differences (normal for a Linux desktop):** no `navigator.share`, DPR 1, 24-bit color, no mic/camera,
+software WebGL.
+
+## Re-check anywhere
+`python -m aptbot.scrapers.facebook_generic_browser.explore.tools.envprobe`: sandbox, WebGL, UA/brands, tz, screen
+and work area, media devices, fonts. Run it on every new machine and compare with this page.
+
+## On the physical Pi (still to do)
+- Same image (or the same packages natively). Pi OS ships its own Chromium build: re-run `envprobe` + `validate`.
+- WebGL will still be llvmpipe under Xvfb. A GPU-backed renderer ("V3D") would need a real X/Wayland session on the
+  V3D driver (e.g. `labwc`/`cage` headless backend, or Xorg dummy + glamor). Unverified and optional.
+- Login: run the container with `VNC=1 -p 127.0.0.1:5900:5900` (on the Pi: `ssh -L 5900:localhost:5900 pi`), open
+  `vnc://localhost:5900`, `fbgb login`, log in by hand. Or skip VNC: `fbgb login --stdin` (verified in Docker). A new device for the account. Expect "confirm it's you" once.

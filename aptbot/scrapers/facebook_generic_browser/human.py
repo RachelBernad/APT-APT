@@ -125,7 +125,7 @@ async def click(page, locator, *, modifiers: list[str] | None = None) -> None:
 
 
 async def type_text(page, text: str) -> None:
-    """Type with per-key random gaps (used for search boxes; never for credentials)."""
+    """Type with per-key random gaps (search boxes; the assisted login form). Never log `text`."""
     for ch in text:
         await page.keyboard.type(ch)
         await asyncio.sleep(_lognormal_ms(120, 0.45, 45, 400) / 1000)

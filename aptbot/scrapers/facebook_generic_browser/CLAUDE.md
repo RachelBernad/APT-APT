@@ -11,7 +11,8 @@ Chrome, headful). `aptbot` never imports this package and this package never imp
   **Follow it whenever you explore this or any other site, and add any new technique you use to it.**
 
 ## Account safety (mandatory)
-- Never type, store, log or commit credentials. A human logs in by hand (`explore/open_profile.py`).
+- Never store, log or commit credentials. Login: by hand, or assisted with credentials the user gives at runtime,
+  passed only via stdin (`fbgb login --stdin`; never argv/env/files). Stop on code/checkpoint pages; no auto-retry.
 - Never commit or print cookies, `fb_dtsg`/`lsd`/`jazoest` or other session tokens. The profile and raw captures
   live in `~/.fbgb/` (outside the repo).
 - Every browsing session goes through `browser.py` (validated config), `human.py` (input),
@@ -37,6 +38,10 @@ Rules:
 - After a `patchright` upgrade, rerun `explore/validate.py` and update `api_docs/stealth/browser-setup.md`.
   `IGNORED_DEFAULT_ARGS` in `browser.py` is matched by exact string and can silently drift.
 - Public API changes: update `docs/api-reference.md` (a test checks every public method is listed) + docstrings.
+
+## Conventions agents must keep
+- **Times are UTC everywhere** (models, cache, CLI output with a `UTC` suffix, `since=` inputs). Convert only for
+  display. Naive datetimes are a bug. When reporting times to the user, say they're UTC or convert to Israel time.
 
 ## Code conventions
 - Python 3.13, asyncio. Its own venv: `~/.fbgb/venv` (`requirements.txt` here, NOT the repo root's).

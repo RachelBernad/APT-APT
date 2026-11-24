@@ -1,5 +1,10 @@
 # Data model
 
+> **Time zone: every datetime is timezone-aware UTC** (`created_at`, `last_post_time`, comment times, `started_at`).
+> Facebook sends unix seconds, and we never convert. Israel is UTC+2 (winter) / UTC+3 (summer). Convert for display only:
+> `post.created_at.astimezone(ZoneInfo("Asia/Jerusalem"))`. In JSON (`to_dict()`) they're ISO-8601 with `+00:00`.
+> The CLI prints them with a `UTC` suffix.
+
 Last verified: 2026-11-24. Code: `models.py`. Every type has `to_dict()` → JSON-safe dict (datetimes → ISO-8601 UTC).
 Facebook paths are relative to the payload node and found by key, not by full path (`parse.py`).
 Field maps of the underlying queries: `../api_docs/graphql/queries/`.

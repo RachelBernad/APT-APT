@@ -9,4 +9,4 @@ Last verified: 2026-11-24
 - Relevant cookie names: `c_user` (account id), `xs` (session), `datr` (browser id, long-lived: the device identity),
   `fr`, `sb`. Treat the whole profile dir as a secret. It never enters the repo.
 - Always close the context cleanly (`async with open_context`), because killing Chrome can lose recent cookie writes.
-- Moving machines (Mac → Pi) = a new profile + a new manual login (see `../stealth/pi-headless.md`).
+- Moving machines (Mac → Pi) = a new profile + a new login (by hand or `login --stdin`) (see `../stealth/pi-headless.md`).

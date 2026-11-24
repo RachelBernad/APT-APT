@@ -2,7 +2,7 @@
 
     # from the repo root (zsh/bash):
     fbgb() { ~/.fbgb/venv/bin/python -m aptbot.scrapers.facebook_generic_browser "$@"; }
-    fbgb login                          # opens Chrome; a human logs in, then closes the window
+    fbgb login [--stdin]                # by hand; or --stdin: email+password from stdin/prompt, typed for you
     fbgb status | resume | validate
     fbgb groups                         # list_groups
     fbgb group <group_id>               # get_group
@@ -16,6 +16,7 @@
     fbgb filter [--group ID ...] [--include W ...] [--exclude W ...] [--min-price N] [--max-price N]
                [--min-rooms R] [--max-rooms R] [--photos | --no-photos] [--since ISO] [--limit N]
 Add --json for one JSON object per line. Add --tabs N to change parallelism.
+All times are UTC (Israel = UTC+2 in winter, UTC+3 in summer). --since takes ISO-8601; without an offset it's UTC.
 """
 from __future__ import annotations
 
@@ -23,14 +24,18 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aptbot.scrapers.facebook_generic_browser.api import FacebookAPI
 from aptbot.scrapers.facebook_generic_browser.errors import FBGBError
 
 
 def _since(s: str | None):
-    return datetime.fromisoformat(s) if s else None
+    """ISO-8601; a value without an offset is taken as UTC (like every time this library returns)."""
+    if not s:
+        return None
+    dt = datetime.fromisoformat(s)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def _show(obj, as_json: bool) -> None:
@@ -41,7 +46,7 @@ def _show(obj, as_json: bool) -> None:
             print(json.dumps(d, ensure_ascii=False))
             continue
         if "post_id" in d:
-            t = (d.get("created_at") or "")[:16].replace("T", " ")
+            t = (d.get("created_at") or "")[:16].replace("T", " ") + " UTC"
             hints = d.get("hints") or {}
             extra = " ".join(x for x in [f"₪{hints['prices'][0]:,}" if hints.get("prices") else "",
                                          f"{hints['rooms']}r" if hints.get("rooms") else "",
@@ -49,10 +54,10 @@ def _show(obj, as_json: bool) -> None:
                                          f"💬{d['comment_count']}" if d.get("comment_count") else ""] if x)
             print(f"{t}  {d.get('group_id')}/{d['post_id']}  {extra}\n    {d['text'][:160]!r}\n    {d.get('url')}")
             for c in d.get("comments") or []:
-                print(f"      💬 {(c.get('created_at') or '')[:16]} {c['text'][:100]!r}")
+                print(f"      💬 {(c.get('created_at') or '')[:16].replace('T', ' ')} UTC {c['text'][:100]!r}")
         elif "join_state" in d or "last_post_time" in d:
             lp = (d.get("last_post_time") or "")[:16].replace("T", " ")
-            print(f"{d['id']:>18}  {d.get('join_state') or '':9} {d.get('privacy') or '':7} last post {lp or '?':16}  {d['name']}")
+            print(f"{d['id']:>18}  {d.get('join_state') or '':9} {d.get('privacy') or '':7} last post {(lp + ' UTC') if lp else '?':20}  {d['name']}")
         elif "summary" in d:
             print(f"{d['id']:>18}  {d.get('summary') or '':45}  {d['name']}")
         else:
@@ -62,8 +67,7 @@ def _show(obj, as_json: bool) -> None:
 async def _run(a) -> int:
     if a.cmd == "login":
         from aptbot.scrapers.facebook_generic_browser.explore import open_profile
-        await open_profile.main()
-        return 0
+        return await open_profile.main(stdin=a.stdin)
     if a.cmd == "validate":
         from aptbot.scrapers.facebook_generic_browser.explore import validate
         await validate.main(["patchright"])
@@ -111,7 +115,9 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--json", action="store_true", help="one JSON object per line")
     ap.add_argument("--tabs", type=int, default=3, help="parallel tabs (default 3; use 2 on a Raspberry Pi)")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("login", "validate", "status", "resume"):
+    s = sub.add_parser("login", help="log the profile in (by hand, or --stdin: email+password typed for you)")
+    s.add_argument("--stdin", action="store_true", help="read email and password (2 lines) from stdin, or prompt")
+    for name in ("validate", "status", "resume"):
         sub.add_parser(name)
     s = sub.add_parser("groups"); s.add_argument("--refresh", action="store_true")
     s = sub.add_parser("group"); s.add_argument("group_id"); s.add_argument("--refresh", action="store_true")

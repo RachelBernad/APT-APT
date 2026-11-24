@@ -17,6 +17,7 @@ uv venv ~/.fbgb/venv --python 3.13
 uv pip install --python ~/.fbgb/venv/bin/python -r aptbot/scrapers/facebook_generic_browser/requirements.txt
 fbgb() { ~/.fbgb/venv/bin/python -m aptbot.scrapers.facebook_generic_browser "$@"; }   # run from the repo root
 fbgb login        # Chrome opens: log in BY HAND, then close the window
+fbgb login --stdin   # or: email+password from stdin/prompt, typed for you (never stored)
 fbgb groups       # your groups (members + pending requests)
 fbgb posts 305724686290054 --limit 10
 ```
@@ -33,6 +34,9 @@ async with FacebookAPI(max_tabs=3) as fb:
     new = await fb.new_posts()                      # only posts since the last call; unchanged groups skipped
     cheap = await fb.filter_posts(max_price=6500, min_rooms=3)               # cache only
 ```
+
+> **All times are UTC** (timezone-aware datetimes; the CLI prints a `UTC` suffix). Israel = UTC+2/+3. See
+> [docs/data-model.md](docs/data-model.md).
 
 ## Functions
 `status` · `resume` · `list_groups` · `get_group` · `latest_posts` · `stream_posts` · `new_posts` · `search_groups` ·

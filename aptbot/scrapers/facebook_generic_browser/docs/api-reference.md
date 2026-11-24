@@ -13,6 +13,8 @@ async with FacebookAPI(max_tabs=3) as fb:
 - **"Cost"** = navigations charged to the account-wide budget (default 8/min, burst 3, 120/hour). Scrolling is free.
 - **Cache**: results are stored in SQLite (`$FBGB_HOME/fbgb.db`). Methods with `max_age` answer from the cache when
   the data is younger than that. Pass `max_age=0` to force a fresh read.
+- **Times are UTC.** Every returned datetime is timezone-aware UTC. `since=` accepts an aware datetime or unix
+  seconds; pass aware datetimes (`datetime.now(timezone.utc) - timedelta(hours=3)`), not naive local times.
 - Every browser-backed method accepts `timeout=` (seconds, default 240). On timeout it raises `RequestTimeout`
   and the tab is freed.
 - Errors common to every browser-backed method: `Halted` (account-safety stop), `NotLoggedIn`, `BudgetExhausted`,

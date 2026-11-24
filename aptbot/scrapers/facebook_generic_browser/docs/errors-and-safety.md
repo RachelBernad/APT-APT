@@ -28,7 +28,8 @@ The account is the scarce resource. A checkpoint can lock it for days, so the li
    **Never automate step 3.**
 
 ## Built-in safety behavior
-- No scripted login, ever. No credentials anywhere in code, config or logs.
+- Login is by hand, or assisted (`login --stdin`) with credentials given at runtime. Credentials are never stored:
+  not in code, config, env vars, logs or files. Never retry a failed login automatically.
 - Real Chrome, headful, nothing spoofed ([../api_docs/stealth/browser-setup.md](../api_docs/stealth/browser-setup.md)).
 - Human input only: wheel scrolling, curved pointer moves, jittered clicks and typing. Input only to the front tab.
 - Read-only: no likes, comments, posts, joins or messages.

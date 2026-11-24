@@ -4,12 +4,14 @@ Rules (see api_docs/stealth/browser-setup.md for why):
 - headful only. On a GUI-less Linux box run under Xvfb (DISPLAY must be set).
 - real Google Chrome on macOS (channel="chrome"); system Chromium on Linux/arm64.
 - no custom user agent, headers, viewport, locale or fingerprint injection.
-- the profile lives OUTSIDE the repo (default ~/.fbgb/profile). A human logs in once, by hand.
+- the profile lives OUTSIDE the repo (default ~/.fbgb/profile). Logged in once (`fbgb login`, by hand or --stdin).
 
 Env overrides:
   FBGB_HOME          base dir for profile/captures/validation (default ~/.fbgb)
   FBGB_PROFILE_DIR   Chrome user-data-dir (default $FBGB_HOME/profile)
   FBGB_BROWSER       explicit browser executable path
+  FBGB_CHROME_ARGS   extra Chrome switches, space-separated (deployment only, e.g. in Docker:
+                     "--disable-namespace-sandbox" = use the setuid sandbox; see api_docs/stealth/pi-headless.md)
 """
 from __future__ import annotations
 
@@ -85,7 +87,8 @@ async def open_context(profile_dir: Path = PROFILE_DIR, *, engine: str = "patchr
             headless=False,
             no_viewport=True,
             ignore_default_args=IGNORED_DEFAULT_ARGS if engine == "patchright" else None,
-            chromium_sandbox=True,  # Playwright defaults to --no-sandbox; never browse Facebook unsandboxed
+            chromium_sandbox=True,
+            args=os.environ.get("FBGB_CHROME_ARGS", "").split() or None,  # Playwright defaults to --no-sandbox; never browse Facebook unsandboxed
             # focus_control=True turns OFF Playwright's focus emulation, which otherwise makes every tab
             # report hasFocus()=true and visibilityState="visible" at the same time.
             **({"focus_control": True} if engine == "patchright" else {}),

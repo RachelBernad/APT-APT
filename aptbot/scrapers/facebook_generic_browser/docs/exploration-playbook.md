@@ -13,7 +13,8 @@ click gets you there, (2) which response carries the data and where inside it, (
 - **The account is the scarce resource.** Short sessions (≤ 1–2 min), few navigations, ≥ 20–30 min between bursts
   of sessions, stop on the first warning. Explore in a handful of focused sessions, not one long crawl.
 - **Read-only.** Never click like/follow/join/post/message while exploring. Never type in a composer.
-- **Credentials never pass through code or chat.** A human logs in by hand into a persistent profile.
+- **Credentials are never stored.** A human logs in by hand into a persistent profile, or hands them over at
+  runtime for an assisted login (stdin only: not argv, env, files or logs).
 - **Write down what you observed, when, and from which capture.** Inferred = mark it **Unverified**.
 
 ## 1. Make the browser boring first (no site involved)
@@ -27,8 +28,26 @@ click gets you there, (2) which response carries the data and where inside it, (
    → FB: Playwright's defaults leaked storage-partitioning, unthrottled hidden tabs and "all tabs focused";
    fixed with `ignore_default_args`, `focus_control=True`, `chromium_sandbox=True`.
 
-## 2. Log in once, by hand
+## 1b. New environment (Docker, Pi, VM, CI)? Check the environment before any site
+Every new place the browser runs changes the fingerprint. Before touching a real site:
+1. `tools/envprobe.py` on the new box **and** on a real desktop. Diff the outputs. Each difference is a candidate tell.
+2. **Sandbox:** `chrome://sandbox` must say "adequately sandboxed". If Chromium won't start ("Failed to move to new
+   namespace"), the container blocks namespaces. Confirm with a throwaway `seccomp=unconfined` run, then ship a
+   profile = Docker's default + `clone`/`unshare`/`setns` only. Never `--no-sandbox` (visible warning bar, a known
+   tell). Never `CAP_SYS_ADMIN`.
+3. **WebGL:** no WebGL at all is a strong tell. Prefer Mesa (`--use-gl=angle --use-angle=gl --ignore-gpu-blocklist` →
+   "llvmpipe", looks like a GPU-less Linux desktop) over SwiftShader (Chrome-specific, known tell). Test WebGL2 on a
+   **fresh canvas** (a canvas that already has a webgl context returns null for webgl2: a probe bug that looks like a browser gap).
+4. **Desktop signals:** a work area smaller than the screen (window-manager margin / panel), at least one audio
+   output (virtual sink), maximized window, real fonts for the site's language, TZ/locale matching the IP.
+5. Re-run the detectors (`explore/validate.py`) and record the before/after table.
+→ FB: all of this was done for the Pi in Docker. See `../api_docs/stealth/pi-headless.md` (sandbox, WebGL, taskbar,
+audio: CreepJS "like headless" 50% → 38%, Mac 31%).
+
+## 2. Log in once (by hand, or assisted)
 `explore/open_profile.py`: open the profile, the human logs in (2FA, "trust this device"), closes the window.
+Or assisted (`--stdin`): credentials from stdin, typed with human timing. Stop on any code/checkpoint page and
+hand that step to the human.
 Detect success by **cookie names only** (FB: `c_user`, `xs`), never values. Always close the context cleanly.
 
 ## 3. Capture everything the page fetches, passively
@@ -118,8 +137,8 @@ signals matter too: the normal background calls firing means a healthy logged-in
 - Document in `api_docs/` (their side) with `Last verified:` + CHANGELOG. Keep `SPEC.md` (our side) in sync.
 
 ## Checklist for a new site
-1. [ ] validate.py green on the real browser; multi-tab probe OK
-2. [ ] manual login; cookie-name check
+1. [ ] validate.py green on the real browser; multi-tab probe OK; envprobe clean on every machine/container used
+2. [ ] login (manual or assisted via stdin); cookie-name check
 3. [ ] session 1: home + the main list page, with capture on → timeline, shape, islands, domcensus
 4. [ ] operation catalogue (name → page → what it carries → trigger)
 5. [ ] URL map, sort/filter params verified against API variables, permission states
