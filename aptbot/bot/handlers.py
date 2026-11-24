@@ -1,4 +1,7 @@
-"""Telegram command + conversation handlers.
+"""PARKED (not registered): the filters wizard, kept for when filters come back.
+The live commands are in ``aptbot.bot.simple``.
+
+Telegram command + conversation handlers.
 
 UX: a persistent tap-bar (Add monitor / My searches / Help) drives an inline
 drill-down. A *monitor* watches many areas (searched nationwide or browsed by

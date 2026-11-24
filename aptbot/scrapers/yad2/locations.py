@@ -299,6 +299,16 @@ def city_name(city_id: str) -> str:
     return c["name"] if c and c.get("name") else str(city_id)
 
 
+def city_target(city_id: str) -> LocationTarget:
+    """A whole-city target from the bundled catalog (region/area ids + display name)."""
+    c = load_catalog().get("cities", {}).get(str(city_id))
+    if not c:
+        raise KeyError(f"city {city_id!r} is not in the bundled catalog")
+    return LocationTarget(
+        level="city", region_id=int(c.get("regionId") or 0), area_id=_as_int(c.get("areaId")),
+        city_id=str(city_id), display_name=c.get("name") or str(city_id))
+
+
 @lru_cache(maxsize=1)
 def popular_cities() -> List[tuple]:
     """Return [(name, region_id, city_id)] for well-known cities present in the catalog."""

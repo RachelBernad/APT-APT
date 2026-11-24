@@ -3,7 +3,7 @@
 A saved search = one filter set + a *list* of area targets
 (``search_locations``), so one monitor can watch many areas. Per-search
 ``seen_listings`` drives only-new + capped backfill + price-change with per-user
-isolation. No in-place migrations: a database from another schema version is
+isolation; ``fb_seen`` does the same for Facebook posts, keyed by a content hash. No in-place migrations: a database from another schema version is
 moved aside and a fresh one is created (see ``Database._set_aside_foreign_db``).
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from aptbot.models import LocationTarget, SavedSearch
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS saved_searches (
     features           TEXT,
     is_active          INTEGER NOT NULL DEFAULT 1,
     is_primed          INTEGER NOT NULL DEFAULT 0,
+    fb_primed          INTEGER NOT NULL DEFAULT 0,
     created_at         TEXT NOT NULL,
     updated_at         TEXT NOT NULL
 );
@@ -79,6 +80,16 @@ CREATE TABLE IF NOT EXISTS seen_listings (
     PRIMARY KEY (search_id, listing_uid)
 );
 
+-- Facebook posts already delivered, per search. content_hash = sha256 of the stripped
+-- post text (see aptbot.fb_engine.content_hash), so cross-posts dedup to one.
+CREATE TABLE IF NOT EXISTS fb_seen (
+    search_id     INTEGER NOT NULL REFERENCES saved_searches(id) ON DELETE CASCADE,
+    content_hash  TEXT    NOT NULL,
+    post_url      TEXT,
+    first_seen_at TEXT    NOT NULL,
+    PRIMARY KEY (search_id, content_hash)
+);
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -88,7 +99,7 @@ CREATE TABLE IF NOT EXISTS meta (
 _SEARCH_COLUMNS = (
     "id, chat_id, label, min_price, max_price, min_rooms, max_rooms, min_sqm, "
     "max_sqm, min_floor, max_floor, property_types, property_condition, features, "
-    "is_active, is_primed"
+    "is_active, is_primed, fb_primed"
 )
 
 _FILTER_FIELDS = (
@@ -153,6 +164,7 @@ def _row_to_search(row: aiosqlite.Row) -> SavedSearch:
         features=_features_from_db(row["features"]),
         is_active=bool(row["is_active"]),
         is_primed=bool(row["is_primed"]),
+        fb_primed=bool(row["fb_primed"]),
         locations=[],
     )
 
@@ -414,7 +426,7 @@ class Database:
         """Reset priming so searches resume with a capped backfill (used on unmute)."""
         async with self._write_lock:
             await self._conn.execute(
-                "UPDATE saved_searches SET is_primed=0 WHERE chat_id=?", (chat_id,)
+                "UPDATE saved_searches SET is_primed=0, fb_primed=0 WHERE chat_id=?", (chat_id,)
             )
             await self._conn.commit()
 
@@ -422,7 +434,7 @@ class Database:
         """Reset priming for one search (after an edit / re-enable) so it re-backfills."""
         async with self._write_lock:
             await self._conn.execute(
-                "UPDATE saved_searches SET is_primed=0 WHERE id=?", (search_id,)
+                "UPDATE saved_searches SET is_primed=0, fb_primed=0 WHERE id=?", (search_id,)
             )
             await self._conn.commit()
 
@@ -458,6 +470,32 @@ class Database:
                 "UPDATE seen_listings SET last_price=?, last_notified_at=? "
                 "WHERE search_id=? AND listing_uid=?",
                 (price, _now(), search_id, uid),
+            )
+            await self._conn.commit()
+
+    async def mark_fb_primed(self, search_id: int) -> None:
+        async with self._write_lock:
+            await self._conn.execute(
+                "UPDATE saved_searches SET fb_primed=1 WHERE id=?", (search_id,)
+            )
+            await self._conn.commit()
+
+    # --- facebook seen posts ---
+    async def get_fb_seen(self, search_id: int) -> set:
+        cur = await self._conn.execute(
+            "SELECT content_hash FROM fb_seen WHERE search_id=?", (search_id,))
+        return {r["content_hash"] for r in await cur.fetchall()}
+
+    async def add_fb_seen(self, search_id: int, rows: List[Tuple[str, Optional[str]]]) -> None:
+        """Record (content_hash, post_url) pairs as delivered; re-adding is a no-op."""
+        if not rows:
+            return
+        now = _now()
+        async with self._write_lock:
+            await self._conn.executemany(
+                "INSERT OR IGNORE INTO fb_seen(search_id, content_hash, post_url, first_seen_at) "
+                "VALUES (?,?,?,?)",
+                [(search_id, h, url, now) for h, url in rows],
             )
             await self._conn.commit()
 

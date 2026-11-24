@@ -117,3 +117,65 @@ def format_price_change(apt: Dict[str, Any], old_price: Optional[int]) -> str:
         f"<b>Was:</b> {_format_price(old_price)}  →  <b>Now:</b> {_format_price(apt.get('price'))}\n"
         f"<b>URL:</b> <a href='{url}'>Link</a>"
     )
+
+
+# --- Facebook group posts ---------------------------------------------------
+
+CAPTION_LIMIT = 1024    # Telegram photo / album caption
+MESSAGE_LIMIT = 4096    # Telegram text message
+_ISRAEL_TZ = "Asia/Jerusalem"
+
+
+def _fb_header(post) -> str:
+    from zoneinfo import ZoneInfo
+    parts = [f"📘 <b>{_html_value(post.group_name or 'Facebook')}</b>"]
+    if post.created_at is not None:
+        parts.append(post.created_at.astimezone(ZoneInfo(_ISRAEL_TZ)).strftime("%d/%m %H:%M"))
+    return " · ".join(parts)
+
+
+def _fb_link(post) -> str:
+    if not post.url:
+        return ""
+    return f"<a href='{html.escape(post.url, quote=True)}'>לפוסט בפייסבוק ↗</a>"
+
+
+def format_fb_post(post, limit: int = MESSAGE_LIMIT) -> str:
+    """Header (group · Israel time), the post text and a link, within ``limit`` chars.
+    The raw text is cut BEFORE escaping, so an entity is never split."""
+    head, link = _fb_header(post), _fb_link(post)
+    text = (post.text or "").strip()
+    frame = len(head) + len(link) + 4
+    body = _html_value(text)
+    if frame + len(body) > limit:
+        room = max(0, limit - frame - 1)
+        while room and len(_html_value(text[:room])) > room:   # escaping grows the text
+            room -= 1
+        body = _html_value(text[:room].rstrip()) + "…"
+    return "\n\n".join(p for p in (head, body, link) if p)
+
+
+def fb_post_fits_caption(post) -> bool:
+    return len(format_fb_post(post, limit=MESSAGE_LIMIT)) <= CAPTION_LIMIT
+
+
+def format_fb_short_caption(post) -> str:
+    """Album caption when the full text doesn't fit (the text follows as a message)."""
+    return "\n".join(p for p in (_fb_header(post), _fb_link(post)) if p)
+
+
+def format_fb_backfill_intro(sample: int, groups: int) -> str:
+    return (
+        f"📘 <b>Facebook:</b> here are the <b>{sample} newest post"
+        f"{'s' if sample != 1 else ''}</b> from {groups} Tel Aviv apartment groups. "
+        f"From now on I'll send only new ones (each post once, even if it's cross-posted)."
+    )
+
+
+def format_fb_stopped(reason: str) -> str:
+    return (
+        "⚠️ <b>Facebook reading stopped</b> to keep the account safe.\n"
+        f"Reason: {_html_value(reason)}\n"
+        "Someone needs to check the account (log in / clear the warning) and restart the bot. "
+        "Yad2 keeps working."
+    )

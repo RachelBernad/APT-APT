@@ -26,6 +26,37 @@ HOODS_DIR = DATA_DIR / "hoods"
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
+
+def _id_list(raw: str) -> list:
+    return [p.strip() for p in raw.split(",") if p.strip()]
+
+
+# Only these chats may talk to the bot or receive anything from it (comma-separated
+# Telegram chat ids; group chats are negative). Set it in .env, never in the repo.
+# Empty = nobody (the bot logs every refused chat id, so you can find yours).
+ALLOWED_CHAT_IDS = frozenset(int(x) for x in _id_list(os.getenv("ALLOWED_CHAT_IDS", "")))
+
+# --- Facebook groups (aptbot/scrapers/facebook_generic_browser) ---
+FB_ENABLED = os.getenv("FB_ENABLED", "1").strip().lower() not in ("0", "false", "no", "")
+# Groups to watch (the account must be a MEMBER). Default: the Tel Aviv rental groups.
+FB_GROUP_IDS = _id_list(os.getenv("FB_GROUP_IDS", ",".join([
+    "157839564799734",   # גינדי תל אביב דירות להשכרה ומכירה
+    "474384046336013",   # דירות להשכרה לב תל אביב והצפון הישן
+    "240748264581079",   # תל אביב דירות למכירה/השכרה
+    "457465901082882",   # דירות בתל אביב ללא תיווך
+    "101875683484689",   # דירות מפה לאוזן בתל אביב
+    "305724686290054",   # דירות להשכרה בתל אביב
+    "1484784835108605",  # יד 2 - תל אביב והמרכז
+])))
+FB_MAX_TABS = int(os.getenv("FB_MAX_TABS", "2"))
+# Poll every 20-35 min, jittered (the library's account-safety guidance, SPEC §7).
+FB_POLL_MIN_SECONDS = int(os.getenv("FB_POLL_MIN_SECONDS", str(20 * 60)))
+FB_POLL_MAX_SECONDS = int(os.getenv("FB_POLL_MAX_SECONDS", str(35 * 60)))
+# Newest posts sent as a taster when a monitor starts; the rest are recorded as seen.
+FB_BACKFILL_CAP = int(os.getenv("FB_BACKFILL_CAP", "5"))
+# Photos per post album (Telegram allows 2-10 per media group).
+FB_MAX_PHOTOS = int(os.getenv("FB_MAX_PHOTOS", "10"))
+
 # --- Scrape cycle ---
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", str(60 * 15)))  # default 15 min
 

@@ -139,7 +139,8 @@ class SavedSearch:
     property_condition: Optional[int] = None
     features: List[str] = field(default_factory=list)
     is_active: bool = True
-    is_primed: bool = False
+    is_primed: bool = False      # Yad2 taster sent
+    fb_primed: bool = False      # Facebook taster sent (separate: the sources prime independently)
     locations: List[LocationTarget] = field(default_factory=list)
 
 
