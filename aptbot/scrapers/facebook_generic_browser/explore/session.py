@@ -213,7 +213,6 @@ async def harvest(cap: Capture, url: str, want: int) -> None:
         await health.check(page)
         dt = time.monotonic() - t0
         await snap(page, cap, "harvest_end")
-        times = sorted(s["creation_time"] or 0 for s in seen.values())
         rep = {"url": url, "posts": len(seen), "seconds": round(dt, 1), "posts_per_min": round(len(seen) / dt * 60, 1),
                "timeline": timeline, "order_check": [s["creation_time"] for s in seen.values()]}
         (cap.dir / "harvest.json").write_text(json.dumps(rep, indent=1))

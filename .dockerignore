@@ -1,5 +1,6 @@
-# Build context is the repo root (see deploy/Dockerfile). Only aptbot/ and
-# requirements.txt are COPY'd, but keep the context small and secret-free.
+# Shared by BOTH builds (deploy/Dockerfile = bot, deploy/fbgb-headless/Dockerfile =
+# Facebook reader); the Pi's Docker has no BuildKit, so per-Dockerfile ignore files
+# are not an option. Never exclude a package one of the images COPYs.
 **/__pycache__/
 **/*.py[cod]
 **/.DS_Store
@@ -19,3 +20,8 @@ archive/
 tests/
 .playwright-mcp/
 .pytest_cache/
+# facebook_generic_browser: docs/samples only (explore/ is runtime code for fbgb login/validate)
+aptbot/scrapers/facebook_generic_browser/api_docs/
+aptbot/scrapers/facebook_generic_browser/docs/
+aptbot/scrapers/facebook_generic_browser/examples/
+aptbot/scrapers/facebook_generic_browser/out/

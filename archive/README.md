@@ -7,5 +7,5 @@ not run against the current codebase without porting.
 
 | Folder | What | Why retired |
 |--------|------|-------------|
-| [`facebook/`](./facebook/) | Facebook Marketplace scraper (BeautifulSoup) + the old generic scraper/config it plugged into | Unreliable; dropped in `f6b2068` |
+| [`facebook/`](./facebook/) | Facebook Marketplace scraper (BeautifulSoup) + the old generic scraper/config it plugged into | Unreliable; dropped in `f6b2068`. **Superseded** by [`aptbot/scrapers/facebook_generic_browser`](../aptbot/scrapers/facebook_generic_browser/) (Facebook *groups*, logged-in browser) |
 | [`rentlyfly/`](./rentlyfly/) | rentlyfly.ai client (a Facebook-Groups aggregator, Tel Aviv only) + its tests | Site offline since at least 2026-11-23 (HTTP 402 `DEPLOYMENT_DISABLED`) |

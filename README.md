@@ -24,9 +24,13 @@ aptbot/                     the bot (run: python -m aptbot)
       harvest_locations.py    rebuilds data/ (python -m aptbot.scrapers.yad2.harvest_locations)
       data/                   bundled location catalog
       docs/                   reverse-engineered API reference (start at docs/README.md)
-deploy/                     Dockerfile, compose, build/run/stop scripts (see deploy/README.md)
+    tel_aviv_gis/           municipal GIS: construction/plans near a point (library; not wired into the engine yet)
+    facebook_generic_browser/  Facebook groups reader via a logged-in Chrome (own venv + image; not wired in yet;
+                              see its README.md)
+deploy/                     bot Dockerfile, compose, build/run/stop scripts (see deploy/README.md)
+  fbgb-headless/            separate no-GUI image for the Facebook reader (see its README.md)
 tests/                      unit (offline) + live smoke tests (see tests/README.md)
-archive/                    retired scrapers: Facebook Marketplace, rentlyfly.ai (not imported)
+archive/                    retired scrapers: old Facebook Marketplace, rentlyfly.ai (not imported)
 ```
 
 To add a source, create `aptbot/scrapers/<name>/` that returns the shared listing
