@@ -1,6 +1,7 @@
 # Viewer: what iView requests on load
 
-Last verified: 2026-11-23 (Chrome DevTools capture of `https://gisn.tel-aviv.gov.il/iview2js4/index.aspx`)
+Last verified: 2026-11-24 (Chrome DevTools capture of `https://gisn.tel-aviv.gov.il/iview2js4/index.aspx`
+on 2026-11-23; bundle and `tabaot*.json` re-fetched on 2026-11-24)
 
 The viewer is an ASP.NET page plus the ArcGIS JS API 4.30 (`js.arcgis.com/4.30`) and a
 bundled app script (`/iView2js4/bundles/MyJavaScripts?v=…`, ~2 MB).
@@ -15,6 +16,11 @@ bundled app script (`/iView2js4/bundles/MyJavaScripts?v=…`, ~2 MB).
    `subLayers`. Equivalent to `MapServer/layers?f=json`.
 6. `/metadata/iviewservice5500.json`: the same for the TA5500 service.
 7. `/metadata/mekomot.json`, `metadata.json` (620 entries), `streets*.json`, `sug_mismach.csv`, `tabaot*.json`.
+   - `tabaot0.json`…`tabaot2.json` are the viewer's plan lists, exported from the same table as
+     layer 528. They are **not** an independent source: during the 2026-11-24 outage all three held
+     the ArcGIS error body (`{"error":{"code":400,"message":"Failed to execute query."}}`), 100 bytes,
+     with an identical sha256 in `manifest.json`. A tiny size, or equal hashes across the three, in
+     `manifest.json` is a cheap outage signal. (Verified 2026-11-24 by fetching the bundle and the files.)
    - `metadata.json` per layer: `layerCode` (= layer id), `layerName`, `layerNameEng`,
      `nameInDatabase`, `lastUpdateDate`, and flags `isInternet`/`isIdentify`/`isFreeSearch`/….
 

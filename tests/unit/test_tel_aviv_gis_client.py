@@ -3,7 +3,9 @@
 INVARIANTS (api_docs/operations/query.md, transport/http-and-auth.md):
 - the point goes on the wire as ``lng,lat`` with inSR/outSR 4326;
 - paging uses resultOffset + orderByFields=<oid> and follows exceededTransferLimit;
-- an ``{"error": ...}`` body (sent with HTTP 200) raises, never returns empty.
+- an ``{"error": ...}`` body (sent with HTTP 200) raises, never returns empty;
+- a ``1=1`` probe tells a rejected query from a layer outage (same error body);
+- ``distance_m=0`` sends a bare point (the server returns nothing for distance=0).
 """
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -11,7 +13,8 @@ from types import SimpleNamespace
 import aiohttp
 import pytest
 
-from aptbot.scrapers.tel_aviv_gis.client import TelAvivGisClient, TelAvivGisError
+from aptbot.scrapers.tel_aviv_gis.client import (TelAvivGisClient, TelAvivGisError,
+                                                 TelAvivGisLayerUnavailable, TelAvivGisQueryError)
 from aptbot.scrapers.tel_aviv_gis.models import Kind, Severity, Stage
 
 NOW = datetime(2026, 11, 23, 12, tzinfo=timezone.utc)
@@ -132,12 +135,61 @@ async def test_runaway_paging_raises():
             await gis.query("permits", now=NOW)
 
 
+FAILED = {"error": {"code": 400, "message": "Failed to execute query.", "details": []}}
+
+
 async def test_error_body_with_http_200_raises():
     err = {"error": {"code": 400, "message": "Unable to complete operation.", "details": []}}
-    s = FakeSession((200, err))
-    with pytest.raises(TelAvivGisError, match="Unable to complete"):
+    s = FakeSession((200, err), (200, {"count": 10}))
+    with pytest.raises(TelAvivGisQueryError, match="Unable to complete"):
         await _query(s, "permits")
-    assert len(s.calls) == 1  # not retried
+    assert len(s.calls) == 2  # not retried; one 1=1 probe
+
+
+async def test_bad_query_on_healthy_layer_is_a_query_error():
+    # A bad field name and a layer outage return the same body; the probe decides.
+    s = FakeSession((200, FAILED), (200, {"count": 10642}))
+    with pytest.raises(TelAvivGisQueryError) as info:
+        await _query(s, "permits", where="no_such_field=1")
+    assert not isinstance(info.value, TelAvivGisLayerUnavailable)
+    probe = s.calls[1][1]
+    assert probe["where"] == "1=1" and probe["returnCountOnly"] == "true"
+    assert s.calls[1][0].endswith("/MapServer/772/query")
+
+
+async def test_layer_failing_even_1_eq_1_is_unavailable():
+    s = FakeSession((200, FAILED), (200, FAILED))
+    with pytest.raises(TelAvivGisLayerUnavailable, match=r"528 \(plans\).*server-side"):
+        await _query(s, "plans", geometry=(32.08, 34.78), distance_m=300)
+    assert len(s.calls) == 2
+
+
+async def test_unavailable_is_still_a_tel_aviv_gis_error():
+    # Callers that catch the base class keep working.
+    s = FakeSession((200, FAILED), (200, FAILED))
+    with pytest.raises(TelAvivGisError):
+        await _query(s, "plans")
+
+
+async def test_probe_network_failure_reports_the_original_error():
+    s = FakeSession((200, FAILED), (503, {}), (503, {}), (503, {}))
+    with pytest.raises(TelAvivGisQueryError, match="Failed to execute"):
+        await _query(s, "plans")
+
+
+async def test_zero_distance_sends_a_bare_point():
+    s = FakeSession((200, {"features": []}))
+    await _query(s, "tama38_zones", geometry=(32.08, 34.78), distance_m=0)
+    p = s.calls[0][1]
+    assert p["geometry"] == "34.78,32.08" and "distance" not in p and "units" not in p
+
+
+@pytest.mark.parametrize("bad", [-1, float("nan"), float("inf")])
+async def test_invalid_distance_is_rejected_locally(bad):
+    s = FakeSession()
+    with pytest.raises(ValueError):
+        await _query(s, "permits", geometry=(32.08, 34.78), distance_m=bad)
+    assert s.calls == []
 
 
 async def test_5xx_is_retried_then_succeeds():

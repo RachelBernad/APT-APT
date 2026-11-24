@@ -37,9 +37,10 @@ in `pytest.ini`).
 | `unit/test_engine.py`       | `aptbot.engine` | `scrape_sig`/`group_searches`/`union_filters`, `matches_*`, `scrape_group`, **#5** capped backfill / only-new / price change / send-failure retry / prime-race guard / chat dedup, `run_cycle` logging |
 | `unit/test_activity.py`     | `aptbot.bot.activity` | one log line per user action, new-user tagging, the observer never raises |
 | `unit/test_tel_aviv_gis_geometry.py` | `aptbot.scrapers.tel_aviv_gis.geometry` | centroid returns **(lat, lng)**, either winding, holes, area-weighted multipolygons |
-| `unit/test_tel_aviv_gis_layers.py` | `aptbot.scrapers.tel_aviv_gis.layers` | per-layer Stage codes, **lapsed** = expired before start, severity tokens (renewal = medium, units ≥ 4 → high), inclusive end-day windows; v2: plan stages/scope severity/`urban_renewal`, dangerous-building order tags, TAMA 38 tags, non-http links dropped |
-| `unit/test_tel_aviv_gis_client.py` | `aptbot.scrapers.tel_aviv_gis.client` | point sent as **`lng,lat`** in 4326, offset paging on `exceededTransferLimit`, **error body with HTTP 200 raises**, 5xx retried / 4xx not |
-| `live/test_tel_aviv_gis_live.py` | Tel Aviv GIS (real) | typed point+radius query, site-scoped plans typed with title+url, every supported layer answers, catalog reports no drift |
+| `unit/test_tel_aviv_gis_layers.py` | `aptbot.scrapers.tel_aviv_gis.layers` | per-layer Stage codes, **lapsed** = expired before start, severity tokens (renewal = medium, units ≥ 4 → high), inclusive end-day windows; v2: plan stages/scope severity/`urban_renewal`, dangerous-building order tags, TAMA 38 tags, non-http links dropped; **issued 772 rows under a newer request take their own dates** (permitted/active/lapsed/completed) |
+| `unit/test_tel_aviv_gis_client.py` | `aptbot.scrapers.tel_aviv_gis.client` | point sent as **`lng,lat`** in 4326, offset paging on `exceededTransferLimit`, **error body with HTTP 200 raises**, 5xx retried / 4xx not, **`1=1` probe: query error vs layer unavailable**, `distance_m=0` sends a bare point |
+| `unit/test_tel_aviv_gis_catalog.py` | `aptbot.scrapers.tel_aviv_gis.catalog` | a failing layer prints **UNAVAILABLE** (exit 3) instead of crashing; DRIFT (exit 1) wins |
+| `live/test_tel_aviv_gis_live.py` | Tel Aviv GIS (real) | typed point+radius query, site-scoped plans typed with title+url, each supported layer answers (skips on a city-side outage), a bad field is a query error, `distance_m=0` = bare point, catalog reports no drift |
 | `live/test_yad2_live.py`    | Yad2 (real) | **#2** `city=0070` returns markers, `city=70` returns none; `fetch_map` end to end |
 | `live/test_locations_live.py` | autocomplete (real) | Tel Aviv resolves to string id `"5000"`; live `fetch_city_hoods` |
 

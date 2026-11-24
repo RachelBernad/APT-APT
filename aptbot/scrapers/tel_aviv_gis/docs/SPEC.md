@@ -1,6 +1,7 @@
 # tel_aviv_gis: SPEC
 
-Status: **v2 implemented** (2026-11-23: v1 works, v2 long-horizon signals). Remote-API facts live in `../api_docs/`; this file
+Status: **v2.1** (2026-11-23: v1 works, v2 long-horizon signals; 2026-11-24: outage-aware errors,
+`distance_m=0`, permit stage from own dates). Remote-API facts live in `../api_docs/`; this file
 holds our contract and the decisions behind it. Vocabulary: `GLOSSARY.md`.
 
 ## Purpose
@@ -51,6 +52,17 @@ Not a dataset: no storage, no refresh job, no browser at runtime.
     `PLANS_LIVE_WHERE` are exported for callers.
 14. Severity describes the nature of the thing, not whether it's still alive. A cancelled renewal
     plan stays `high`; callers filter on `stage`.
+15. **Outage ≠ bad query.** The server sends the same error body for both, so on an error the client
+    probes the layer with a `1=1` count and raises `TelAvivGisLayerUnavailable` (outage) or
+    `TelAvivGisQueryError` (our query). Both subclass `TelAvivGisError`. No automatic retry: the observed
+    outage lasted at least an hour. Callers degrade per layer.
+16. **`distance_m=0` = "contains the point":** the client sends a bare point, because the server
+    returns nothing for `distance=0`.
+17. **772 stage from the record's own dates** when `building_stage` (a building-level field) says
+    requested but the request was issued: finished/occupation → completed, started → active,
+    otherwise permitted/lapsed. Start/finish dates are per building, so they only count when on or
+    after this permit's issue date. `expiry_date` 2999-12-31 (the no-expiry sentinel) is dropped
+    from `dates`.
 
 ## Public API
 ```python
@@ -64,18 +76,25 @@ async with TelAvivGisClient(session=None) as gis:     # owns a session if none g
                                        # affordable_housing/746
         where="1=1",                   # ArcGIS SQL over raw field names; CURRENT_TIMESTAMP works
         geometry=(32.0754, 34.7748),   # WGS84 (lat, lng), optional
-        distance_m=200,                # server-side radius; requires geometry
+        distance_m=200,                # server-side radius; requires geometry; 0/None = contains point
         out_fields=None,               # None = all; mapper/oid fields are always added
         return_geometry=True,
-        now=None,                      # reference time for date-derived stages;
+        now=None,                      # reference time for date-derived stages (default: now);
                                        # a naive datetime is taken as Israel local time
     )                                  # -> list[ConstructionFeature], all pages
 
 feats = await query("sites", geometry=(lat, lng), distance_m=150)   # one-shot helper
 ```
 Bounded concurrency per client (`TLV_GIS_CONCURRENCY`), retries on network errors / 5xx / 429
-with exponential backoff, and `TelAvivGisError` on an ArcGIS error body (sent as HTTP 200),
-on exhausted retries, or past `TLV_GIS_MAX_PAGES`. Unknown layers raise `KeyError`.
+with exponential backoff, and `TelAvivGisError` on exhausted retries or past `TLV_GIS_MAX_PAGES`.
+An ArcGIS error body (sent as HTTP 200) raises `TelAvivGisQueryError`, or
+`TelAvivGisLayerUnavailable` when the layer also fails a `1=1` count (decision 15).
+Unknown layers raise `KeyError`.
+
+```python
+results = await asyncio.gather(*(gis.query(k, geometry=p, distance_m=300) for k in LAYERS),
+                               return_exceptions=True)   # one layer down must not hide the rest
+```
 
 ```python
 @dataclass(frozen=True)
@@ -101,19 +120,20 @@ class ConstructionFeature:
 Settings (`aptbot/config.py`): `TLV_GIS_MAPSERVER`, `TLV_GIS_PAGE_SIZE` (≤2000),
 `TLV_GIS_CONCURRENCY` (4), `TLV_GIS_TIMEOUT` (60 s), `TLV_GIS_RETRIES` (3), `TLV_GIS_MAX_PAGES` (50).
 
-Drift check: `python -m aptbot.scrapers.tel_aviv_gis.catalog` (exit 1 on drift; `--all` lists every layer).
+Drift check: `python -m aptbot.scrapers.tel_aviv_gis.catalog` (exit 1 on drift, 3 when some layer is
+UNAVAILABLE but nothing drifted; `--all` lists every layer).
 
 ## Layer → Kind/Stage/Severity mapping
 Field-level detail: `../api_docs/services/IView2WM/layers/`.
 
 | Layer | Kind | Stage rule | Severity rule | Address | `dates` keys |
 |---|---|---|---|---|---|
-| 772 permits | building | `building_stage`: בתהליך היתר→requested; קיים היתר→permitted (lapsed if expired); בבניה→active; תעודת גמר / אכלוס→completed | tokens on `sug_bakasha`; units ≥ 4 → high | `addresses` | requested, issued, expires, start |
+| 772 permits | building | `building_stage`: בתהליך היתר→requested (but issued rows use their own dates, decision 17); קיים היתר→permitted (lapsed if expired); בבניה→active; תעודת גמר / אכלוס→completed | tokens on `sug_bakasha`; units ≥ 4 → high | `addresses` | requested, issued, expires, start |
 | 499 sites | building | `matzav_bniya`: פתיחת תיק/פיצול→permitted; תחילת עבודות/עפר/יסודות/שלד→active; גמר בניה or empty→completed | tokens on `sug_bakasha` + `sivug` | `ktovet` | works_approved, status |
 | 433 street_licenses | infrastructure | window (actual start or validity start, then planned end or validity end) | medium | `t_rechov` | start, end |
 | 858 public_night_works | infrastructure | window `tr_avodat_laila_me`..`_ad` | high | street (from – to) | start, end |
 | 479 site_night_works | building | window `tr_hatchala`..`tr_siyum` (DD/MM/YYYY strings) | high | `ktovet` | start, end |
-| 528 plans | plan | `t_status_klali`: בתכנון→proposed, בתוקף→approved, מבוטלת→cancelled (incl. shelved/historic) | low: policy/re-parcellation subject or broad scope; high: site scope + (urban renewal, or design-plan approval); else medium | none (title + url) | opened, deposited, approved, status_changed |
+| 528 plans | plan | `t_status_klali`: בתכנון→proposed, בתוקף→approved, מבוטלת→cancelled (incl. shelved/historic) | low: policy/re-parcellation subject or broad scope; high: site scope + (urban renewal, or design-plan approval); else medium | none (title + url) | deposited, approved, status_changed (opened: field removed 2026-11-24) |
 | 591 dangerous_buildings | hazard | ordered | high with a demolition/immediate tag, else medium | `t_ktovet` | none |
 | 801 tama38_zones | policy | approved | low | none (title + PDF url) | none |
 | 746 affordable_housing | building | `Status`: before/after deposit→proposed, plan in force→approved, ברישוי→requested, בבניה→active, מאוכלס→completed | medium | `Address` | none |
@@ -144,8 +164,14 @@ order 7 → `immediate_order`.
 
 ## Open questions
 - `request_stage` codes (1,2,3,5,6) on 772: meaning unknown, unused.
-- Should 772 and 499 records for the same building be de-duplicated? (Possible join:
-  499 `heterim` ↔ 772 `request_num`, untested.) Left to callers.
+- Should 772 and 499 records for the same building be de-duplicated? The join is now verified
+  (499 `heterim` ↔ 772 `permission_num`, identical polygons; api_docs 499 page). Left to callers for now;
+  a helper is a candidate. Likewise 433 rows de-duplicated by `ms_rishayon`.
+- Plans fallback while 528 is down: none on the city's side (all services and the viewer caches share
+  the source). The national planning GIS (`ags.iplan.gov.il`) answers plain HTTP with a gov.il error page
+  and would need its own browser analysis.
+- A distance-to-edge helper (0 inside, else nearest edge) instead of centroid distance.
+- Parsing 772 `tochen_bakasha` (demolished floors/area, floors, units, basements).
 - Bot integration (which layers/stages/severities/tags/radius to flag on a listing) is a separate change.
 - A street-address → exact-point helper (layer 527, fuzzy street names) is not built yet.
 - Not investigated: 557 infrastructure-improvement zones, 682 preservation buildings.

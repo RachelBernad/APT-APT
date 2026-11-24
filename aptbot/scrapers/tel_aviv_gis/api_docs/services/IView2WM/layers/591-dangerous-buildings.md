@@ -1,6 +1,6 @@
 # Layer 591: מבנים מסוכנים (Dangerous buildings)
 
-Last verified: 2026-11-23 · Status: **mapped** (`dangerous_buildings`)
+Last verified: 2026-11-24 · Status: **mapped** (`dangerous_buildings`)
 
 - URL: `…/WM/IView2WM/MapServer/591` · DB name `kl_tg_mivne_mesukan`
 - Geometry: **Point** (address point). OID field: `oid_mivne`. Count: 577. Refresh: nightly.
@@ -11,12 +11,14 @@ Last verified: 2026-11-23 · Status: **mapped** (`dangerous_buildings`)
 | name | alias | type | notes |
 |---|---|---|---|
 | `t_tzav` | תיאור צו | String | order/notice type, see codes |
-| `t_mimzaim` | תאור ממצאים | String | engineer's findings, free text (cracks, balconies...) |
+| `t_mimzaim` | תאור ממצאים | String(255) | engineer's findings, free text (cracks, balconies...) with `\r\n` line breaks. **Truncated at 255 characters** mid-word, with no ellipsis: 553 of 577 rows are ≥ 250 characters, i.e. cut. The full text is not published here |
 | `t_ktovet` | תאור כתובת | String | `"רחוב נחלת בנימין מס' 105"` |
 | `shem_rechov`, `ms_bayit`, `knisa`, `k_rechov` | street, number, entrance, street code | | |
 | `UniqueId`, `date_import` | | String | |
 
-No date of the order is published.
+No date of the order is published. Every string field is declared `length: 255`.
+`ms_bayit` (house number) plus `shem_rechov` gives an exact address match, which is more reliable than a
+radius around a point for "is *this* building listed".
 
 ## Codes: `t_tzav` (2026-11-23 counts)
 | value | count | tags |

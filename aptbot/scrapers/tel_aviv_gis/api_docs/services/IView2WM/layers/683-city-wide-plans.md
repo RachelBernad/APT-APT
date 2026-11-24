@@ -1,6 +1,10 @@
 # Layer 683: תוכניות כלל עירוניות (City-wide town plans)
 
-Last verified: 2026-11-23 · Status: **documented, not mapped**
+Last verified: 2026-11-24 · Status: **documented, not mapped** · **OUTAGE since 2026-11-24**
+
+> Fails exactly like 528 (same source table): every query returns `"Failed to execute query."`,
+> and `taarichPticha` is gone from the field list. See `528-town-plans.md` and
+> [transport/http-and-auth.md#outages](../../../transport/http-and-auth.md#outages).
 
 - URL: `…/WM/IView2WM/MapServer/683` · same `nameInDatabase` as 528 (`yk_tg_taba_union`).
   **Unverified:** that it's a definition-query subset of 528 (likely, given the name and schema).

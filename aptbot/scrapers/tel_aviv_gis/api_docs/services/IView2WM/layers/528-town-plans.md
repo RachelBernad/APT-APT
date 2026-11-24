@@ -1,9 +1,17 @@
 # Layer 528: תוכניות בניין עיר (Town plans / תב"ע)
 
-Last verified: 2026-11-23 · Status: **mapped** (`plans`)
+Last verified: 2026-11-24 · Status: **mapped** (`plans`) · **OUTAGE since 2026-11-24 (see below)**
 
 - URL: `…/WM/IView2WM/MapServer/528` · DB name `yk_tg_taba_union`
-- Geometry: **Polygon** (plan boundary). OID field: `oid_taba`. Count: 5077. Refresh: nightly.
+- Geometry: **Polygon** (plan boundary). OID field: `oid_taba`. Count: 5077 (2026-11-23). Refresh: nightly.
+
+> **Outage (observed 2026-11-24, ~09:45–10:45 IST and ongoing):** every query fails with
+> `{"error":{"code":400,"message":"Failed to execute query."}}`, even `where=1=1&returnCountOnly=true`,
+> on every service, and the viewer's `tabaot*.json` caches hold the same error. The metadata still loads,
+> but `taarichPticha` has disappeared from the field list (48 fields). Details and detection:
+> [transport/http-and-auth.md#outages](../../../transport/http-and-auth.md#outages). The client raises
+> `TelAvivGisLayerUnavailable`. When the layer returns, re-run `catalog.py` and re-check the codes and
+> counts below before trusting them.
 - Layer 683 (city-wide plans) has the **same schema** (see `683-city-wide-plans.md`).
 
 ## Fields
@@ -19,7 +27,7 @@ Last verified: 2026-11-23 · Status: **mapped** (`plans`)
 | `maslul` | מסלול | String | `ועדה מקומית` 929 · `ועדה מחוזית` 551 · empty 3597 |
 | `sw_hitchadshut_ironit` | כולל התחדשות עירונית | SmallInteger | 1 on only **39** plans. The title is a better signal |
 | `sw_mimush_male` | מומשה במלואה | Integer | 1 on only 7. Unreliable |
-| `taarichPticha` | תאריך פתיחה | Date | plan opened |
+| ~~`taarichPticha`~~ | תאריך פתיחה | Date | plan opened. **Removed from the layer on 2026-11-24**; `layers.py` still reads it if it comes back, but no longer expects it |
 | `tr_hafkada` | הפקדה | Date | deposited |
 | `tr_matan_tokef` | מתן תוקף | Date | approved; old plans go back decades, so filter on it |
 | `tr_shinuy_status` | תאריך שינוי סטטוס | Date | |

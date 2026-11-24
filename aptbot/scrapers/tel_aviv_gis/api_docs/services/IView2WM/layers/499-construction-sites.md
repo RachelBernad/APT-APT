@@ -1,6 +1,6 @@
 # Layer 499: אתרי בניה (Construction sites)
 
-Last verified: 2026-11-23 · Status: **mapped** (`sites`)
+Last verified: 2026-11-24 · Status: **mapped** (`sites`)
 
 - URL: `…/WM/IView2WM/MapServer/499`
 - Geometry: **Polygon**. OID field: `oid_site`. Count: 1611. Refresh: nightly.
@@ -18,9 +18,10 @@ Last verified: 2026-11-23 · Status: **mapped** (`sites`)
 | `sug_bakasha` | מהות | String | `"<category>/<subtype>"` items joined with ` ,` |
 | `tochen_bakasha` | תוכן בבקשה | String | free text |
 | `ktovet` | כתובת | String | `"שדרות המעפילים מס' 18,  רחוב מורדי הגטאות מס' 35 "` |
-| `heterim` | היתרים בתיק | String | permit numbers joined with ` ,` (e.g. `20220951 ,20260532`). **Unverified:** same 8-digit format as 772 `request_num`; the join was not tested |
-| `ishurei_laila` | אישור לעבודות לילה | String | `DD/MM/YYYY-DD/MM/YYYY` ranges joined with ` ,` (repeats), mostly null |
-| `tik_tipul`, `ms_tik_binyan`, `gush_chelka`, `baalei_heter`, `shimush` | ids, parcel, owner, use | | |
+| `heterim` | היתרים בתיק | String | permit numbers joined with ` ,` (e.g. `20220951 ,20260532`). These are 772 **`permission_num`** values (not `request_num`); see Joining |
+| `ishurei_laila` | אישור לעבודות לילה | String | night-work approvals: `DD/MM/YYYY-DD/MM/YYYY` ranges joined with ` ,` (repeats), mostly null. Past approvals stay listed; this is a history, not a schedule |
+| `baalei_heter` | בעלי היתר | String | permit holder, often the developer company |
+| `tik_tipul`, `ms_tik_binyan`, `gush_chelka`, `shimush` | supervision file, building file, parcel (`"6215 / 200 "`), use | | |
 | `url_archion_tik` | | String | **intranet** host `handasa-archive`, not public |
 
 ## Codes: `matzav_bniya`
@@ -34,6 +35,16 @@ Last verified: 2026-11-23 · Status: **mapped** (`sites`)
 | גמר שלד | 50 | active |
 | גמר בניה | 83 | completed |
 | *(empty)* | 99 | completed (all have an occupancy/form-4/completion status) |
+
+## Joining with 772 permits (verified 2026-11-24)
+A site and the permit(s) it executes describe the same building twice. Link them by:
+- `heterim` → split on `,`, strip, match 772 `permission_num`. 58 of 60 random sites matched at
+  least one permit; 29 of the 60 list **more than one** permit (amendments, renewals).
+- `tik_tipul` = 772 `tik_tipul_1` (55 of 60), and `ms_tik_binyan` = 772 `ms_tik_binyan`.
+- The polygons are identical (same vertices), so a radius query returns both. Callers that
+  count "construction near X" should de-duplicate on this join.
+The 499 row is the better source of the physical stage (`matzav_bniya`); 772 has the request
+details (`sug_bakasha`, `tochen_bakasha`, units).
 
 ## Mapping (in `layers.py`)
 Kind = building. Severity from `sug_bakasha` + `sivug` tokens. Address = `ktovet`.
