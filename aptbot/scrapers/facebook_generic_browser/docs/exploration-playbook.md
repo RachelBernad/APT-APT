@@ -41,7 +41,7 @@ Every new place the browser runs changes the fingerprint. Before touching a real
 4. **Desktop signals:** a work area smaller than the screen (window-manager margin / panel), at least one audio
    output (virtual sink), maximized window, real fonts for the site's language, TZ/locale matching the IP.
 5. Re-run the detectors (`explore/validate.py`) and record the before/after table.
-→ FB: all of this was done for the Pi in Docker. See `../api_docs/stealth/pi-headless.md` (sandbox, WebGL, taskbar,
+→ FB: all of this was done in Docker (no GUI). See `../api_docs/stealth/no-gui-container.md` (sandbox, WebGL, taskbar,
 audio: CreepJS "like headless" 50% → 38%, Mac 31%).
 
 ## 2. Log in once (by hand, or assisted)

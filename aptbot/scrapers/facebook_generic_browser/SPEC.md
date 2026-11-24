@@ -1,7 +1,7 @@
 # facebook_generic_browser: SPEC
 
 Status 2026-11-24: **library built and verified live on the Mac** (8 sessions, 0 warnings). Every decision below
-cites its evidence (a validation result, an `api_docs/` page or a test). The Raspberry Pi deployment and the
+cites its evidence (a validation result, an `api_docs/` page or a test). The no-GUI container deployment on a real host and the
 in-container service (§12) are designed but not yet built or run.
 
 ## 1. Goal
@@ -22,7 +22,7 @@ Risk: against Meta's Terms. The account can be checkpointed or banned. Mitigated
 | R2 | Human-looking input | `human.py`, attention lock | hovercard queries fire from our pointer path (real-pointer behavior) |
 | R3 | **Fast** | payload-first, request-aware waits, short random gaps | ~76 posts/min in one tab (`api_docs/feed/infinite-scroll.md`) |
 | R4 | Concurrent async callers, multiple tabs, one account | §5 dispatcher + tab workers | 2.05× with 3 tabs live. `tests/unit/test_fbgb_dispatcher.py` |
-| R5 | Raspberry Pi without GUI | headful Chromium under Xvfb + VNC login | **validated in Docker linux/arm64** (`api_docs/stealth/pi-headless.md`), physical Pi not yet |
+| R5 | Host without GUI (container) | headful Chromium under Xvfb + VNC login | **validated in Docker linux/arm64** (`api_docs/stealth/no-gui-container.md`), no other host yet |
 | R6 | No credentials stored anywhere | login by hand, or assisted `login --stdin` (memory only) into the profile | `explore/open_profile.py` checks cookie names only. Assisted login verified in Docker |
 | R7 | Account safety first | §7 budgets, §8 breaker | 8 sessions, 0 interstitials |
 | R8 | Easy for future implementers | `docs/` + examples + CLI + docs-sync test | `tests/unit/test_fbgb_docs.py` |
@@ -88,11 +88,11 @@ comment_count, reaction_count, comments[Comment]|None, hints{prices, rooms, phon
 
 ## 11. Deployment
 - **Mac (now):** venv `~/.fbgb/venv` (own `requirements.txt`), profile/cache in `~/.fbgb/` (`docs/operations.md`).
-- **No GUI (Pi), validated in Docker linux/arm64 2026-11-24:** image `deploy/fbgb-headless/`. Debian Chromium headful
+- **No GUI (container), validated in Docker linux/arm64 2026-11-24:** image `deploy/fbgb-headless/`. Debian Chromium headful
   under Xvfb + openbox (32 px work-area margin) + PulseAudio null sink, custom seccomp (Docker default + namespaces)
   for the sandbox, Mesa WebGL (`FBGB_CHROME_ARGS`), maximized. Detectors: all green except the "Chromium" brand
-  (unavoidable on Linux ARM). Login: assisted `login --stdin` (verified) or by hand over VNC on 127.0.0.1. Details: `api_docs/stealth/pi-headless.md`.
-  Still to do on the physical Pi: same checks, `max_tabs=2`, optional V3D GPU renderer.
+  (unavoidable on Linux ARM). Login: assisted `login --stdin` (verified) or by hand over VNC on 127.0.0.1. Details: `api_docs/stealth/no-gui-container.md`.
+  Still to do on each new host: same checks, `max_tabs=2` on a low-CPU host, optional GPU renderer.
 
 ## 12. Integration with the bot (future phase, designed, NOT built)
 The library runs as **its own process inside the bot's Docker container**, behind an authenticated local service:

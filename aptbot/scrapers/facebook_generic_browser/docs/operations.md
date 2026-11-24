@@ -43,8 +43,8 @@ no Facebook involved. Do it after every patchright or Chrome upgrade and compare
 upgrade, run `fbgb validate`. If `storagePartitioning` turns red, copy the new `disabledFeatures` list from
 `patchright/driver/package/lib/coreBundle.js` (search `chromiumSwitches`) into `_PW_DISABLED_FEATURES`.
 
-## No GUI (Raspberry Pi / Docker)
+## No GUI (Docker container)
 Validated in Docker (linux/arm64) on the Mac: `deploy/fbgb-headless/README.md` (build, run options, VNC login) and
-`../api_docs/stealth/pi-headless.md` (what each setting fixes, measured). Use `max_tabs=2` on the Pi. Check any new
+`../api_docs/stealth/no-gui-container.md` (what each setting fixes, measured). Use `max_tabs=2` on a low-CPU host. Check any new
 machine with `python -m aptbot.scrapers.facebook_generic_browser.explore.tools.envprobe`. The future in-container
 service with authentication is designed in SPEC §12.

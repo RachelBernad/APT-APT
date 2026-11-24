@@ -20,7 +20,7 @@ but the browser layer has to be clean first, or nothing else helps.
 | IPC flooding protection / popup blocking disabled | rate of `history.pushState`, `window.open` without a gesture | ✅ normal |
 | Hidden tabs not throttled | timer accuracy while `visibilityState=hidden` | ✅ throttled like Chrome (3 ticks/3 s) |
 | All tabs focused + visible at once | `document.hasFocus()`, `visibilitychange` events | ✅ fixed with `focus_control=True` |
-| Headless (`HeadlessChrome` UA, missing plugins, GPU = SwiftShader) | UA/userAgentData, `navigator.plugins`, WebGL renderer | ✅ headful on the Mac. **Pi: WebGL under Xvfb = llvmpipe/SwiftShader**, see `pi-headless.md` |
+| Headless (`HeadlessChrome` UA, missing plugins, GPU = SwiftShader) | UA/userAgentData, `navigator.plugins`, WebGL renderer | ✅ headful on the Mac. **No-GUI container: WebGL under Xvfb = llvmpipe/SwiftShader**, see `no-gui-container.md` |
 | Spoofed-fingerprint inconsistencies (UA vs. client hints vs. platform, patched natives' `toString`) | cross-checks; CreepJS "lies" | ✅ nothing spoofed, so nothing inconsistent |
 | Emulated viewport (1280×720 defaults) | `innerWidth/innerHeight` vs `outerWidth/Height` | ✅ `no_viewport=True` |
 | Request interception (`page.route`) | Service Worker / timing / header oddities | ✅ not used |

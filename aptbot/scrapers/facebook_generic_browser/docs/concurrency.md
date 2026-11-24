@@ -45,6 +45,6 @@ max_tabs tab workers: each owns ONE tab and runs one job at a time. Tabs open la
 - Order of results across different calls isn't guaranteed (priority + FIFO only decide who starts first).
 
 ## Tuning
-`FacebookAPI(max_tabs=…)`: 3 on a Mac, 2 on a Raspberry Pi (CPU-bound). `jobs.Env` holds the scroll timing knobs:
+`FacebookAPI(max_tabs=…)`: 3 on a Mac, 2 on a low-CPU host (CPU-bound). `jobs.Env` holds the scroll timing knobs:
 `request_wait` (0.35–0.7 s look for a pagination request after a burst), `response_timeout` (8 s),
 `max_stalls` (6 bursts without new posts = end of feed).

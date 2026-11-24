@@ -1,7 +1,7 @@
 # fbgb-headless: Facebook browser library in a container with no real display
 
-Test image for running `facebook_generic_browser` where there's no GUI (the Raspberry Pi), validated on the Mac's
-Docker (linux/arm64). It's separate from the bot image. Findings: `aptbot/scrapers/facebook_generic_browser/api_docs/stealth/pi-headless.md`.
+Test image for running `facebook_generic_browser` on any host without a GUI, validated on the Mac's
+Docker (linux/arm64). It's separate from the bot image. Findings: `aptbot/scrapers/facebook_generic_browser/api_docs/stealth/no-gui-container.md`.
 
 ```bash
 # build (from the repo root)

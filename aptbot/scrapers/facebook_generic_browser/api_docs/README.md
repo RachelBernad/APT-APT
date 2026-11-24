@@ -7,7 +7,7 @@ Reading order: stealth → graphql → feed → groups → posts.
 
 - **stealth/**: [browser-setup](stealth/browser-setup.md) (validated launch config + scores) ·
   [automation-signals](stealth/automation-signals.md) · [behavior-model](stealth/behavior-model.md) (fast + human) ·
-  [rate-limits-and-checkpoints](stealth/rate-limits-and-checkpoints.md) · [pi-headless](stealth/pi-headless.md)
+  [rate-limits-and-checkpoints](stealth/rate-limits-and-checkpoints.md) · [no-gui-container](stealth/no-gui-container.md)
 - **session/**: [login-and-cookies](session/login-and-cookies.md) · [account-health](session/account-health.md)
 - **navigation/**: [url-map](navigation/url-map.md) · [routing-spa](navigation/routing-spa.md)
 - **graphql/**: [README](graphql/README.md) (request/response format, query catalogue)

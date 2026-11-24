@@ -41,7 +41,7 @@ class FacebookAPI:
         """
         home:             state dir (cache db, halt marker). Default $FBGB_HOME or ~/.fbgb.
         profile_dir:      Chrome profile with the logged-in session. Default $FBGB_PROFILE_DIR or <home>/profile.
-        max_tabs:         tabs used in parallel (3 on a Mac, 2 on a Raspberry Pi).
+        max_tabs:         tabs used in parallel (3 on a Mac, 2 on a low-CPU host).
         limiter:          account-wide navigation budget (default 8/min, burst 3, 120/hour).
         idle_close_after: close Chrome after this many idle seconds (None = keep it open). It reopens on demand.
         default_timeout:  per-call timeout in seconds for browser-backed calls.

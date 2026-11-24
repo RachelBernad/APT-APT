@@ -11,7 +11,7 @@ Env overrides:
   FBGB_PROFILE_DIR   Chrome user-data-dir (default $FBGB_HOME/profile)
   FBGB_BROWSER       explicit browser executable path
   FBGB_CHROME_ARGS   extra Chrome switches, space-separated (deployment only, e.g. in Docker:
-                     "--disable-namespace-sandbox" = use the setuid sandbox; see api_docs/stealth/pi-headless.md)
+                     "--disable-namespace-sandbox" = use the setuid sandbox; see api_docs/stealth/no-gui-container.md)
 """
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ def browser_kwargs() -> dict:
 
 def _check_display() -> None:
     if platform.system() == "Linux" and not os.environ.get("DISPLAY"):
-        raise RuntimeError("No DISPLAY. Run under Xvfb (see api_docs/stealth/pi-headless.md); never headless.")
+        raise RuntimeError("No DISPLAY. Run under Xvfb (see api_docs/stealth/no-gui-container.md); never headless.")
 
 
 @asynccontextmanager

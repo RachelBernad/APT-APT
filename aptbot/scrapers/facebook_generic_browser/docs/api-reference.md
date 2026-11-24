@@ -30,7 +30,7 @@ FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, limiter=None, idle_close
 |---|---|
 | `home` | state dir: cache DB, `HALTED` marker, debug captures. Default `$FBGB_HOME` or `~/.fbgb` |
 | `profile_dir` | Chrome profile holding the logged-in session. Default `$FBGB_PROFILE_DIR` or `<home>/profile` |
-| `max_tabs` | parallel tabs (3 on a Mac, 2 on a Raspberry Pi). Light load opens only 1 |
+| `max_tabs` | parallel tabs (3 on a Mac, 2 on a low-CPU host). Light load opens only 1 |
 | `limiter` | `Limiter(rate_per_min=8, burst=3, hourly_cap=120)`, shared by all tabs |
 | `idle_close_after` | seconds of inactivity before Chrome is closed (`None` = keep open) |
 | `default_timeout` | per-call timeout for browser-backed calls |

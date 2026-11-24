@@ -1,7 +1,7 @@
-# Headful Chromium with NO real display (Xvfb), for facebook_generic_browser. The test image for the Raspberry Pi
-# design (api_docs/stealth/pi-headless.md). Build from the REPO ROOT:
+# Headful Chromium with NO real display (Xvfb), for facebook_generic_browser. For any host without a GUI
+# (api_docs/stealth/no-gui-container.md). Build from the REPO ROOT:
 #   docker build -f deploy/fbgb-headless/Dockerfile -t fbgb-headless:test .
-# Same base as the bot image (Debian 13 / python:3.12-slim), linux/arm64 like the Pi.
+# Same base as the bot image (Debian 13 / python:3.12-slim), validated on linux/arm64.
 FROM python:3.12-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     DISPLAY=:99 SCREEN=1920x1080x24 \
     FBGB_HOME=/home/fbgb/.fbgb FBGB_BROWSER=/usr/bin/chromium \
     FBGB_CHROME_ARGS="--use-gl=angle --use-angle=gl --ignore-gpu-blocklist --start-maximized"
-# FBGB_CHROME_ARGS (validated 2026-11-24, api_docs/stealth/pi-headless.md): WebGL via Mesa llvmpipe through Xvfb's
+# FBGB_CHROME_ARGS (validated 2026-11-24, api_docs/stealth/no-gui-container.md): WebGL via Mesa llvmpipe through Xvfb's
 # GLX (looks like a Linux desktop without GPU drivers). Without it Chrome has NO WebGL at all, and SwiftShader
 # (--enable-unsafe-swiftshader) is a known automation tell. Maximized window like a real user.
 # Run with: --shm-size=1g --security-opt seccomp=deploy/fbgb-headless/seccomp-chromium.json
