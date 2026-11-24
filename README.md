@@ -1,11 +1,14 @@
 # APT-APT
 
-A multi-user Telegram bot that watches **Yad2** rental listings. Each chat creates
-**monitors**: one filter set (price, rooms, size, floor, property type and condition,
-and features such as elevator or ממ״ד) over any number of areas, picked by fuzzy
-Hebrew/English search or by browsing a city's neighborhoods. The bot scrapes each
-distinct area once per cycle, matches every listing against every monitor locally,
-and sends only **new** listings and **price changes**, each with a photo preview.
+A Telegram bot that watches **Tel Aviv apartment rentals** on two sources and posts what's new:
+
+- **Yad2**: every rental listing in Tel Aviv. New listings and price changes, each with a photo.
+- **Facebook groups**: the Tel Aviv rental groups, read through a logged-in browser. Each new post arrives
+  with its text and photos, **once**, even if it's cross-posted to several groups. Dedup uses a hash of the
+  post text with leading/trailing whitespace stripped.
+
+Send `/monitor` in the chat to start; no filters for now. **Only the chats in `ALLOWED_CHAT_IDS`** (set in
+`.env`) can use the bot or receive anything from it. Every other chat is ignored, and its id is logged.
 
 ## Layout
 
@@ -14,9 +17,11 @@ aptbot/                     the bot (run: python -m aptbot)
   __main__.py               entry point: Telegram polling + periodic scrape cycle
   config.py                 every setting, env-overridable
   models.py                 shared dataclasses, feature/property/condition tables
-  db.py                     async SQLite (users, monitors, seen listings)
-  engine.py                 scrape once per area → match per monitor → route
-  bot/                      Telegram-facing: handlers, activity log, formatting, HTML report
+  db.py                     async SQLite (users, monitors, seen Yad2 listings, seen FB posts)
+  engine.py                 Yad2: scrape once per area → match per monitor → route
+  fb_engine.py              Facebook: poll the groups → dedup by content hash → route
+  bot/                      Telegram-facing: simple.py (live commands), gate.py (allowlist),
+                            formatting, activity log; handlers.py = parked filters wizard
   scrapers/
     yad2/                   the Yad2 source, self-contained:
       gateway.py              listings map feed (200-cap price bisection)
@@ -24,11 +29,11 @@ aptbot/                     the bot (run: python -m aptbot)
       harvest_locations.py    rebuilds data/ (python -m aptbot.scrapers.yad2.harvest_locations)
       data/                   bundled location catalog
       docs/                   reverse-engineered API reference (start at docs/README.md)
-    tel_aviv_gis/           municipal GIS: construction/plans near a point (library; not wired into the engine yet)
-    facebook_generic_browser/  Facebook groups reader via a logged-in Chrome (own venv + image; not wired in yet;
-                              see its README.md)
-deploy/                     bot Dockerfile, compose, build/run/stop scripts (see deploy/README.md)
-  fbgb-headless/            separate no-GUI image for the Facebook reader (see its README.md)
+    facebook_generic_browser/  Facebook groups reader via a logged-in Chrome (see its README.md)
+    tel_aviv_gis/           municipal GIS: construction/plans near a point (library; not wired in yet)
+deploy/                     Yad2-only bot image, compose, scripts (see deploy/README.md)
+  aptbot-fb/                the bot with Yad2 + Facebook in one no-GUI container (see its README.md)
+  fbgb-headless/            its base: headful Chromium under Xvfb (see its README.md)
 tests/                      unit (offline) + live smoke tests (see tests/README.md)
 archive/                    retired scrapers: old Facebook Marketplace, rentlyfly.ai (not imported)
 ```
@@ -36,23 +41,18 @@ archive/                    retired scrapers: old Facebook Marketplace, rentlyfl
 To add a source, create `aptbot/scrapers/<name>/` that returns the shared listing
 dict (`aptbot/models.py`, `LISTING_KEYS`) and call it from `aptbot.engine.scrape_group`.
 
-## Run locally
+## Run (Mac or any Docker host)
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env            # set TELEGRAM_BOT_TOKEN
-set -a; . ./.env; set +a
-.venv/bin/python -m aptbot      # writes out/bot.db and out/bot.log
+cp .env.example .env            # set TELEGRAM_BOT_TOKEN and ALLOWED_CHAT_IDS
+deploy/aptbot-fb/build.sh && deploy/aptbot-fb/run.sh
 ```
 
-## Deploy
-
-```bash
-deploy/build-docker.sh && deploy/run-docker.sh
-```
-
-Details, including the Raspberry Pi and the fresh-start DB policy, are in
-[`deploy/README.md`](deploy/README.md).
+This needs a logged-in Facebook profile in the `fbgb-home` Docker volume, which is a one-time login (see
+[`deploy/aptbot-fb/README.md`](deploy/aptbot-fb/README.md)). For Yad2 only, set `FB_ENABLED=0` and use the
+lighter image (`deploy/build-docker.sh && deploy/run-docker.sh`), or run it directly with
+`python -m aptbot` after `pip install -r requirements.txt`. Details on the Raspberry Pi and the fresh-start DB policy are
+in [`deploy/README.md`](deploy/README.md).
 
 ## Test
 
@@ -64,5 +64,6 @@ Details, including the Raspberry Pi and the fresh-start DB policy, are in
 
 ## Bot commands
 
-`/start`, `/mysearches`, `/report` (an HTML page of current matches), `/mute`,
-`/unmute`, `/help`, plus the persistent tap bar (Add monitor / My searches / Daily report / Help).
+`/monitor` (start watching Tel Aviv on both sources; you first get a short taster of what's there now),
+`/stop`, `/status` (last check of each source and Facebook's remaining budget) and `/help`. In a group, use them
+as commands (`/monitor@YourBot` also works), since bots in groups only see commands.
