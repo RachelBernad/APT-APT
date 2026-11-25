@@ -15,7 +15,7 @@ A Telegram bot that watches **Tel Aviv apartment rentals** on two sources and po
   [`aptbot/listing_ai/SPEC.md`](aptbot/listing_ai/SPEC.md).
 
 Send `/monitor` in the chat to start; no filters for now. **Only the chats in `ALLOWED_CHAT_IDS`** (set in
-`.env`) can use the bot or receive anything from it. Every other chat is ignored, and its id is logged.
+`.env`) can use the bot or receive anything from it. Every other chat is ignored, and its id is logged. Inside an allowed group, **only the people in `ALLOWED_USER_IDS`** can give commands; a new member, an anonymous admin or a linked channel is refused, and at startup the bot warns if the group has more members than those people plus itself (they could read the listings).
 
 ## Layout
 

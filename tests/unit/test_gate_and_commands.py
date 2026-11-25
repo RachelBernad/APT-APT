@@ -16,7 +16,12 @@ from aptbot.scrapers.yad2 import locations
 ALLOWED = -1000000001
 
 
-def _update(chat_id, chat_type="group", title="קבוצת בדיקה", migrate_to=None):
+ALICE, BOB, STRANGER = 111111111, 222222222, 333333333
+ANON_ADMIN = 1087968824          # Telegram's GroupAnonymousBot
+
+
+def _update(chat_id, chat_type="group", title="קבוצת בדיקה", migrate_to=None, user_id=ALICE,
+            no_user=False):
     replies = []
 
     async def reply_text(text, **kw):
@@ -24,37 +29,66 @@ def _update(chat_id, chat_type="group", title="קבוצת בדיקה", migrate_t
 
     msg = SimpleNamespace(migrate_to_chat_id=migrate_to, reply_text=reply_text)
     chat = SimpleNamespace(id=chat_id, type=chat_type, title=title, username=None, first_name=None)
-    user = SimpleNamespace(username="alice_test")
+    user = None if no_user else SimpleNamespace(id=user_id, username="alice_test",
+                                                first_name="Alice", last_name=None)
     return SimpleNamespace(effective_chat=chat, effective_message=msg, effective_user=user), replies
 
 
 # --- gate ------------------------------------------------------------------
 
 async def test_gate_lets_the_allowed_chat_through():
-    gate = ChatGate({ALLOWED})
+    gate = ChatGate({ALLOWED}, users=set())
     upd, _ = _update(ALLOWED)
     assert await gate(upd, None) is None
 
 
 async def test_gate_stops_any_other_chat():
-    gate = ChatGate({ALLOWED})
+    gate = ChatGate({ALLOWED}, users=set())
     upd, _ = _update(222222222, chat_type="private")
     with pytest.raises(ApplicationHandlerStop):
         await gate(upd, None)
 
 
 async def test_empty_allowlist_blocks_everyone():
-    gate = ChatGate(set())
+    gate = ChatGate(set(), users=set())
     upd, _ = _update(ALLOWED)
     with pytest.raises(ApplicationHandlerStop):
         await gate(upd, None)
 
 
 async def test_gate_follows_a_supergroup_migration():
-    gate = ChatGate({ALLOWED})
+    gate = ChatGate({ALLOWED}, users=set())
     upd, _ = _update(ALLOWED, migrate_to=-1009999999999)
     await gate(upd, None)
     assert gate.is_allowed(-1009999999999)
+
+
+async def test_user_allowlist_lets_listed_people_through():
+    gate = ChatGate({ALLOWED}, users={ALICE, BOB})
+    for uid in (ALICE, BOB):
+        upd, _ = _update(ALLOWED, user_id=uid)
+        assert await gate(upd, None) is None
+
+
+@pytest.mark.parametrize("kw", [{"user_id": STRANGER}, {"user_id": ANON_ADMIN}, {"no_user": True}])
+async def test_user_allowlist_refuses_others_inside_the_allowed_group(kw):
+    gate = ChatGate({ALLOWED}, users={ALICE, BOB})
+    upd, _ = _update(ALLOWED, **kw)
+    with pytest.raises(ApplicationHandlerStop):
+        await gate(upd, None)
+
+
+async def test_listed_user_in_another_chat_is_still_refused():
+    gate = ChatGate({ALLOWED}, users={ALICE})
+    upd, _ = _update(ALICE, chat_type="private", user_id=ALICE)
+    with pytest.raises(ApplicationHandlerStop):
+        await gate(upd, None)
+
+
+async def test_empty_user_allowlist_keeps_chat_only_behavior():
+    gate = ChatGate({ALLOWED}, users=set())
+    upd, _ = _update(ALLOWED, user_id=STRANGER)
+    assert await gate(upd, None) is None
 
 
 # --- commands --------------------------------------------------------------

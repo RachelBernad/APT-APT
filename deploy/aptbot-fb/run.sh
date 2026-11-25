@@ -6,7 +6,7 @@
 set -eu
 cd "$(dirname "$0")/../.."
 [ -f .env ] || { echo "missing .env (copy .env.example)"; exit 1; }
-mkdir -p out
+mkdir -p out && chmod 700 out     # bot.db + bot.log: chat ids, names, cached posts
 docker rm -f aptbot-fb >/dev/null 2>&1 || true
 docker run -d --name aptbot-fb --restart unless-stopped \
   --shm-size=1g --security-opt seccomp=deploy/fbgb-headless/seccomp-chromium.json \

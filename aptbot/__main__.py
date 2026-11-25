@@ -207,6 +207,26 @@ class Bot:
             BotCommand("help", "How the bot works"),
         ])
 
+    async def _check_membership(self):
+        """Warn when an allowed group has more members than the allowed people + this bot.
+        Strangers can't command the bot (the gate refuses them), but they would still READ
+        every listing sent to the group. The Bot API can count members, not list them."""
+        if not self.gate.users:
+            return
+        for chat_id in sorted(self.gate.allowed):
+            if chat_id > 0:
+                continue
+            try:
+                n = await self.application.bot.get_chat_member_count(chat_id)
+            except TelegramError as exc:
+                logger.warning("Could not count members of chat %s: %s", chat_id, exc)
+                continue
+            if n > len(self.gate.users) + 1:
+                logger.warning("Chat %s has %d members, more than the %d allowed people + the bot: "
+                               "someone else can read the listings.", chat_id, n, len(self.gate.users))
+            else:
+                logger.info("Chat %s has %d members (allowed people + the bot).", chat_id, n)
+
     async def _open_facebook(self):
         if not config.FB_ENABLED:
             logger.info("Facebook source disabled (FB_ENABLED=0).")
@@ -258,6 +278,7 @@ class Bot:
             await self.application.initialize()
             await self.application.start()
             await self._set_commands()
+            await self._check_membership()
             await self.application.updater.start_polling()
             logger.info("Bot polling started; scrape interval = %ss", config.CHECK_INTERVAL_SECONDS)
 

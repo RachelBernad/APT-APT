@@ -12,7 +12,7 @@ deploy/aptbot-fb/stop.sh      # clean stop: Chrome closes and flushes cookies
 ```
 
 ## Needs
-- **`.env` at the repo root** (gitignored): `TELEGRAM_BOT_TOKEN` and `ALLOWED_CHAT_IDS` (see `.env.example`).
+- **`.env` at the repo root** (gitignored): `TELEGRAM_BOT_TOKEN`, `ALLOWED_CHAT_IDS` and `ALLOWED_USER_IDS` (see `.env.example`).
   The repo is public, so these never go in a committed file.
 - **A logged-in Facebook profile in the `fbgb-home` volume.** It's a one-time login, described in
   [`../fbgb-headless/README.md`](../fbgb-headless/README.md#one-time-login). If the session is missing or Facebook shows a

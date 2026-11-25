@@ -135,6 +135,8 @@ def who(update: Update) -> str:
     chat_id = chat.id if chat else (user.id if user else "?")
     if chat is not None and chat.type != "private":
         actor = full_name(user) or (f"@{user.username}" if user and user.username else "?")
+        if user is not None and getattr(user, "id", None) is not None:
+            actor += f" (user {user.id})"      # the id ALLOWED_USER_IDS needs
         return f'{chat_id} [{chat.type} "{chat.title or "—"}"] by {actor}'
     bits = [str(chat_id)]
     name = full_name(user)

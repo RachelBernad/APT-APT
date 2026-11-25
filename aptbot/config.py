@@ -36,6 +36,12 @@ def _id_list(raw: str) -> list:
 # Empty = nobody (the bot logs every refused chat id, so you can find yours).
 ALLOWED_CHAT_IDS = frozenset(int(x) for x in _id_list(os.getenv("ALLOWED_CHAT_IDS", "")))
 
+# Only these PEOPLE (Telegram user ids, positive) may give commands, even inside an
+# allowed group: a new group member, an anonymous admin or a linked channel is refused.
+# Empty = any member of an allowed chat (logged as a warning at startup). The gate logs
+# every refused user id once, so you can find yours.
+ALLOWED_USER_IDS = frozenset(int(x) for x in _id_list(os.getenv("ALLOWED_USER_IDS", "")))
+
 # --- Facebook groups (aptbot/scrapers/facebook_generic_browser) ---
 FB_ENABLED = os.getenv("FB_ENABLED", "1").strip().lower() not in ("0", "false", "no", "")
 # Groups to watch (the account must be a MEMBER). Default: the Tel Aviv rental groups.
