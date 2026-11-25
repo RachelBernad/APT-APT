@@ -1,12 +1,17 @@
 """Facebook groups source: poll the watched groups, dedup by content, route to monitors.
 
 Separate from the Yad2 ``engine`` on purpose: Facebook is read through a real,
-logged-in browser (``aptbot.scrapers.facebook_generic_browser``) with an
-account-wide budget, so it polls on its own slower, jittered schedule and stops
+logged-in browser (``aptbot.scrapers.facebook_generic_browser``), one tab acting
+at a time, so it polls on its own slower, jittered schedule and stops
 for good on any account-safety signal instead of retrying.
 
 Dedup key = :func:`content_hash` (the post text with leading/trailing whitespace
 stripped), so the same apartment cross-posted to several groups arrives once.
+
+Optional AI analysis (``aptbot.listing_ai``): just before a monitor's posts are sent,
+the ones about to go out are analyzed (cached per content hash, so every monitor
+reuses one analysis) and each is sent with its Listing Facts, or without them when
+the AI is off, paused or failed.
 """
 from __future__ import annotations
 
@@ -17,19 +22,20 @@ import random
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Awaitable, Callable, Iterable, List, Optional
+from typing import Awaitable, Callable, Dict, Iterable, List, Optional
 
 from aptbot import config
 from aptbot.bot.formatting import format_fb_backfill_intro, format_fb_stopped
 from aptbot.db import Database
 from aptbot.engine import _pace
 from aptbot.models import SavedSearch
-from aptbot.scrapers.facebook_generic_browser import AccountAtRisk, BudgetExhausted, Halted, Post
+from aptbot.scrapers.facebook_generic_browser import AccountAtRisk, Halted, Post
 
 logger = logging.getLogger(__name__)
 
-PostSender = Callable[[int, Post], Awaitable[bool]]
+PostSender = Callable[[int, Post, Optional[object]], Awaitable[bool]]   # (chat, post, facts)
 TextSender = Callable[..., Awaitable[bool]]
+Analyze = Callable[[List[Post]], Awaitable[Dict[str, object]]]          # posts -> {content_hash: facts}
 
 # Cached posts older than this aren't used for the start-up taster: their signed photo
 # URLs expire after ~4 days, and a stale "newest" post isn't news.
@@ -71,8 +77,44 @@ class FbState:
     wake: asyncio.Event = field(default_factory=asyncio.Event)
 
 
+def analyzer_inputs(posts: Iterable[Post]):
+    """fbgb posts -> listing_ai inputs keyed by :func:`content_hash`."""
+    from aptbot.listing_ai import PostInput
+    return [PostInput(key=content_hash(p), text=p.text or "", posted_at=p.created_at,
+                      group_name=p.group_name, photo_count=p.photo_count or len(p.photos))
+            for p in posts]
+
+
+def make_analyze(analyzer) -> Optional[Analyze]:
+    """Wrap a ``ListingAnalyzer`` (or None) as the ``analyze`` hook. Never raises."""
+    if analyzer is None:
+        return None
+
+    async def analyze(posts: List[Post]) -> Dict[str, object]:
+        try:
+            return await analyzer.analyze(analyzer_inputs(posts))
+        except Exception as exc:                       # the AI must never block delivery
+            logger.error("AI analysis failed: %s: %s", type(exc).__name__, exc)
+            return {}
+    return analyze
+
+
+async def _facts_for(analyze: Optional[Analyze], posts: List[Post]) -> Dict[str, object]:
+    return await analyze(posts) if analyze is not None and posts else {}
+
+
+def wanted(facts) -> bool:
+    """Send this post? Posts without facts (AI off/failed/paused) always go out; analyzed
+    ones only if their Post kind is in ``FB_POST_KINDS`` (empty = every kind)."""
+    if facts is None or not config.FB_POST_KINDS:
+        return True
+    kind = getattr(facts, "post_kind", None)
+    return getattr(kind, "value", kind) in config.FB_POST_KINDS
+
+
 async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Database,
-                         s: SavedSearch, posts: List[Post], taster: List[Post]) -> int:
+                         s: SavedSearch, posts: List[Post], taster: List[Post],
+                         analyze: Optional[Analyze] = None) -> int:
     """Deliver posts to one monitor. Returns how many were sent.
 
     - **not FB-primed**: record every post (this poll + the taster pool) as seen and
@@ -80,6 +122,9 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
       newest ``FB_BACKFILL_CAP`` as a taster.
     - **primed**: send each post whose content hash is new, oldest first; record it
       only after a successful send, so a failed send retries next poll.
+
+    With an ``analyze`` hook, posts whose Post kind isn't in ``FB_POST_KINDS`` are
+    recorded as seen and not sent (the taster analyzes a few extra to fill its cap).
     """
     fresh = await db.get_search(s.id)
     if fresh is None or not fresh.is_active:
@@ -91,23 +136,35 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
         pool = unique_by_content([*posts, *taster])
         await db.add_fb_seen(s.id, [(content_hash(p), p.url) for p in pool])
         await db.mark_fb_primed(s.id)
-        sample = [p for p in pool if content_hash(p) not in seen][: config.FB_BACKFILL_CAP]
+        cap = config.FB_BACKFILL_CAP
+        sample = [p for p in pool if content_hash(p) not in seen][: cap * (3 if analyze else 1)]
+        facts = await _facts_for(analyze, sample)
+        sample = [p for p in sample if wanted(facts.get(content_hash(p)))][:cap]
         if sample:
             groups = len(config.FB_GROUP_IDS)
             await send_text(s.chat_id, format_fb_backfill_intro(len(sample), groups))
             await _pace()
             for p in sample:
-                if await send_post(s.chat_id, p):
+                if await send_post(s.chat_id, p, facts.get(content_hash(p))):
                     sent += 1
                     await _pace()
         logger.info("FB primed search #%s: taster %d of %d known posts", s.id, sent, len(pool))
         return sent
 
-    for p in reversed(unique_by_content(posts)):      # oldest first reads naturally
+    pending = [p for p in reversed(unique_by_content(posts))   # oldest first reads naturally
+               if content_hash(p) not in seen]
+    facts = await _facts_for(analyze, pending)
+    skipped = [p for p in pending if not wanted(facts.get(content_hash(p)))]
+    if skipped:
+        await db.add_fb_seen(s.id, [(content_hash(p), p.url) for p in skipped])
+        seen.update(content_hash(p) for p in skipped)
+        logger.info("FB search #%s: %d post(s) skipped by kind (FB_POST_KINDS=%s)",
+                    s.id, len(skipped), ",".join(sorted(config.FB_POST_KINDS)))
+    for p in pending:
         h = content_hash(p)
         if h in seen:
             continue
-        if await send_post(s.chat_id, p):
+        if await send_post(s.chat_id, p, facts.get(h)):
             await db.add_fb_seen(s.id, [(h, p.url)])
             seen.add(h)
             sent += 1
@@ -120,8 +177,8 @@ def _allowed(searches: List[SavedSearch]) -> List[SavedSearch]:
 
 
 async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextSender,
-                       state: FbState) -> Optional[float]:
-    """One poll. Returns a forced delay in seconds (budget exhausted) or None.
+                       state: FbState, analyze: Optional[Analyze] = None) -> None:
+    """One poll.
     Sets ``state.stopped_reason`` on an account-safety stop (the caller stops polling)."""
     searches = _allowed(await db.get_active_searches())
     if not searches:
@@ -141,16 +198,13 @@ async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextS
         for chat in sorted({s.chat_id for s in searches}):
             await send_text(chat, format_fb_stopped(reason))
         return None
-    except BudgetExhausted as exc:
-        logger.warning("FB budget exhausted; next poll in %.0fs", exc.retry_after)
-        return float(exc.retry_after)
 
     state.last_cycle_at = datetime.now(timezone.utc)
     state.last_new = len(posts)
     sent = 0
     for s in searches:
         try:
-            sent += await route_fb_posts(send_post, send_text, db, s, posts, taster)
+            sent += await route_fb_posts(send_post, send_text, db, s, posts, taster, analyze)
         except Exception as exc:
             state.errors += 1
             logger.error("FB routing failed for search #%s: %s", s.id, exc)
@@ -161,7 +215,8 @@ async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextS
 
 
 async def fb_loop(fb, db: Database, send_post: PostSender, send_text: TextSender,
-                  state: FbState, *, first_delay: float = 10.0) -> None:
+                  state: FbState, *, first_delay: float = 10.0,
+                  analyze: Optional[Analyze] = None) -> None:
     """Poll forever on a jittered 20-35 min schedule (or sooner when ``state.wake``
     is set by /monitor). Exits for good once Facebook reports an account-safety stop."""
     delay = first_delay
@@ -171,16 +226,14 @@ async def fb_loop(fb, db: Database, send_post: PostSender, send_text: TextSender
         except asyncio.TimeoutError:
             pass
         state.wake.clear()
-        forced = None
         started = time.monotonic()
         try:
-            forced = await run_fb_cycle(fb, db, send_post, send_text, state)
+            await run_fb_cycle(fb, db, send_post, send_text, state, analyze)
         except Exception as exc:              # parse drift, timeouts, browser crash: try next time
             state.errors += 1
             logger.error("FB cycle failed: %s: %s", type(exc).__name__, exc)
         if state.stopped_reason:
             logger.error("FB polling stopped until restart: %s", state.stopped_reason)
             return
-        delay = forced if forced is not None else random.uniform(
-            config.FB_POLL_MIN_SECONDS, config.FB_POLL_MAX_SECONDS)
+        delay = random.uniform(config.FB_POLL_MIN_SECONDS, config.FB_POLL_MAX_SECONDS)
         logger.debug("FB cycle took %.0fs; next in %.0fs", time.monotonic() - started, delay)

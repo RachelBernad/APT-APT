@@ -9,7 +9,8 @@ USER root
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 COPY aptbot ./aptbot
-RUN mkdir -p /app/out && chown -R fbgb:fbgb /app
+RUN mkdir -p /app/out && chown -R fbgb:fbgb /app \
+    && mkdir -p /home/fbgb/.aptbot && chown fbgb:fbgb /home/fbgb/.aptbot && chmod 700 /home/fbgb/.aptbot
 
 USER fbgb
 # The base entrypoint starts the virtual display, then runs this.

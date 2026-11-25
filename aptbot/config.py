@@ -56,6 +56,20 @@ FB_BACKFILL_CAP = int(os.getenv("FB_BACKFILL_CAP", "5"))
 # Photos per post album (Telegram allows 2-10 per media group).
 FB_MAX_PHOTOS = int(os.getenv("FB_MAX_PHOTOS", "10"))
 
+# --- AI analysis of Facebook posts (aptbot/listing_ai, ChatGPT-subscription OAuth) ---
+# Off by default: needs langchain-openai and a one-time `python -m aptbot.listing_ai login`.
+# The token store lives OUTSIDE the repo (AI_AUTH_PATH, default ~/.aptbot/chatgpt-auth.json).
+AI_ENABLED = os.getenv("AI_ENABLED", "0").strip().lower() not in ("0", "false", "no", "")
+AI_MODEL = os.getenv("AI_MODEL", "gpt-6-luna")
+AI_EFFORT = os.getenv("AI_EFFORT", "low")            # reasoning effort
+AI_BATCH = int(os.getenv("AI_BATCH", "15"))          # posts per model call
+AI_CONCURRENCY = int(os.getenv("AI_CONCURRENCY", "3"))
+AI_TIMEOUT = float(os.getenv("AI_TIMEOUT", "120"))   # seconds per batch (15 posts take ~45 s)
+
+# Which AI Post kinds reach the chat (comma-separated; empty = every kind):
+# rent, roommate, sublet, sale, seeking, not_listing. Posts the AI couldn't analyze always go out.
+FB_POST_KINDS = frozenset(k.lower() for k in _id_list(os.getenv("FB_POST_KINDS", "rent")))
+
 # --- Scrape cycle ---
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", str(60 * 15)))  # default 15 min
 

@@ -3,3 +3,7 @@ aiohttp
 aiosqlite
 rapidfuzz
 Brotli==1.1.0
+# AI summaries of Facebook posts (aptbot/listing_ai). Pinned: the ChatGPT-OAuth model is a
+# private, experimental langchain-openai class; re-validate before bumping (listing_ai/SPEC.md).
+langchain-openai==1.8.5
+langchain-core==1.8.4

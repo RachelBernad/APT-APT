@@ -219,3 +219,7 @@ __marimo__/
 aptbot/scrapers/facebook_generic_browser/captures/
 aptbot/scrapers/facebook_generic_browser/profile/
 *.har
+# ChatGPT OAuth token store for aptbot/listing_ai lives in ~/.aptbot (outside the repo); belt and braces:
+.aptbot/
+chatgpt-auth.json
+chatgpt-auth.json.lock

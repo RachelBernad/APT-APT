@@ -140,28 +140,126 @@ def _fb_link(post) -> str:
     return f"<a href='{html.escape(post.url, quote=True)}'>לפוסט בפייסבוק ↗</a>"
 
 
-def format_fb_post(post, limit: int = MESSAGE_LIMIT) -> str:
+# --- AI summary (aptbot.listing_ai Listing Facts) ---------------------------------
+SUMMARY_SEPARATOR = "────────"
+_KIND_LABELS = {
+    "rent": "🏠 השכרה", "roommate": "👥 שותפים", "sublet": "🧳 סאבלט", "sale": "🏷 מכירה",
+    "seeking": "🔎 מחפשים דירה", "not_listing": "🚫 לא מודעת דירה",
+}
+# Three-state booleans: True -> listed after ✅, False -> listed after ❌, None -> hidden.
+_FEATURE_LABELS = (
+    ("has_mamad", "ממ״ד"), ("has_mamak", "ממ״ק"), ("has_shelter", "מקלט"), ("elevator", "מעלית"),
+    ("renovated", "משופצת"), ("balcony", "מרפסת"), ("splitted_apt", "דירה מחולקת"),
+    ("underground_apartment", "דירת מרתף"),
+)
+
+
+def _num(x) -> str:
+    return f"{x:g}" if isinstance(x, float) else str(x)
+
+
+def _ils(x) -> str:
+    return f"{int(x):,} ₪"
+
+
+def _floor(x) -> str:
+    return "קרקע" if x == 0 else "מרתף" if x == -1 else _num(float(x))
+
+
+def _entry(v: str) -> str:
+    if v == "immediate":
+        return "מיידית"
+    parts = v.split("-")
+    return "/".join(reversed(parts)) if all(p.isdigit() for p in parts) else v
+
+
+def format_fb_summary(facts) -> str:
+    """Compact Hebrew summary of a post's Listing Facts (only fields that are not null)."""
+    kind = getattr(facts.post_kind, "value", facts.post_kind)
+    head = _KIND_LABELS.get(kind, str(kind))
+    if kind in ("seeking", "not_listing"):
+        return head
+    if facts.city_area_or_address:
+        head += " · " + _html_value(facts.city_area_or_address) + (" 📍" if facts.has_accurate_address else "")
+    lines = [head]
+
+    money = []
+    if facts.price_ils is not None:
+        money.append(_ils(facts.price_ils))
+    if facts.arnona_ils is not None:
+        money.append(f"ארנונה {facts.arnona_ils:,}")
+    if facts.vaad_bayit_ils is not None:
+        money.append(f"ועד {facts.vaad_bayit_ils:,}")
+    if facts.bills_included is not None:
+        money.append("כולל חשבונות" if facts.bills_included else "לא כולל חשבונות")
+    if facts.is_broker is True:
+        money.append("תיווך" + (f" ({_html_value(facts.broker_fee)})" if facts.broker_fee else ""))
+    elif facts.is_broker is False:
+        money.append("ללא תיווך")
+    if facts.entry_date:
+        money.append("כניסה: " + _html_value(_entry(facts.entry_date)))
+    if facts.lease_term_months:
+        money.append(f"חוזה {facts.lease_term_months} חודשים")
+    if money:
+        lines.append("💰 " + " · ".join(money))
+
+    size = []
+    if facts.rooms_count is not None:
+        size.append(f"{_num(facts.rooms_count)} חד׳")
+    if facts.square_meters is not None:
+        size.append(f"{_num(facts.square_meters)} מ״ר")
+    if facts.floor is not None:
+        size.append(f"קומה {_floor(facts.floor)}")
+    if size:
+        lines.append("🛏 " + " · ".join(size))
+
+    yes, no = [], []
+    for field, label in _FEATURE_LABELS:
+        v = getattr(facts, field)
+        if field == "balcony" and v and facts.balcony_type:
+            label = _html_value(facts.balcony_type)
+        (yes if v is True else no if v is False else []).append(label)
+    feats = []
+    if yes:
+        feats.append("✅ " + " · ".join(yes))
+    if no:
+        feats.append("❌ " + " · ".join(no))
+    if feats:
+        lines.append("  ".join(feats))
+    return "\n".join(lines)
+
+
+def format_fb_post(post, limit: int = MESSAGE_LIMIT, summary: Optional[str] = None) -> str:
     """Header (group · Israel time), the post text and a link, within ``limit`` chars.
-    The raw text is cut BEFORE escaping, so an entity is never split."""
-    head, link = _fb_header(post), _fb_link(post)
+    With an AI summary the top block is header + summary + link, then a separator, then the
+    text (the link stays on top, visible without scrolling). The raw text is cut BEFORE
+    escaping, so an entity is never split."""
+    link = _fb_link(post)
+    if summary:
+        head = "\n".join(p for p in (_fb_header(post), summary, link) if p) + "\n" + SUMMARY_SEPARATOR
+        tail = ""
+    else:
+        head, tail = _fb_header(post), link
     text = (post.text or "").strip()
-    frame = len(head) + len(link) + 4
+    frame = len(head) + len(tail) + 4
     body = _html_value(text)
     if frame + len(body) > limit:
         room = max(0, limit - frame - 1)
         while room and len(_html_value(text[:room])) > room:   # escaping grows the text
             room -= 1
         body = _html_value(text[:room].rstrip()) + "…"
-    return "\n\n".join(p for p in (head, body, link) if p)
+    return "\n\n".join(p for p in (head, body, tail) if p)
 
 
-def fb_post_fits_caption(post) -> bool:
-    return len(format_fb_post(post, limit=MESSAGE_LIMIT)) <= CAPTION_LIMIT
+def fb_post_fits_caption(post, summary: Optional[str] = None) -> bool:
+    return len(format_fb_post(post, limit=MESSAGE_LIMIT, summary=summary)) <= CAPTION_LIMIT
 
 
-def format_fb_short_caption(post) -> str:
-    """Album caption when the full text doesn't fit (the text follows as a message)."""
-    return "\n".join(p for p in (_fb_header(post), _fb_link(post)) if p)
+def format_fb_short_caption(post, summary: Optional[str] = None) -> str:
+    """Album caption when the full text doesn't fit (the text follows as a message).
+    The summary stays here, on the photos."""
+    head = f"{_fb_header(post)}\n{summary}" if summary else _fb_header(post)
+    return "\n".join(p for p in (head, _fb_link(post)) if p)
 
 
 def format_fb_backfill_intro(sample: int, groups: int) -> str:

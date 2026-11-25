@@ -90,6 +90,16 @@ CREATE TABLE IF NOT EXISTS fb_seen (
     PRIMARY KEY (search_id, content_hash)
 );
 
+-- AI Listing Facts per post (aptbot.listing_ai), shared by every monitor. Additive:
+-- CREATE IF NOT EXISTS on an existing v4 database, so no SCHEMA_VERSION bump.
+CREATE TABLE IF NOT EXISTS fb_analysis (
+    content_hash   TEXT PRIMARY KEY,
+    model          TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    facts_json     TEXT NOT NULL,
+    analyzed_at    TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -497,6 +507,31 @@ class Database:
                 "VALUES (?,?,?,?)",
                 [(search_id, h, url, now) for h, url in rows],
             )
+            await self._conn.commit()
+
+    # --- AI analysis cache (aptbot.listing_ai) ---
+    async def get_fb_analysis(self, hashes, prompt_version: str) -> Dict[str, str]:
+        """{content_hash: facts_json} for the hashes analyzed with ``prompt_version``."""
+        hashes = list(hashes)
+        out: Dict[str, str] = {}
+        for i in range(0, len(hashes), 500):               # stay under SQLite's variable limit
+            chunk = hashes[i:i + 500]
+            cur = await self._conn.execute(
+                f"SELECT content_hash, facts_json FROM fb_analysis WHERE prompt_version=? "
+                f"AND content_hash IN ({','.join('?' * len(chunk))})", (prompt_version, *chunk))
+            out.update({r["content_hash"]: r["facts_json"] for r in await cur.fetchall()})
+        return out
+
+    async def put_fb_analysis(self, rows) -> None:
+        """Store (content_hash, model, prompt_version, facts_json) rows; newest wins."""
+        rows = list(rows)
+        if not rows:
+            return
+        now = _now()
+        async with self._write_lock:
+            await self._conn.executemany(
+                "INSERT OR REPLACE INTO fb_analysis(content_hash, model, prompt_version, facts_json, "
+                "analyzed_at) VALUES (?,?,?,?,?)", [(*r, now) for r in rows])
             await self._conn.commit()
 
     # --- meta ---

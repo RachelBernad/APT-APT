@@ -10,7 +10,7 @@ import pytest
 
 from aptbot import config, fb_engine
 from aptbot.models import LocationTarget, SavedSearch
-from aptbot.scrapers.facebook_generic_browser import BudgetExhausted, Halted, NotLoggedIn, Photo, Post
+from aptbot.scrapers.facebook_generic_browser import Halted, NotLoggedIn, Photo, Post
 
 CHAT = 1001
 T0 = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
@@ -46,8 +46,9 @@ class Sent:
     def __init__(self, fail=False):
         self.posts, self.texts, self.fail = [], [], fail
 
-    async def post(self, chat_id, p):
+    async def post(self, chat_id, p, facts=None):
         self.posts.append((chat_id, p.post_id))
+        self.facts = getattr(self, "facts", []) + [facts]
         return not self.fail
 
     async def text(self, chat_id, text, photo=None):
@@ -189,11 +190,3 @@ async def test_safety_stop_notifies_once_and_stops_the_loop(db, exc):
     assert fb.new_calls == 1
     assert len(out.texts) == 1 and "stopped" in out.texts[0][1]
 
-
-async def test_budget_exhausted_returns_the_retry_delay(db):
-    await _monitor(db)
-    fb = FakeFB(exc=BudgetExhausted(321))
-    out = Sent()
-    state = fb_engine.FbState()
-    assert await fb_engine.run_fb_cycle(fb, db, out.post, out.text, state) == 321
-    assert state.stopped_reason is None and out.texts == []

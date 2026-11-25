@@ -64,10 +64,11 @@ def _when(dt: Optional[datetime]) -> str:
 
 class SimpleCommands:
     def __init__(self, db: Database, *, on_started: Callable[[int], Awaitable[None]],
-                 fb_state=None, fb_api=None):
+                 fb_state=None, fb_api=None, analyzer=None):
         self.db = db
         self.on_started = on_started   # called with the search id: immediate Yad2 scan + wake FB
         self.fb_state = fb_state
+        self.analyzer = analyzer
         self.fb_api = fb_api
 
     async def sync_areas(self) -> int:
@@ -148,13 +149,21 @@ class SimpleCommands:
             else:
                 fb = (f"last poll {_when(st.last_cycle_at)}, {st.last_new} new post(s), "
                       f"{st.last_sent} sent")
-            try:
-                budget = (await self.fb_api.status()).budget_left
-                fb += f", budget {budget}/hour left"
-            except Exception:
-                pass
             lines.append(f"<b>Facebook:</b> {fb}")
+            lines.append(f"<b>AI summaries:</b> {_ai_status(self.analyzer)}")
         await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+
+
+def _ai_status(analyzer) -> str:
+    if analyzer is None:
+        return "off"
+    st = analyzer.state
+    if analyzer.paused:
+        return f"⏸ paused (ChatGPT usage limit) until {_when(st.paused_until)}"
+    text = f"on, {st.analyzed} post(s) analyzed"
+    if st.failed:
+        text += f", {st.failed} sent without a summary"
+    return text
 
 
 def _loc_keys(targets) -> set:

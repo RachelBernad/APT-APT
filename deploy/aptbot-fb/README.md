@@ -17,6 +17,15 @@ deploy/aptbot-fb/stop.sh      # clean stop: Chrome closes and flushes cookies
 - **A logged-in Facebook profile in the `fbgb-home` volume.** It's a one-time login, described in
   [`../fbgb-headless/README.md`](../fbgb-headless/README.md#one-time-login). If the session is missing or Facebook shows a
   warning, the bot stops reading Facebook, tells the allowed chat once, and keeps Yad2 running.
+- **Optional: AI summaries** (`AI_ENABLED=1` in `.env`). They need a ChatGPT login stored in the `aptbot-ai`
+  volume. The token never touches the repo folder. Log in once with a device code, which works headless: it prints
+  a URL and a code to enter in any browser.
+  ```bash
+  docker run --rm -it --entrypoint python -v aptbot-ai:/home/fbgb/.aptbot aptbot-fb:latest -m aptbot.listing_ai login
+  docker run --rm --entrypoint python -v aptbot-ai:/home/fbgb/.aptbot aptbot-fb:latest -m aptbot.listing_ai status
+  ```
+  Without the login, or when the ChatGPT usage limit is reached, posts are sent as before with no summary.
+  See [`aptbot/listing_ai/SPEC.md`](../../aptbot/listing_ai/SPEC.md).
 - **One bot instance per token.** A second poller gets `Conflict: terminated by other getUpdates request`.
 
 ## Run options (the same as fbgb-headless)

@@ -11,7 +11,7 @@ import signal
 
 import aiohttp
 from telegram import BotCommand, InputMediaPhoto, Update
-from telegram.error import Forbidden, RetryAfter, TelegramError
+from telegram.error import Forbidden, RetryAfter, TelegramError, TimedOut
 from telegram.ext import Application, CommandHandler, TypeHandler
 
 from aptbot.bot import activity
@@ -27,20 +27,34 @@ config.setup_logging()
 logger = logging.getLogger(__name__)
 
 
+def _assume_delivered(chat_id: int, what: str) -> bool:
+    """A Telegram TimedOut means "no ack in time", not "not delivered": with our timeouts
+    it has always been a slow ack. Treat it as sent, since a resend duplicates the message."""
+    logger.warning("Telegram %s to chat %s timed out waiting for the ack; assuming delivered.",
+                   what, chat_id)
+    return True
+
+
 class Bot:
     def __init__(self, token: str):
         self.token = token
         # concurrent_updates(True): each update (button tap, keystroke) runs in its
         # own task instead of queuing behind the previous handler, so toggles feel
         # instant even while an autocomplete lookup or scan is in flight.
+        # Telegram acks a message sent right after an album only once the album is processed
+        # (measured 5.1 s), and an album of uncached Facebook photos takes longer still, so the
+        # library's 5 s default read timeout fired on messages that WERE delivered.
         self.application: Application = (
-            Application.builder().token(token).concurrent_updates(True).build()
+            Application.builder().token(token).concurrent_updates(True)
+            .connect_timeout(10).pool_timeout(10).read_timeout(30).write_timeout(30)
+            .media_write_timeout(60).build()
         )
         self.db: Database = Database(config.DB_PATH)
         self.http: aiohttp.ClientSession | None = None
         self.gate = ChatGate()
         self.fb = None                       # FacebookAPI when FB_ENABLED
         self.fb_state = fb_engine.FbState()
+        self.analyzer = None                 # listing_ai.ListingAnalyzer when AI_ENABLED
         self.commands: SimpleCommands | None = None
 
     async def send(self, chat_id: int, text: str, photo: str | None = None) -> bool:
@@ -57,6 +71,8 @@ class Bot:
                 await self.application.bot.send_photo(
                     chat_id=chat_id, photo=photo, caption=caption, parse_mode="HTML")
                 return True
+            except TimedOut:
+                return _assume_delivered(chat_id, "photo")
             except RetryAfter as exc:
                 wait = int(getattr(exc, "retry_after", 5)) + random.randint(1, 5)
                 logger.info("Flood control (photo): waiting %ss for chat %s", wait, chat_id)
@@ -86,6 +102,8 @@ class Bot:
                 disable_web_page_preview=True,
             )
             return True
+        except TimedOut:
+            return _assume_delivered(chat_id, "message")
         except RetryAfter as exc:
             wait = int(getattr(exc, "retry_after", 5)) + random.randint(1, 5)
             logger.info("Flood control: waiting %ss before retrying chat %s", wait, chat_id)
@@ -106,18 +124,20 @@ class Bot:
             logger.error("Telegram error sending to chat %s: %s", chat_id, exc)
             return False
 
-    async def send_post(self, chat_id: int, post) -> bool:
+    async def send_post(self, chat_id: int, post, facts=None) -> bool:
         """Deliver one Facebook post: an album of its photos (caption = the text when it
         fits), else/then the text. If the album fails (expired/blocked photo URL) the
-        text still goes out, so the post is never lost."""
+        text still goes out, so the post is never lost. ``facts`` (AI Listing Facts)
+        adds a summary above the text."""
         if not self.gate.is_allowed(chat_id):
             logger.warning("Refusing to send to chat %s: not in ALLOWED_CHAT_IDS.", chat_id)
             return False
         urls = [p.url for p in post.photos if p.url][: max(1, config.FB_MAX_PHOTOS)]
-        full = formatting.format_fb_post(post)
+        summary = formatting.format_fb_summary(facts) if facts is not None else None
+        full = formatting.format_fb_post(post, summary=summary)
         if urls:
-            fits = formatting.fb_post_fits_caption(post)
-            caption = full if fits else formatting.format_fb_short_caption(post)
+            fits = formatting.fb_post_fits_caption(post, summary)
+            caption = full if fits else formatting.format_fb_short_caption(post, summary)
             media = [InputMediaPhoto(u, caption=caption if i == 0 else None,
                                      parse_mode="HTML" if i == 0 else None)
                      for i, u in enumerate(urls)]
@@ -128,6 +148,10 @@ class Bot:
                             chat_id=chat_id, photo=urls[0], caption=caption, parse_mode="HTML")
                     else:
                         await self.application.bot.send_media_group(chat_id=chat_id, media=media)
+                    return True if fits else await self._send_text(chat_id, full)
+                except TimedOut:
+                    # Delivered but slow to ack: resending as text would duplicate the post.
+                    _assume_delivered(chat_id, "FB album")
                     return True if fits else await self._send_text(chat_id, full)
                 except RetryAfter as exc:
                     if attempt == 2:
@@ -200,12 +224,32 @@ class Bot:
                     config.FB_POLL_MAX_SECONDS // 60)
         return fb
 
+    def _open_analyzer(self):
+        """The AI analyzer when AI_ENABLED and a token store exists; else None (posts go raw)."""
+        if not config.AI_ENABLED:
+            return None
+        try:
+            from aptbot.listing_ai import ListingAnalyzer
+            from aptbot.listing_ai.llm.auth import store_path
+            if not store_path().exists():
+                logger.error("AI_ENABLED but no ChatGPT token store at %s; run "
+                             "`python -m aptbot.listing_ai login`. Posts go without AI.", store_path())
+                return None
+            analyzer = ListingAnalyzer.from_config(cache=self.db)
+        except Exception as exc:
+            logger.error("AI analyzer unavailable (%s: %s); posts go without AI.", type(exc).__name__, exc)
+            return None
+        logger.info("AI analysis on: model %s, %d posts/batch.", config.AI_MODEL, config.AI_BATCH)
+        return analyzer
+
     async def run(self):
         await self.db.connect()
+        self.analyzer = self._open_analyzer()
         self.http = aiohttp.ClientSession()
         self.fb = await self._open_facebook()
         self.commands = SimpleCommands(self.db, on_started=self.scan_now,
-                                       fb_state=self.fb_state, fb_api=self.fb)
+                                       fb_state=self.fb_state, fb_api=self.fb,
+                                       analyzer=self.analyzer)
         await self.commands.sync_areas()
         self._register_handlers()
 
@@ -220,7 +264,8 @@ class Bot:
             cycle_task = asyncio.create_task(self._cycle_loop())
             if self.fb is not None and not self.fb_state.stopped_reason:
                 fb_task = asyncio.create_task(fb_engine.fb_loop(
-                    self.fb, self.db, self.send_post, self.send, self.fb_state))
+                    self.fb, self.db, self.send_post, self.send, self.fb_state,
+                    analyze=fb_engine.make_analyze(self.analyzer)))
             # Run until cancelled (e.g. SIGTERM).
             await asyncio.Event().wait()
         finally:
