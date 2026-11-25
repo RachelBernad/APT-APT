@@ -9,12 +9,17 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import random
 from contextlib import asynccontextmanager
 
 from aptbot.scrapers.facebook_generic_browser import human
 
 _rng = random.SystemRandom()
+
+# Page-load timeout for typed navigations, in seconds. 45 s suits a desktop; a slow host
+# (a Raspberry Pi 3 swapping while Chromium starts) needs more: set FBGB_NAV_TIMEOUT=120.
+NAV_TIMEOUT_MS = float(os.environ.get("FBGB_NAV_TIMEOUT", "45")) * 1000
 
 
 async def pace() -> None:
@@ -67,8 +72,10 @@ class TabPool:
             self.front = id(page)
             return page
 
-    async def goto(self, page, url: str, *, wait: str = "domcontentloaded", timeout: float = 45_000) -> None:
+    async def goto(self, page, url: str, *, wait: str = "domcontentloaded",
+                   timeout: float | None = None) -> None:
         """Typed-URL navigation. Attention is held only while 'typing'; the load happens after."""
+        timeout = NAV_TIMEOUT_MS if timeout is None else timeout
         async with self.foreground(page):
             await human.micro()
             await page.goto(url, wait_until="commit", timeout=timeout)

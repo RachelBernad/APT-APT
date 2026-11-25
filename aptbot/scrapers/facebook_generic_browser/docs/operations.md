@@ -17,6 +17,7 @@ The bot's own venv/image is untouched. The library only needs to be importable w
 | `~/.fbgb/HALTED` | circuit-breaker marker (delete only via `fbgb resume`) | no |
 | `~/.fbgb/captures/` | raw payloads (only with `debug_dump=True` / explore scripts) | contains real posts |
 Override with `FBGB_HOME`, `FBGB_PROFILE_DIR`, `FBGB_BROWSER` (explicit Chrome/Chromium binary).
+`FBGB_NAV_TIMEOUT` (seconds, default 45) is the page-load timeout; slow hosts such as a Raspberry Pi 3 need about 120.
 
 ## Log in (once per machine)
 Two ways, both print only `logged in: yes/no` (by cookie name):
