@@ -54,6 +54,8 @@ FB_GROUP_IDS = _id_list(os.getenv("FB_GROUP_IDS", ",".join([
     "305724686290054",   # דירות להשכרה בתל אביב
 ])))
 FB_MAX_TABS = int(os.getenv("FB_MAX_TABS", "2"))
+# Per-request limit (seconds) for one Facebook job, e.g. one group feed. Slow hosts (a Pi 3) need ~600.
+FB_REQUEST_TIMEOUT = float(os.getenv("FB_REQUEST_TIMEOUT", "240"))
 # Poll every 20-35 min, jittered (the library's account-safety guidance, SPEC §7).
 FB_POLL_MIN_SECONDS = int(os.getenv("FB_POLL_MIN_SECONDS", str(20 * 60)))
 FB_POLL_MAX_SECONDS = int(os.getenv("FB_POLL_MAX_SECONDS", str(35 * 60)))
