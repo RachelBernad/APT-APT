@@ -19,7 +19,7 @@ max_tabs tab workers: each owns ONE tab and runs one job at a time. Tabs open la
    │  click, typing). Taking it brings the tab to the front. A hidden tab never gets input.
    ├─ Between bursts a job waits for the NETWORK without holding attention, so the other tabs take their turn.
    │  Network waits overlap; input is serialized, like one person switching tabs quickly.
-   ├─ Limiter: one account-wide navigation budget for all tabs (8/min, burst 3, 120/hour)
+   ├─ Pace: every attention grab first waits a 10–30 ms random gap (tabs.pace), so operations never fire back-to-back
    └─ Health: AccountAtRisk in any tab → breaker HALTED → every queued/running call fails with Halted
 ```
 
@@ -41,7 +41,7 @@ max_tabs tab workers: each owns ONE tab and runs one job at a time. Tabs open la
 
 ## What they can't
 - Parallelism isn't free: input is serialized, so N tabs give less than N× speed (~2× with 3 tabs above).
-- `max_tabs` doesn't raise the account budget. More tabs = the same number of navigations, just overlapped.
+- More tabs don't mean parallel input: tabs only overlap their network waits.
 - Order of results across different calls isn't guaranteed (priority + FIFO only decide who starts first).
 
 ## Tuning

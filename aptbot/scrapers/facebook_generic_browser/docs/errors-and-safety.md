@@ -11,7 +11,6 @@ The account is the scarce resource. A checkpoint can lock it for days, so the li
 | `NotLoggedIn` (a `Halted`) | the profile has no session cookies | a human runs `fbgb login` |
 | `AccountAtRisk` | internal: a checkpoint/block/login screen was seen. Converted to `Halted` for callers | n/a |
 | `NotMember(group_id, join_state)` | the group's feed isn't readable (private + not a member / pending) | skip the group |
-| `BudgetExhausted(retry_after)` | the hourly navigation cap was hit | retry after `retry_after` s (or use the cache) |
 | `RequestTimeout` | the call exceeded `timeout`; its job was cancelled and the tab freed | retry later or with a bigger timeout |
 | `SchemaDrift` | Facebook changed its frontend: expected data didn't arrive or didn't parse | stop using that function. Fix per [extending.md](extending.md) |
 | `FBGBError` | base class of all the above except `AccountAtRisk` | n/a |
@@ -34,12 +33,13 @@ The account is the scarce resource. A checkpoint can lock it for days, so the li
 - Human input only: wheel scrolling, curved pointer moves, jittered clicks and typing. Input only to the front tab.
 - Read-only: no likes, comments, posts, joins or messages.
 - Passive data: only Facebook's own responses are read. The library never sends its own requests.
-- Account-wide budget across all tabs. Chrome closes when idle (people close browsers).
+- One tab acts at a time; every operation waits a 10–30 ms random gap first. Chrome closes when idle (people close browsers).
 
-## Operating limits (start here; SPEC §7)
-| Budget | Default |
+## Operating rules (our choice; Facebook publishes no limit. SPEC §7)
+| Rule | Default |
 |---|---|
-| navigations | 8/min, burst 3, 120/hour (`Limiter`) |
+| tabs acting | one at a time (FIFO attention lock) |
+| gap before each operation | 10–30 ms random (`tabs.pace`) |
 | polling (`new_posts`) | every 20–35 min, jittered, not 01:00–07:00 |
 | tabs | 3 (Mac), 2 (Pi) |
 Day-1 history: 8 sessions on 2026-11-24 with no warnings.

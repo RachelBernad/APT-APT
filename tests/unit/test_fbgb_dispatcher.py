@@ -4,7 +4,7 @@ INVARIANTS (docs/concurrency.md):
 - at most n_workers jobs run at once; tabs open lazily;
 - identical keys share one job; same-group jobs never overlap;
 - attention (foreground) is never held by two tabs; a switch brings the tab to the front first;
-- the limiter is shared; halt fails queued + running jobs and rejects new ones; cancellation frees the tab.
+- every attention grab is paced and tabs never act at once; halt fails queued + running jobs and rejects new ones; cancellation frees the tab.
 """
 import asyncio
 
@@ -12,7 +12,7 @@ import pytest
 
 from aptbot.scrapers.facebook_generic_browser import human, tabs
 from aptbot.scrapers.facebook_generic_browser.dispatcher import Dispatcher, Priority
-from aptbot.scrapers.facebook_generic_browser.errors import BudgetExhausted, Halted, RequestTimeout
+from aptbot.scrapers.facebook_generic_browser.errors import Halted, RequestTimeout
 
 
 @pytest.fixture(autouse=True)
@@ -204,10 +204,35 @@ async def test_attention_is_exclusive_and_switches_bring_to_front():
     assert a.fronted + b.fronted == pool.switches >= 2
 
 
-async def test_limiter_is_shared_and_hourly_cap_raises():
-    lim = tabs.Limiter(rate_per_min=6000, burst=2, hourly_cap=3)
-    await asyncio.gather(lim.take(), lim.take(), lim.take())
-    assert lim.left() == 0
-    with pytest.raises(BudgetExhausted) as e:
-        await lim.take()
-    assert 0 < e.value.retry_after <= 3600
+async def test_every_attention_grab_is_paced_and_never_overlaps(monkeypatch):
+    gaps, inside = [], []
+    real_sleep = asyncio.sleep
+
+    async def fake_pace():
+        gaps.append(1)
+        await real_sleep(0)
+    monkeypatch.setattr(tabs, "pace", fake_pace)
+    pool = tabs.TabPool(ctx=None, max_tabs=3)
+    a, b = FakeTab(0), FakeTab(1)
+
+    async def work(t):
+        for _ in range(4):
+            async with pool.foreground(t):
+                inside.append(t)
+                assert len(inside) == 1           # no other tab is acting right now
+                await real_sleep(0.001)
+                inside.pop()
+
+    await asyncio.gather(work(a), work(b))
+    assert len(gaps) == 8
+
+
+async def test_pace_is_a_tiny_random_gap(monkeypatch):
+    slept = []
+
+    async def rec(s):
+        slept.append(s)
+    monkeypatch.setattr(tabs.asyncio, "sleep", rec)
+    for _ in range(50):
+        await tabs.pace()
+    assert all(0.01 <= s <= 0.03 for s in slept) and len(set(slept)) > 1

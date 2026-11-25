@@ -29,14 +29,6 @@ class NotMember(FBGBError):
         self.group_id, self.join_state = group_id, join_state
 
 
-class BudgetExhausted(FBGBError):
-    """The account-wide navigation budget is used up. Retry after `retry_after` seconds."""
-
-    def __init__(self, retry_after: float):
-        super().__init__(f"navigation budget exhausted; retry in {retry_after:.0f}s")
-        self.retry_after = retry_after
-
-
 class SchemaDrift(FBGBError):
     """Facebook's frontend changed: expected data didn't arrive or didn't parse. Update api_docs/ + parse.py."""
 
@@ -45,5 +37,5 @@ class RequestTimeout(FBGBError):
     """The request didn't finish within its timeout. The job was cancelled and its tab released."""
 
 
-__all__ = ["AccountAtRisk", "BudgetExhausted", "FBGBError", "Halted", "NotLoggedIn", "NotMember",
+__all__ = ["AccountAtRisk", "FBGBError", "Halted", "NotLoggedIn", "NotMember",
            "RequestTimeout", "SchemaDrift"]

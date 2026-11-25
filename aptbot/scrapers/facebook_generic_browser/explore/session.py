@@ -19,7 +19,7 @@ import time
 from aptbot.scrapers.facebook_generic_browser import health, human
 from aptbot.scrapers.facebook_generic_browser.capture import Capture
 from aptbot.scrapers.facebook_generic_browser.browser import PROFILE_DIR, open_context
-from aptbot.scrapers.facebook_generic_browser.tabs import Limiter, TabPool
+from aptbot.scrapers.facebook_generic_browser.tabs import TabPool
 
 _rng = random.SystemRandom()
 
@@ -50,7 +50,7 @@ async def landmarks(page) -> dict:
 
 async def start(ctx, cap: Capture):
     page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-    pool = TabPool(ctx, max_tabs=3, limiter=Limiter(rate_per_min=5, burst=2, session_cap=40))
+    pool = TabPool(ctx, max_tabs=3)
     await pool.goto(page, "https://www.facebook.com/")
     await page.wait_for_load_state("load")
     await health.check(page)
@@ -74,7 +74,6 @@ async def joined(cap: Capture) -> None:
         link = page.locator('a[href$="/groups/"], a[href*="/groups/?"], a[href*="/groups/feed"]').first
         if await link.count():
             async with pool.foreground(page):
-                await pool.limiter.take()
                 await human.click(page, link)
             await page.wait_for_load_state("load")
         else:
@@ -193,7 +192,7 @@ async def harvest(cap: Capture, url: str, want: int) -> None:
     async with open_context(PROFILE_DIR) as ctx:
         cap.attach(ctx)
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-        pool = TabPool(ctx, max_tabs=1, limiter=Limiter(rate_per_min=6, burst=2, session_cap=10))
+        pool = TabPool(ctx, max_tabs=1)
         t0 = time.monotonic()
         await pool.goto(page, url)
         await health.check(page)
@@ -235,7 +234,7 @@ async def deep(cap: Capture, group_url: str) -> None:
     async with open_context(PROFILE_DIR) as ctx:
         cap.attach(ctx)
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-        pool = TabPool(ctx, max_tabs=3, limiter=Limiter(rate_per_min=8, burst=3, session_cap=15))
+        pool = TabPool(ctx, max_tabs=3)
         await pool.goto(page, group_url)
         await health.check(page)
         cap._index({"kind": "landmarks", "where": "private_group_top", **await landmarks(page)})
@@ -255,7 +254,6 @@ async def deep(cap: Capture, group_url: str) -> None:
             has_text=re.compile(r"^\s*\d+\s+(comments?|תגובות|תגובה)\s*$", re.I)).first
         if await btn.count():
             async with pool.foreground(page):
-                await pool.limiter.take()
                 await human.click(page, btn)
             await page.wait_for_selector('[role="dialog"]', timeout=10_000)
             await asyncio.sleep(_rng.uniform(1.5, 2.5))
@@ -292,7 +290,6 @@ async def deep(cap: Capture, group_url: str) -> None:
         # 3) search box: type a query, Enter, then the Groups filter
         box = page.locator('input[type="search"]').first
         async with pool.foreground(page):
-            await pool.limiter.take()
             await human.click(page, box)
             await human.type_text(page, "דירה להשכרה")
             await human.micro()
@@ -305,7 +302,6 @@ async def deep(cap: Capture, group_url: str) -> None:
         grp = page.locator('a[href*="/search/groups"]').first
         if await grp.count():
             async with pool.foreground(page):
-                await pool.limiter.take()
                 await human.click(page, grp)
             await asyncio.sleep(_rng.uniform(2, 3))
             await health.check(page)

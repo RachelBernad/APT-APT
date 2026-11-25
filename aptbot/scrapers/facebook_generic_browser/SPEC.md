@@ -24,7 +24,7 @@ Risk: against Meta's Terms. The account can be checkpointed or banned. Mitigated
 | R4 | Concurrent async callers, multiple tabs, one account | §5 dispatcher + tab workers | 2.05× with 3 tabs live. `tests/unit/test_fbgb_dispatcher.py` |
 | R5 | Host without GUI (container) | headful Chromium under Xvfb + VNC login | **validated in Docker linux/arm64** (`api_docs/stealth/no-gui-container.md`), no other host yet |
 | R6 | No credentials stored anywhere | login by hand, or assisted `login --stdin` (memory only) into the profile | `explore/open_profile.py` checks cookie names only. Assisted login verified in Docker |
-| R7 | Account safety first | §7 budgets, §8 breaker | 8 sessions, 0 interstitials |
+| R7 | Account safety first | §7 rules, §8 breaker | 8 sessions, 0 interstitials |
 | R8 | Easy for future implementers | `docs/` + examples + CLI + docs-sync test | `tests/unit/test_fbgb_docs.py` |
 | R9 | Reusable exploration method | `docs/exploration-playbook.md` + `explore/tools/` | used for every finding here |
 
@@ -47,7 +47,7 @@ focus_control=True, ignore_default_args=IGNORED_DEFAULT_ARGS)`. Nothing spoofed.
 callers → Dispatcher (single-flight by key, per-group exclusion, priority INTERACTIVE>POLL>BACKGROUND, timeout/cancel,
           halt) → max_tabs workers (one tab each, opened lazily) → jobs
 jobs: input only inside TabPool.foreground (FIFO attention lock, short bursts, switch = bring_to_front + think);
-      network waits outside the lock (overlap across tabs); shared Limiter; health.check after every navigation
+      network waits outside the lock (overlap across tabs); 10–30 ms pace before each attention grab; health.check after every navigation
 ```
 Verified: bounded parallelism, coalescing, group exclusion, priorities, timeout frees the tab, halt fails all,
 crashed tab recreated, attention exclusive (offline tests). Live: 2.05× with 3 tabs. Hidden tabs keep receiving
@@ -61,9 +61,10 @@ responses. Feed pagination needs the front tab.
 4. **Cache-first:** `max_age` reads, `filter_posts` from SQLite, `new_posts` skips groups whose `last_post_time` didn't move.
 5. **Parallel tabs** for independent work.
 
-## 7. Budgets (account-wide; start conservative)
-`Limiter`: 8 navigations/min, burst 3, 120/hour → `BudgetExhausted(retry_after)`. Polling every 20–35 min, jittered,
-not 01:00–07:00. Tabs: 3 (Mac), 2 (Pi). Chrome closes after 10 idle minutes. Loosen only after weeks clean.
+## 7. Operating rules (our choice; Facebook publishes no limit)
+One tab acts at a time (FIFO attention lock); `tabs.pace()` waits 10–30 ms (random) before every operation. No
+per-minute or hourly navigation cap (removed 2026-11-25). Polling every 20–35 min, jittered, not 01:00–07:00.
+Tabs: 3 (Mac), 2 (Pi). Chrome closes after 10 idle minutes.
 
 ## 8. Failure handling (`errors.py`, `health.py`; `docs/errors-and-safety.md`)
 | Event | Behavior |
@@ -71,7 +72,6 @@ not 01:00–07:00. Tabs: 3 (Mac), 2 (Pi). Chrome closes after 10 idle minutes. L
 | checkpoint / block / login wall | `AccountAtRisk` → `<home>/HALTED` written, all calls fail with `Halted`, persists across restarts until `resume()` by a human |
 | no session cookies | `NotLoggedIn` (a `Halted`) |
 | private group not readable | `NotMember(group_id, join_state)` |
-| hourly budget hit | `BudgetExhausted(retry_after)` |
 | slow call | `RequestTimeout`, job cancelled, tab freed |
 | frontend changed | `SchemaDrift` → follow `docs/extending.md` drift workflow |
 | tab crash | the worker recreates its tab on the next job |

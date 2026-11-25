@@ -23,7 +23,7 @@ from aptbot.scrapers.facebook_generic_browser.dispatcher import Dispatcher, Prio
 from aptbot.scrapers.facebook_generic_browser.errors import (AccountAtRisk, FBGBError, Halted, NotLoggedIn)
 from aptbot.scrapers.facebook_generic_browser.models import Group, GroupHit, Post, State, Status
 from aptbot.scrapers.facebook_generic_browser.store import Store
-from aptbot.scrapers.facebook_generic_browser.tabs import Limiter, TabPool
+from aptbot.scrapers.facebook_generic_browser.tabs import TabPool
 
 _END = object()
 
@@ -36,13 +36,12 @@ def _unix(v: datetime | float | int | None) -> float | None:
 
 class FacebookAPI:
     def __init__(self, *, home: Path | None = None, profile_dir: Path | None = None, max_tabs: int = 3,
-                 limiter: Limiter | None = None, idle_close_after: float | None = 600,
+                 idle_close_after: float | None = 600,
                  default_timeout: float = 240, debug_dump: bool = False):
         """
         home:             state dir (cache db, halt marker). Default $FBGB_HOME or ~/.fbgb.
         profile_dir:      Chrome profile with the logged-in session. Default $FBGB_PROFILE_DIR or <home>/profile.
         max_tabs:         tabs used in parallel (3 on a Mac, 2 on a low-CPU host).
-        limiter:          account-wide navigation budget (default 8/min, burst 3, 120/hour).
         idle_close_after: close Chrome after this many idle seconds (None = keep it open). It reopens on demand.
         default_timeout:  per-call timeout in seconds for browser-backed calls.
         debug_dump:       write raw captured payloads to <home>/captures/ (contain real posts; debugging only).
@@ -50,7 +49,6 @@ class FacebookAPI:
         self.home = Path(home) if home else HOME
         self.profile_dir = Path(profile_dir) if profile_dir else (self.home / "profile" if home else PROFILE_DIR)
         self.max_tabs = max_tabs
-        self.limiter = limiter or Limiter()
         self.idle_close_after = idle_close_after
         self.default_timeout = default_timeout
         self.debug_dump = debug_dump
@@ -96,7 +94,7 @@ class FacebookAPI:
                 await stack.aclose()
                 raise NotLoggedIn("no Facebook session in the profile; run the login command")
             self._stack, self._ctx = stack, ctx
-            self._pool = TabPool(ctx, max_tabs=self.max_tabs, limiter=self.limiter)
+            self._pool = TabPool(ctx, max_tabs=self.max_tabs)
             hub = CaptureHub(ctx, self.home / "captures" / time.strftime("%Y%m%d-%H%M%S") if self.debug_dump else None)
             hub.is_front = lambda page: self._pool.front == id(page) if self._pool else None
             self._env = jobs.Env(pool=self._pool, hub=hub)
@@ -168,7 +166,7 @@ class FacebookAPI:
         d = self._dispatcher
         return Status(state=State.HALTED if halted else (State.OK if d else State.STOPPED),
                       logged_in=self._logged_in, halt_reason=halted, tabs_busy=d.busy if d else 0,
-                      max_tabs=self.max_tabs, queued=d.queued if d else 0, budget_left=self.limiter.left(),
+                      max_tabs=self.max_tabs, queued=d.queued if d else 0,
                       started_at=self._started_at)
 
     async def resume(self) -> None:

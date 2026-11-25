@@ -10,20 +10,20 @@ async with FacebookAPI(max_tabs=3) as fb:
 ```
 - Every method is a **coroutine, safe to call concurrently** from any number of tasks. Browser work is scheduled
   over up to `max_tabs` tabs of one account ([concurrency.md](concurrency.md)).
-- **"Cost"** = navigations charged to the account-wide budget (default 8/min, burst 3, 120/hour). Scrolling is free.
+- **"Cost"** = navigations the call makes (informational; there is no budget). Scrolling is free.
 - **Cache**: results are stored in SQLite (`$FBGB_HOME/fbgb.db`). Methods with `max_age` answer from the cache when
   the data is younger than that. Pass `max_age=0` to force a fresh read.
 - **Times are UTC.** Every returned datetime is timezone-aware UTC. `since=` accepts an aware datetime or unix
   seconds; pass aware datetimes (`datetime.now(timezone.utc) - timedelta(hours=3)`), not naive local times.
 - Every browser-backed method accepts `timeout=` (seconds, default 240). On timeout it raises `RequestTimeout`
   and the tab is freed.
-- Errors common to every browser-backed method: `Halted` (account-safety stop), `NotLoggedIn`, `BudgetExhausted`,
+- Errors common to every browser-backed method: `Halted` (account-safety stop), `NotLoggedIn`,
   `RequestTimeout`, `SchemaDrift`. See [errors-and-safety.md](errors-and-safety.md).
 - Chrome starts lazily on the first browser-backed call and closes after `idle_close_after` idle seconds.
 
 ## Constructor
 ```python
-FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, limiter=None, idle_close_after=600,
+FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, idle_close_after=600,
             default_timeout=240, debug_dump=False)
 ```
 | Param | Meaning |
@@ -31,7 +31,6 @@ FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, limiter=None, idle_close
 | `home` | state dir: cache DB, `HALTED` marker, debug captures. Default `$FBGB_HOME` or `~/.fbgb` |
 | `profile_dir` | Chrome profile holding the logged-in session. Default `$FBGB_PROFILE_DIR` or `<home>/profile` |
 | `max_tabs` | parallel tabs (3 on a Mac, 2 on a low-CPU host). Light load opens only 1 |
-| `limiter` | `Limiter(rate_per_min=8, burst=3, hourly_cap=120)`, shared by all tabs |
 | `idle_close_after` | seconds of inactivity before Chrome is closed (`None` = keep open) |
 | `default_timeout` | per-call timeout for browser-backed calls |
 | `debug_dump` | write raw payloads to `<home>/captures/` (they contain real posts; debugging only) |
@@ -40,7 +39,7 @@ FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, limiter=None, idle_close
 
 ## `status() -> Status`
 Cost 0. Never starts Chrome. `Status{state: "stopped"|"ok"|"halted", logged_in, halt_reason, tabs_busy, max_tabs,
-queued, budget_left, started_at}`.
+queued, started_at}`.
 
 ## `resume() -> None`
 Clears the circuit breaker (`HALTED` marker). Call it only after a human has checked the account in a normal browser.

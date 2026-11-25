@@ -12,12 +12,11 @@ the first call that needs Facebook.
 """
 from aptbot.scrapers.facebook_generic_browser.api import FacebookAPI
 from aptbot.scrapers.facebook_generic_browser.dispatcher import Priority
-from aptbot.scrapers.facebook_generic_browser.errors import (AccountAtRisk, BudgetExhausted, FBGBError, Halted,
-                                                             NotLoggedIn, NotMember, RequestTimeout, SchemaDrift)
+from aptbot.scrapers.facebook_generic_browser.errors import (AccountAtRisk, FBGBError, Halted, NotLoggedIn,
+                                                             NotMember, RequestTimeout, SchemaDrift)
 from aptbot.scrapers.facebook_generic_browser.models import (Comment, Group, GroupHit, Hints, Photo, Post, State,
                                                              Status)
-from aptbot.scrapers.facebook_generic_browser.tabs import Limiter
 
-__all__ = ["AccountAtRisk", "BudgetExhausted", "Comment", "FBGBError", "FacebookAPI", "Group", "GroupHit", "Halted",
-           "Hints", "Limiter", "NotLoggedIn", "NotMember", "Photo", "Post", "Priority", "RequestTimeout",
+__all__ = ["AccountAtRisk", "Comment", "FBGBError", "FacebookAPI", "Group", "GroupHit", "Halted",
+           "Hints", "NotLoggedIn", "NotMember", "Photo", "Post", "Priority", "RequestTimeout",
            "SchemaDrift", "State", "Status"]

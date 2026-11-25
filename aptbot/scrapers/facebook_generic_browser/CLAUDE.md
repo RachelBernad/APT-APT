@@ -16,10 +16,10 @@ Chrome, headful). `aptbot` never imports this package and this package never imp
 - Never commit or print cookies, `fb_dtsg`/`lsd`/`jazoest` or other session tokens. The profile and raw captures
   live in `~/.fbgb/` (outside the repo).
 - Every browsing session goes through `browser.py` (validated config), `human.py` (input),
-  `tabs.py` (attention lock, shared limiter) and `health.py` (stop on checkpoint). Prefer `FacebookAPI`.
+  `tabs.py` (attention lock, pace gap) and `health.py` (stop on checkpoint). Prefer `FacebookAPI`.
   No `page.goto` loops, no `scrollTo`, no headless mode, no custom UA or headers, no proxies.
 - On any checkpoint, "temporarily blocked", or login wall: **stop the session and tell the user**. Never retry.
-- Keep volume low: short sessions, and stay inside the budgets in `SPEC.md`.
+- Keep volume low: short sessions, one tab acting at a time (`SPEC.md` §7).
 
 ## Keep `api_docs/` in sync with reality (mandatory)
 When Facebook behaves differently from what `api_docs/` says (a renamed graphql `fb_api_req_friendly_name`,

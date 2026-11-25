@@ -5,7 +5,7 @@
 api.py (FacebookAPI: public methods, cache policy, breaker)
   └─ dispatcher.py (queue, tabs, single-flight)     ← browser-agnostic, unit-tested with fake tabs
        └─ jobs.py (one coroutine per operation, runs in ONE tab)
-            ├─ tabs.py (attention lock, limiter)  ├─ human.py (input)  ├─ health.py (stop screens)
+            ├─ tabs.py (attention lock, pace)  ├─ human.py (input)  ├─ health.py (stop screens)
             ├─ capture.py (CaptureHub: per-tab response events)
             └─ parse.py / extract.py (pure: payload → models)        ← unit-tested on anonymized fixtures
 store.py (SQLite cache)   models.py (dataclasses)   errors.py   browser.py (validated launch config)
@@ -39,5 +39,5 @@ Symptoms: `SchemaDrift`, empty results, `NotMember` on a group you're in, parse 
 ## Rules that keep the account safe
 - No `page.route`, `expose_function`, `add_init_script`, headless, `scrollTo`, custom UA/headers.
 - Never send graphql yourself or replay `doc_id`s. Only read what the page fetches.
-- Every navigation goes through `TabPool.goto` (limiter) and is followed by `health.check`.
+- Every navigation goes through `TabPool.goto` (attention + pace) and is followed by `health.check`.
 - Never write credentials, cookies or tokens anywhere. Raw captures stay in `~/.fbgb/`.

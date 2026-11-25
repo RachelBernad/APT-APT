@@ -9,7 +9,7 @@ the **same account**, while it still looks like one person.
 Standalone: `aptbot` doesn't import it (yet), and it doesn't import `aptbot`.
 
 > Automating a personal account is against Meta's Terms. The account can be checkpointed or banned. Use a
-> secondary account, read-only, within the budgets. The library stops itself on any warning screen.
+> secondary account, read-only, one tab acting at a time. The library stops itself on any warning screen.
 
 ## 5-minute quickstart (Mac)
 ```bash
@@ -62,7 +62,7 @@ sequential. 8 live sessions, zero warnings.
 ## Layout
 ```
 api.py          FacebookAPI (public)          dispatcher.py  queue, tabs, single-flight, halt
-jobs.py         one coroutine per operation   tabs.py        attention lock + account-wide limiter
+jobs.py         one coroutine per operation   tabs.py        attention lock + pace gap   
 parse.py        payload → models (pure)       extract.py     price/rooms/phone hints (pure)
 models.py       dataclasses                   store.py       SQLite cache + watermarks
 capture.py      per-tab response events       health.py      stop screens

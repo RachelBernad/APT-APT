@@ -20,4 +20,4 @@ Earlier open questions (now answered above):
   had no posts (pending membership), so this wasn't exercised.
 
 Design rule: one tab drives the feed (foreground). Up to 2 extra tabs load permalinks for posts that need comments.
-Input only ever goes to the foreground tab (`TabPool.foreground`), and one shared limiter covers all tabs.
+Input only ever goes to the foreground tab (`TabPool.foreground`), and every attention grab waits a 10–30 ms random gap first (`tabs.pace`).

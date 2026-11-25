@@ -118,5 +118,4 @@ class Status(_Base):
     tabs_busy: int
     max_tabs: int
     queued: int
-    budget_left: int
     started_at: datetime | None

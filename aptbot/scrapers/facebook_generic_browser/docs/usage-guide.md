@@ -70,8 +70,6 @@ try:
     posts = await fb.latest_posts(gid, timeout=90)
 except NotMember as e:        # private group, pending request: skip it
     ...
-except BudgetExhausted as e:  # account budget used up: retry after e.retry_after seconds
-    ...
 except RequestTimeout:        # slow page; the tab is already freed
     ...
 except Halted as e:           # STOP. A human checks the account, then fb.resume()
@@ -81,6 +79,4 @@ Full table: [errors-and-safety.md](errors-and-safety.md).
 
 ## 10. Speed vs. safety knobs
 - `max_age` on reads: serve repeat questions from the cache (default 60 s for posts, 10 min for groups).
-- `Limiter(rate_per_min, burst, hourly_cap)`: the account budget. Start conservative and loosen only after
-  weeks of clean runs.
 - `max_tabs`: parallelism (3 Mac / 2 Pi).

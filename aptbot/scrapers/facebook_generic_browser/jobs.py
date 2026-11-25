@@ -1,7 +1,7 @@
 """Browser jobs: one coroutine per API operation. Each runs in ONE tab, chosen by the dispatcher.
 
 Every job follows the same pattern:
-  subscribe to its tab's captured responses → navigate (limiter token, short attention) → health.check →
+  subscribe to its tab's captured responses → navigate (short attention) → health.check →
   parse the page's JSON islands → (scroll in short attention bursts, waiting for Facebook's responses
   OUTSIDE the attention lock, so other tabs get their turn) → parse → return models.
 Data always comes from Facebook's own responses (parse.py). The DOM is only used to find things to click.
@@ -215,7 +215,6 @@ async def search_groups(env: Env, page, query: str, *, limit: int) -> list[Group
         if not page.url.startswith(FB):
             await navigate(env, page, f"{FB}/", q)
         box = page.locator('[role="banner"] input[type="search"], input[type="search"]').first
-        await env.pool.limiter.take()
         async with env.pool.foreground(page):
             await human.click(page, box)
             await human.type_text(page, query)

@@ -48,5 +48,5 @@ string, e.g. "139.8K members"), `description`.
 `id`, `name`, `url`, `summary` ("Public · 43K members · 30+ posts a day"), `privacy`.
 
 ## `Status`
-`state` ("stopped" \| "ok" \| "halted"), `logged_in`, `halt_reason`, `tabs_busy`, `max_tabs`, `queued`, `budget_left`,
+`state` ("stopped" \| "ok" \| "halted"), `logged_in`, `halt_reason`, `tabs_busy`, `max_tabs`, `queued`,
 `started_at`.
