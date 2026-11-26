@@ -19,6 +19,7 @@ from aptbot import config
 from aptbot import engine
 from aptbot import fb_engine
 from aptbot.bot import formatting
+from aptbot.bot.filters import FilterCommands
 from aptbot.bot.gate import ChatGate
 from aptbot.bot.simple import SimpleCommands, now_iso
 from aptbot.db import Database
@@ -124,7 +125,7 @@ class Bot:
             logger.error("Telegram error sending to chat %s: %s", chat_id, exc)
             return False
 
-    async def send_post(self, chat_id: int, post, facts=None) -> bool:
+    async def send_post(self, chat_id: int, post, facts=None, search=None) -> bool:
         """Deliver one Facebook post: an album of its photos (caption = the text when it
         fits), else/then the text. If the album fails (expired/blocked photo URL) the
         text still goes out, so the post is never lost. ``facts`` (AI Listing Facts)
@@ -133,7 +134,7 @@ class Bot:
             logger.warning("Refusing to send to chat %s: not in ALLOWED_CHAT_IDS.", chat_id)
             return False
         urls = [p.url for p in post.photos if p.url][: max(1, config.FB_MAX_PHOTOS)]
-        summary = formatting.format_fb_summary(facts) if facts is not None else None
+        summary = formatting.format_fb_summary(facts, search) if facts is not None else None
         full = formatting.format_fb_post(post, summary=summary)
         if urls:
             fits = formatting.fb_post_fits_caption(post, summary)
@@ -195,6 +196,8 @@ class Bot:
         # never consumes the update.
         self.application.add_handler(
             TypeHandler(Update, activity.make_logger(self.db)), group=-1)
+        # /filters card (inline keyboard). The gate above also guards its button taps.
+        self.application.add_handler(FilterCommands(self.db, on_saved=self.scan_now).conversation())
         for name, fn in (("start", c.start), ("help", c.help), ("monitor", c.monitor),
                          ("stop", c.stop), ("status", c.status)):
             self.application.add_handler(CommandHandler(name, fn))
@@ -202,6 +205,7 @@ class Bot:
     async def _set_commands(self):
         await self.application.bot.set_my_commands([
             BotCommand("monitor", "Start watching Tel Aviv (Yad2 + Facebook)"),
+            BotCommand("filters", "Choose price, rooms, ממ״ד and other filters"),
             BotCommand("stop", "Pause"),
             BotCommand("status", "What each source did last"),
             BotCommand("help", "How the bot works"),

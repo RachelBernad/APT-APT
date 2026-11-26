@@ -46,7 +46,7 @@ class Sent:
     def __init__(self, fail=False):
         self.posts, self.texts, self.fail = [], [], fail
 
-    async def post(self, chat_id, p, facts=None):
+    async def post(self, chat_id, p, facts=None, search=None):
         self.posts.append((chat_id, p.post_id))
         self.facts = getattr(self, "facts", []) + [facts]
         return not self.fail

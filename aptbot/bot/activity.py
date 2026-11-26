@@ -17,14 +17,14 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from aptbot.db import Database
-from aptbot.bot.handlers import BAR_ADD, BAR_HELP, BAR_LIST, BAR_REPORT
 
 logger = logging.getLogger("activity")
 
 MAX_TEXT = 40
 
-# The persistent tap-bar buttons send their label as plain text.
-_BAR_LABELS = {BAR_ADD, BAR_LIST, BAR_REPORT, BAR_HELP}
+# The old persistent tap-bar buttons send their label as plain text (a stale client
+# keyboard can still show them).
+_BAR_LABELS = {"➕ Add monitor", "📋 My searches", "📄 Daily report", "❓ Help"}
 
 # Opaque callback data -> what the user actually did. Longest prefix wins, so
 # "wz:field" is matched before the bare "wz:" namespace.
@@ -44,10 +44,12 @@ _CALLBACK_LABELS = {
     "az:done": "areas done → filters",
     # filter wizard
     "wz:field": "edit filter",
+    "wz:card": "back to filters",
+    "wz:clear": "clear all filters",
     "wz:types": "open property type",
     "wz:cond": "open condition",
     "wz:feats": "open features",
-    "wz:save": "SAVE monitor",
+    "wz:save": "SAVE monitor",  # (/filters: save filters)
     "wz:cancel": "cancel wizard",
     "wz:backlist": "back to list",
     "rng:cardback": "back to filters",

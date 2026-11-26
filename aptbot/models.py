@@ -63,8 +63,8 @@ class ResolvedLocation:
 
 # Verified boolean feature filters on the Yad2 rent feed (param names read straight
 # off the site's own filter URL). key -> (gateway param, Hebrew label, English
-# label, emoji). All are server-side-only (markers don't carry them), so they are
-# part of the scrape group key.
+# label, emoji). Markers don't carry them, so the engine learns them with one
+# ticked-only fetch per wanted feature and only TAGS listings (never drops them).
 FEATURES: Dict[str, tuple] = {
     "elevator":         ("elevator",       "מעלית",       "Elevator",        "🛗"),
     "parking":          ("parking",        "חניה",        "Parking",         "🅿"),
@@ -84,6 +84,19 @@ FEATURES: Dict[str, tuple] = {
     "price_only":       ("priceOnly",      "עם מחיר",     "With price",      "🏷"),
 }
 
+# Features offered in /filters: the apartment amenities. image_only / price_only /
+# exclusive describe the ad, not the apartment ("price only" would also contradict
+# "a listing missing a field is never dropped").
+FILTER_FEATURES = tuple(k for k in FEATURES if k not in ("exclusive", "image_only", "price_only"))
+
+# Feature key -> the Facebook AI ``ListingFacts`` field that answers it (three-state:
+# True / False = the post says no / None = not mentioned). Features without one are
+# always unknown on Facebook.
+FEATURE_FACT_FIELD: Dict[str, str] = {
+    "mamad": "has_mamad", "mamak": "has_mamak", "building_shelter": "has_shelter",
+    "elevator": "elevator", "balcony": "balcony", "renovated": "renovated",
+}
+
 
 def feature_param(key: str) -> Optional[str]:
     spec = FEATURES.get(key)
@@ -97,12 +110,11 @@ def feature_label(key: str) -> str:
 
 @dataclass
 class GatewayFilters:
-    """The *loosest union* of a group's filters, sent to the gateway server-side.
+    """Filters sent to the gateway server-side.
 
-    Boolean features (see ``FEATURES``) are not carried by markers, so they are
-    part of the scrape group key and every member shares the same set. Everything
-    else (price/rooms/sqm/floor/property type/condition) is on the marker and can
-    also be matched locally.
+    The engine's main fetch sends none (so listings missing a value aren't dropped);
+    the per-feature tagging fetches send one feature plus the group's loosest ranges.
+    Everything except features is on the marker and matched locally.
     """
     min_price: Optional[int] = None
     max_price: Optional[int] = None

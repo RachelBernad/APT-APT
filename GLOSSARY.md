@@ -9,6 +9,12 @@ apartments matching their saved search.
 One user's saved search: filters plus the areas it watches. Every delivery is per Monitor.
 _Avoid_: saved search (in user-facing text), subscription, alert
 
+**Filter**:
+A Monitor's conditions (price, rooms, size, floor, type, condition, features), chosen with `/filters`. Lenient: an
+item is dropped only for a value it states outside the Filter; a missing value passes and is shown as ❔. Yad2
+features never drop a Listing, they only tag it (✅ ticked / ❔ not ticked).
+_Avoid_: criteria, rule
+
 **Listing**:
 A Yad2 apartment ad: structured data from the source.
 _Avoid_: ad, item

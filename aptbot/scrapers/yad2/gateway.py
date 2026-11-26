@@ -222,10 +222,10 @@ async def fetch_map(
 def normalize_marker(m: Dict[str, Any], f: Optional[GatewayFilters] = None) -> Dict[str, Any]:
     """Convert a gateway marker into the normalized listing dict shape.
 
-    Amenity flags (elevator/balcony/parking/renovated) are only knowable when the
-    query pushed them server-side; when it did, every returned listing has them, so
-    we mark the flag True (else None/unknown). Property type/condition and orderId
-    come straight off the marker.
+    Markers carry no amenity flags (elevator/ממ״ד/balcony...). ``features`` starts as
+    the features pushed server-side by ``f`` (every returned listing has them); the
+    engine adds more from its per-feature tagging fetches. Anything not listed is
+    unknown, never "no". Property type/condition and orderId come off the marker.
     """
     address = m.get("address", {}) or {}
     city = (address.get("city") or {}).get("text", "")
@@ -250,8 +250,7 @@ def normalize_marker(m: Dict[str, Any], f: Optional[GatewayFilters] = None) -> D
     property_type_id = _PROPERTY_TEXT_TO_ID.get(_ptype_key(property_text))
     condition = (additional.get("propertyCondition") or {}).get("id")
 
-    # Markers carry no feature flags, so a Yad2 listing is known to have exactly
-    # the features that were pushed server-side for this scrape.
+    # Known-present features: the ones pushed server-side for this fetch.
     features = list(f.features) if f else []
 
     floor = house.get("floor")

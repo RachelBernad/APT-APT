@@ -14,7 +14,7 @@ A Telegram bot that watches **Tel Aviv apartment rentals** on two sources and po
   and sales are skipped). If the AI is off, failing or at its usage limit, posts are sent as before. See
   [`aptbot/listing_ai/SPEC.md`](aptbot/listing_ai/SPEC.md).
 
-Send `/monitor` in the chat to start; no filters for now. **Only the chats in `ALLOWED_CHAT_IDS`** (set in
+Send `/monitor` in the chat to start, and `/filters` to choose filters. **Only the chats in `ALLOWED_CHAT_IDS`** (set in
 `.env`) can use the bot or receive anything from it. Every other chat is ignored, and its id is logged. Inside an allowed group, **only the people in `ALLOWED_USER_IDS`** can give commands; a new member, an anonymous admin or a linked channel is refused, and at startup the bot warns if the group has more members than those people plus itself (they could read the listings).
 
 ## Layout
@@ -29,7 +29,7 @@ aptbot/                     the bot (run: python -m aptbot)
   fb_engine.py              Facebook: poll the groups → dedup by content hash → AI facts → route
   listing_ai/               AI Listing Facts for posts over ChatGPT OAuth (SPEC.md; login: python -m aptbot.listing_ai login)
   bot/                      Telegram-facing: simple.py (live commands), gate.py (allowlist),
-                            formatting, activity log; handlers.py = parked filters wizard
+                            formatting, activity log; filters.py = /filters card
   scrapers/
     yad2/                   the Yad2 source, self-contained:
       gateway.py              listings map feed (200-cap price bisection)
@@ -75,5 +75,14 @@ Domain terms are in [`GLOSSARY.md`](GLOSSARY.md) and decisions in [`docs/adr/`](
 ## Bot commands
 
 `/monitor` (start watching Tel Aviv on both sources; you first get a short taster of what's there now),
-`/stop`, `/status` (last check of each source, the AI summaries' state) and `/help`. In a group, use them
-as commands (`/monitor@YourBot` also works), since bots in groups only see commands.
+`/filters`, `/stop`, `/status` (last check of each source, the AI summaries' state, the filters) and `/help`.
+In a group, use them as commands (`/monitor@YourBot` also works), since bots in groups only see commands.
+
+`/filters` opens an inline-keyboard card for the chat's monitor: price, rooms, size and floor ranges (quick picks
+or Custom…, typed as a reply), property type, condition, and features (ממ״ד, ממ״ק, building shelter, elevator,
+parking, balcony, A/C, renovated, furnished, bars, storage, accessibility, pets). Save sends a fresh taster under
+the new filters. Either allowed person can tap the card. Filters are **lenient**: a listing or post is dropped
+only for a value it states outside the filter (price above the max, a post saying "אין ממ״ד"). A missing value
+always passes and is marked ❔. Yad2 features never drop a listing: Yad2 posters often leave the boxes unticked,
+so one extra request per chosen feature per cycle tags the ticked ones ✅ and the rest ❔. On Facebook, features
+are checked through the AI facts (ממ״ד, ממ״ק, shelter, elevator, balcony, renovated); the others are always ❔.

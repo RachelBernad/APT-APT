@@ -103,7 +103,7 @@ class _Recorder:
     def __init__(self):
         self.sent = []
 
-    async def post(self, chat, p, f):
+    async def post(self, chat, p, f, search=None):
         self.sent.append(p.text)
         return True
 
@@ -182,7 +182,7 @@ async def test_route_passes_facts_per_post(db, monkeypatch):
         seen_inputs.extend(p.text for p in posts)
         return {fb_engine.content_hash(p1): FACTS1}
 
-    async def send_post(chat, p, f):
+    async def send_post(chat, p, f, search=None):
         sent.append((p.text, f))
         return True
 
@@ -205,3 +205,55 @@ async def test_make_analyze_never_raises():
             raise RuntimeError("x")
     assert await fb_engine.make_analyze(Boom())([post()]) == {}
     assert fb_engine.make_analyze(None) is None
+
+
+# --- monitor filters on Facebook facts (lenient: unknown passes, stated miss drops) ---
+
+def _filters(**kw):
+    from aptbot.models import SavedSearch
+    return SavedSearch(id=1, chat_id=1001, label="t", **kw)
+
+
+def test_matches_facts_drops_only_stated_misses():
+    s = _filters(max_price=7000, min_rooms=2, features=["mamad", "parking"])
+    assert fb_engine.matches_facts(None, s)                                   # no AI: passes
+    assert fb_engine.matches_facts(facts(), s)                                # nothing stated
+    assert fb_engine.matches_facts(facts(price_ils=6500, rooms_count=2.5, has_mamad=True), s)
+    assert not fb_engine.matches_facts(facts(price_ils=7500), s)              # stated above max
+    assert not fb_engine.matches_facts(facts(rooms_count=1.5), s)             # stated below min
+    assert not fb_engine.matches_facts(facts(has_mamad=False), s)             # "אין ממ״ד"
+    assert fb_engine.matches_facts(facts(elevator=False), s)                  # not a wanted feature
+
+
+async def test_route_skips_stated_misses_marks_them_seen_and_passes_the_monitor(db, monkeypatch):
+    from aptbot import config
+    monkeypatch.setattr(config, "FB_POST_KINDS", frozenset())
+    sid = await _primed_monitor(db, monkeypatch)
+    await db.update_search_filters(sid, max_price=7000, features=["mamad"])
+    posts = _posts("cheap", "pricey", "no-mamad", "silent")
+    by_text = {"cheap": facts(price_ils=6000), "pricey": facts(price_ils=9000),
+               "no-mamad": facts(has_mamad=False), "silent": facts()}
+
+    async def analyze(ps):
+        return {fb_engine.content_hash(p): by_text[p.text] for p in ps}
+
+    got = []
+
+    async def send_post(chat, p, f, search=None):
+        got.append((p.text, search.max_price, search.features))
+        return True
+
+    stale = await db.get_search(sid)
+    stale.max_price = None                       # route must use the latest saved filters
+    await fb_engine.route_fb_posts(send_post, _Recorder().text, db, stale, posts, [], analyze)
+    assert got == [("cheap", 7000, ["mamad"]), ("silent", 7000, ["mamad"])]
+    assert len(await db.get_fb_seen(sid)) == 4
+
+
+def test_summary_names_the_filters_a_post_does_not_answer():
+    s = _filters(max_price=7000, features=["mamad", "parking", "elevator"])
+    text = formatting.format_fb_summary(facts(rooms_count=2, elevator=True), s)
+    assert text.splitlines()[-1] == "❔ לא צוין: מחיר · ממ״ד · חניה"
+    assert "❔" not in formatting.format_fb_summary(facts(price_ils=6000, has_mamad=True), _filters(
+        max_price=7000, features=["mamad"]))
+    assert "❔" not in formatting.format_fb_summary(facts(), None)

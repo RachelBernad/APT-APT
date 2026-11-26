@@ -15,7 +15,7 @@ fb_engine.route_fb_posts ──(posts about to be sent)──▶ ListingAnalyzer
         │                                              │ → ≤3 in flight → strict JSON schema → map by ref
         ◀──────────── {content_hash: ListingFacts} ────┘
 fb_engine.wanted(facts): kind ∈ FB_POST_KINDS (default "rent"), else marked seen and not sent
-send_post(chat, post, facts) → formatting.format_fb_summary + format_fb_post(summary=…)
+send_post(chat, post, facts, search=monitor) → formatting.format_fb_summary(facts, monitor) + format_fb_post(summary=…)
 ```
 
 **Filtering by kind:** `FB_POST_KINDS` (comma-separated, default `rent`, empty = every kind) decides which

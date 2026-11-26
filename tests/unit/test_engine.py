@@ -39,16 +39,16 @@ def test_scrape_sig_prefers_most_specific_scope():
 
 # --- group_searches -------------------------------------------------------
 
-def test_group_searches_groups_by_scope_and_features():
+def test_group_searches_groups_by_scope_and_unions_features():
     s1 = _search(sid=1, city_id="5000")
-    s2 = _search(sid=2, city_id="5000")                        # same scope+feats as s1
-    s3 = _search(sid=3, city_id="5000", features=["elevator"])  # different feature set
-    groups = engine.group_searches([s1, s2, s3])
-    keys = list(groups.keys())
-    assert len(keys) == 2   # (5000, {}) and (5000, {elevator})
-    # the featureless group has both s1 and s2
-    featureless = groups[(LocationSignature(3, None, "5000"), frozenset())]
-    assert {s.id for s, _ in featureless} == {1, 2}
+    s2 = _search(sid=2, city_id="5000", features=["mamad"])
+    s3 = _search(sid=3, city_id="5000", features=["elevator"])
+    s4 = _search(sid=4, city_id="7000")
+    groups = engine.group_searches([s1, s2, s3, s4])
+    # features don't split a scope (they only tag); the key carries their union to tag
+    tlv = groups[(LocationSignature(3, None, "5000"), frozenset({"mamad", "elevator"}))]
+    assert {s.id for s, _ in tlv} == {1, 2, 3}
+    assert {s.id for s, _ in groups[(LocationSignature(3, None, "7000"), frozenset())]} == {4}
 
 
 def test_group_searches_merges_targets_of_one_search():
@@ -95,6 +95,9 @@ def test_union_filters_carries_group_features():
     s1 = _search(sid=1, features=["elevator"])
     f = engine.union_filters([(s1, s1.locations)], frozenset({"elevator"}))
     assert f.features == ["elevator"]
+    # several features come out sorted (stable request order)
+    f2 = engine.union_filters([(s1, s1.locations)], frozenset({"mamad", "elevator"}))
+    assert f2.features == ["elevator", "mamad"]
 
 
 # --- matching -------------------------------------------------------------
@@ -117,8 +120,12 @@ def test_matches_non_amenity_price_and_rooms():
     assert engine.matches_non_amenity(make_listing("yad2:1", price=6000, rooms="3"), s)
     assert not engine.matches_non_amenity(make_listing("yad2:2", price=9000, rooms="3"), s)
     assert not engine.matches_non_amenity(make_listing("yad2:3", price=6000, rooms="2"), s)
-    # price missing -> rejected when a price bound is set
-    assert not engine.matches_non_amenity(make_listing("yad2:4", price=None, rooms="3"), s)
+    # missing price / rooms -> KEPT (a listing is never dropped for a field it doesn't report)
+    assert engine.matches_non_amenity(make_listing("yad2:4", price=None, rooms="3"), s)
+    assert engine.matches_non_amenity(make_listing("yad2:5", price=6000, rooms=""), s)
+    # max-only and min-only bounds
+    assert not engine.matches_non_amenity(make_listing("yad2:6", price=8001), _search(max_price=8000))
+    assert engine.matches_non_amenity(make_listing("yad2:7", price=100), _search(max_price=8000))
 
 
 def test_matches_non_amenity_size_floor_only_when_reported():
@@ -141,10 +148,10 @@ def test_matches_non_amenity_property_type_and_condition_only_when_known():
     assert engine.matches_non_amenity(unknown, s)
 
 
-def test_matches_features_subset():
+def test_features_never_drop_a_yad2_listing():
     s = _search(features=["elevator", "mamad"])
-    assert engine.matches_features(make_listing("y:1", features=["elevator", "mamad", "ac"]), s)
-    assert not engine.matches_features(make_listing("y:2", features=["elevator"]), s)
+    untagged = make_listing("y:2", features=[])
+    assert engine.matches_full(untagged, s, s.locations)
 
 
 # --- scrape_group --------------------------------------------------------
@@ -161,6 +168,50 @@ async def test_scrape_group_normalizes_and_dedups_yad2_markers(monkeypatch):
     sig = LocationSignature(2, None, "0070")
     listings = await engine.scrape_group(None, sig, GatewayFilters(), [(s, s.locations)])
     assert set(listings) == {"yad2:t1"}
+
+
+def _marker(token, price=6000):
+    return {"token": token, "price": price, "address": {}, "additionalDetails": {}, "metaData": {}}
+
+
+async def test_main_fetch_is_unfiltered_and_tagging_fetches_mark_features(monkeypatch):
+    calls = []
+
+    async def fake_fetch_map(http, sig, f):
+        calls.append(f)
+        if not f.features:                       # main fetch: everything, incl. no price
+            return [_marker("a"), _marker("b"), _marker("np", price=None)]
+        return {"mamad": [_marker("a")], "elevator": [_marker("a"), _marker("b"), _marker("zz")]}[f.features[0]]
+
+    monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
+    s = _search(max_price=7000, features=["mamad", "elevator"])
+    sig = engine.scrape_sig(s.locations[0])
+    f = engine.union_filters([(s, s.locations)], frozenset(s.features))
+    listings = await engine.scrape_group(None, sig, f, [(s, s.locations)])
+
+    main = calls[0]
+    assert main.features == [] and main.max_price is None and main.min_rooms is None
+    # tagging fetches: one feature each, narrowed by the group's ranges
+    assert [(c.features, c.max_price) for c in calls[1:]] == [(["elevator"], 7000), (["mamad"], 7000)]
+    assert sorted(listings["yad2:a"]["features"]) == ["elevator", "mamad"]
+    assert listings["yad2:a"]["is_mamad"] is True
+    assert listings["yad2:b"]["features"] == ["elevator"] and listings["yad2:b"]["is_mamad"] is None
+    assert "yad2:zz" not in listings             # tagging never adds listings
+    assert listings["yad2:np"]["features"] == []  # no price: still here, untagged
+    assert all(engine.matches_full(l, s, s.locations) for l in listings.values())
+
+
+async def test_failed_tagging_fetch_keeps_listings_untagged(monkeypatch):
+    async def fake_fetch_map(http, sig, f):
+        if f.features:
+            raise RuntimeError("radware")
+        return [_marker("a")]
+
+    monkeypatch.setattr(yad2_gateway, "fetch_map", fake_fetch_map)
+    s = _search(features=["mamad"])
+    f = engine.union_filters([(s, s.locations)], frozenset(s.features))
+    listings = await engine.scrape_group(None, engine.scrape_sig(s.locations[0]), f, [(s, s.locations)])
+    assert set(listings) == {"yad2:a"} and listings["yad2:a"]["features"] == []
 
 
 # --- routing: backfill / only-new / price-change --------------------------
@@ -375,3 +426,17 @@ async def test_failed_cycle_still_reports(db, monkeypatch, caplog):
         await engine.run_cycle(FakeSender(), db, http=None)
     assert any("bad scrape" in m for m in _engine_info(caplog))
     assert any(r.levelname == "WARNING" for r in caplog.records)
+
+
+# --- message labels --------------------------------------------------------
+
+def test_listing_message_marks_wanted_features_and_unknown_filtered_fields():
+    from aptbot.bot.formatting import format_apartment_message
+    s = _search(max_price=7000, min_rooms=2, features=["mamad", "elevator"])
+    text = format_apartment_message(make_listing("y:1", price=None, rooms="", features=["mamad"]), s)
+    assert "<b>Price:</b> ❔ not listed" in text
+    assert "<b>Rooms:</b> ❔ not listed" in text
+    assert "<b>Features:</b> ✅ Safe room · ❔ Elevator" in text
+    assert "Size" not in text                     # no size filter, no size: nothing shown
+    plain = format_apartment_message(make_listing("y:2", features=["mamad"]))
+    assert "🛡 Safe room" in plain and "❔" not in plain

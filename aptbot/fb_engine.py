@@ -28,12 +28,12 @@ from aptbot import config
 from aptbot.bot.formatting import format_fb_backfill_intro, format_fb_stopped
 from aptbot.db import Database
 from aptbot.engine import _pace
-from aptbot.models import SavedSearch
+from aptbot.models import FEATURE_FACT_FIELD, SavedSearch
 from aptbot.scrapers.facebook_generic_browser import AccountAtRisk, Halted, Post
 
 logger = logging.getLogger(__name__)
 
-PostSender = Callable[[int, Post, Optional[object]], Awaitable[bool]]   # (chat, post, facts)
+PostSender = Callable[..., Awaitable[bool]]   # (chat, post, facts, search=SavedSearch) -> bool
 TextSender = Callable[..., Awaitable[bool]]
 Analyze = Callable[[List[Post]], Awaitable[Dict[str, object]]]          # posts -> {content_hash: facts}
 
@@ -112,6 +112,26 @@ def wanted(facts) -> bool:
     return getattr(kind, "value", kind) in config.FB_POST_KINDS
 
 
+def matches_facts(facts, s: SavedSearch) -> bool:
+    """The monitor's filters on a post's AI facts. Lenient like Yad2: drop only on a value
+    the post STATES outside the filter (price above max, "אין ממ״ד"); not mentioned (None),
+    no facts at all (AI off/failed) and features the AI doesn't extract all pass."""
+    if facts is None:
+        return True
+    for fact, lo, hi in (("price_ils", s.min_price, s.max_price),
+                         ("rooms_count", s.min_rooms, s.max_rooms),
+                         ("square_meters", s.min_sqm, s.max_sqm),
+                         ("floor", s.min_floor, s.max_floor)):
+        v = getattr(facts, fact, None)
+        if v is not None and ((lo is not None and v < lo) or (hi is not None and v > hi)):
+            return False
+    for key in s.features or []:
+        fact = FEATURE_FACT_FIELD.get(key)
+        if fact and getattr(facts, fact, None) is False:
+            return False
+    return True
+
+
 async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Database,
                          s: SavedSearch, posts: List[Post], taster: List[Post],
                          analyze: Optional[Analyze] = None) -> int:
@@ -123,12 +143,18 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
     - **primed**: send each post whose content hash is new, oldest first; record it
       only after a successful send, so a failed send retries next poll.
 
-    With an ``analyze`` hook, posts whose Post kind isn't in ``FB_POST_KINDS`` are
-    recorded as seen and not sent (the taster analyzes a few extra to fill its cap).
+    With an ``analyze`` hook, posts whose Post kind isn't in ``FB_POST_KINDS`` or that miss
+    the monitor's filters (:func:`matches_facts`) are recorded as seen and not sent (the
+    taster analyzes a few extra to fill its cap).
     """
     fresh = await db.get_search(s.id)
     if fresh is None or not fresh.is_active:
         return 0
+    s = fresh                                      # the latest /filters edit applies
+
+    def keep(p: Post) -> bool:
+        f = facts.get(content_hash(p))
+        return wanted(f) and matches_facts(f, s)
     seen = await db.get_fb_seen(s.id)
     sent = 0
 
@@ -139,13 +165,13 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
         cap = config.FB_BACKFILL_CAP
         sample = [p for p in pool if content_hash(p) not in seen][: cap * (3 if analyze else 1)]
         facts = await _facts_for(analyze, sample)
-        sample = [p for p in sample if wanted(facts.get(content_hash(p)))][:cap]
+        sample = [p for p in sample if keep(p)][:cap]
         if sample:
             groups = len(config.FB_GROUP_IDS)
             await send_text(s.chat_id, format_fb_backfill_intro(len(sample), groups))
             await _pace()
             for p in sample:
-                if await send_post(s.chat_id, p, facts.get(content_hash(p))):
+                if await send_post(s.chat_id, p, facts.get(content_hash(p)), search=s):
                     sent += 1
                     await _pace()
         logger.info("FB primed search #%s: taster %d of %d known posts", s.id, sent, len(pool))
@@ -154,17 +180,17 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
     pending = [p for p in reversed(unique_by_content(posts))   # oldest first reads naturally
                if content_hash(p) not in seen]
     facts = await _facts_for(analyze, pending)
-    skipped = [p for p in pending if not wanted(facts.get(content_hash(p)))]
+    skipped = [p for p in pending if not keep(p)]
     if skipped:
         await db.add_fb_seen(s.id, [(content_hash(p), p.url) for p in skipped])
         seen.update(content_hash(p) for p in skipped)
-        logger.info("FB search #%s: %d post(s) skipped by kind (FB_POST_KINDS=%s)",
+        logger.info("FB search #%s: %d post(s) skipped by kind (FB_POST_KINDS=%s) or filters",
                     s.id, len(skipped), ",".join(sorted(config.FB_POST_KINDS)))
     for p in pending:
         h = content_hash(p)
         if h in seen:
             continue
-        if await send_post(s.chat_id, p, facts.get(h)):
+        if await send_post(s.chat_id, p, facts.get(h), search=s):
             await db.add_fb_seen(s.id, [(h, p.url)])
             seen.add(h)
             sent += 1

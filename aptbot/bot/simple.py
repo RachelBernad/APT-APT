@@ -1,8 +1,8 @@
-"""The current, minimal command set: one Tel Aviv monitor per chat, no filters.
+"""The command set: one Tel Aviv monitor per chat.
 
 /monitor starts (or resumes) watching Tel Aviv on Yad2 and the Facebook groups,
-/stop pauses it, /status shows both sources, /help explains. The full filters
-wizard (``aptbot.bot.handlers``) is parked until filters come back.
+/stop pauses it, /status shows both sources and the filters, /help explains.
+/filters (the inline-keyboard card) lives in ``aptbot.bot.filters``.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from aptbot import config
+from aptbot.bot.filters import filters_summary, has_filters
 from aptbot.db import Database
 from aptbot.models import SavedSearch
 from aptbot.scrapers.yad2 import locations
@@ -50,6 +51,8 @@ def help_text(fb_on: bool) -> str:
         "(new listings and price changes).\n"
         f"{fb}\n"
         "/monitor: start watching (you get a short taster of what's there now)\n"
+        "/filters: price, rooms, size, floor, type, condition and features like ממ״ד. "
+        "A listing that doesn't mention a field is kept and marked ❔\n"
         "/stop: pause\n"
         "/status: what each source did last\n"
         "/help: this message"
@@ -137,6 +140,9 @@ class SimpleCommands:
         s = await self._own_search(update.effective_chat.id)
         lines = [f"<b>Monitor:</b> {'on' if s and s.is_active else 'off'}",
                  f"<b>Yad2 areas:</b> {area_summary()}"]
+        if s is not None:
+            lines.append("<b>Filters:</b> " + ("\n" + filters_summary(s) if has_filters(s)
+                                                 else "none (/filters to choose)"))
         last = await self.db.get_meta("yad2_last_cycle")
         lines.append(f"<b>Yad2:</b> every {_interval_min()} min, last check "
                      f"{_when(datetime.fromisoformat(last)) if last else 'not yet'}")

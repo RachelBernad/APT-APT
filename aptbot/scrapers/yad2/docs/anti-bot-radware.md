@@ -17,10 +17,12 @@ per-marker verification of amenities) **cannot be fetched**. But this does **not
 are unavailable — every feature, **including ממ״ד (`shelter=1`)**, is filterable **server-side on the
 feed** (see [listings-map-feed](./listings-map-feed.md)). The bot therefore:
 
-- applies **all feature filters server-side** (elevator, balcony, ממ״ד/`shelter`, parking, …), making
-  them part of the scrape signature since markers don't echo the flags back,
+- learns features server-side (elevator, balcony, ממ״ד/`shelter`, parking, …) with one ticked-only
+  fetch per wanted feature, since markers don't echo the flags back, and only **tags** listings with
+  them (✅ ticked / ❔ not), never drops one: an unticked box can mean "didn't say",
 - does **not** try to re-verify a feature per marker or read item-page-only fields,
-- formats messages from **marker fields only** (plus the features it filtered on), omitting unknowns.
+- formats messages from **marker fields only** (plus the tagged features), marking a filtered field it
+  doesn't know with ❔.
 
 ## Making gateway calls succeed programmatically
 

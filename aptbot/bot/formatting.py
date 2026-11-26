@@ -8,7 +8,7 @@ from __future__ import annotations
 import html
 from typing import Any, Dict, Optional
 
-from aptbot.models import FEATURES
+from aptbot.models import FEATURE_FACT_FIELD, FEATURES
 
 
 def _html_value(value: Any) -> str:
@@ -48,7 +48,14 @@ def photo_caption(text: str, limit: int = 1024) -> str:
     return "\n".join(out)
 
 
-def format_apartment_message(apt: Dict[str, Any]) -> str:
+def _has_range(s, field: str) -> bool:
+    return s is not None and (getattr(s, f"min_{field}") is not None
+                              or getattr(s, f"max_{field}") is not None)
+
+
+def format_apartment_message(apt: Dict[str, Any], s=None) -> str:
+    """``s`` (the monitor's SavedSearch) adds ❔ for filtered fields the listing doesn't
+    report, and a ✅ / ❔ line for the monitor's wanted features."""
     location = _html_value(
         apt.get("location")
         or ", ".join(p for p in (apt.get("street"), apt.get("city")) if p)
@@ -58,27 +65,29 @@ def format_apartment_message(apt: Dict[str, Any]) -> str:
 
     # Only include fields we actually know (printing "Unknown"/"N/A" reads as
     # broken). The source is intentionally NOT shown to the user.
+    price = apt.get("price")
     lines = [
         "<b>🏠 Apartment Found!</b>",
-        f"<b>Price:</b> {_format_price(apt.get('price', 'N/A'))}",
+        f"<b>Price:</b> {_format_price(price) if not _blank(price) else '❔ not listed'}",
         f"<b>Location:</b> {location}",
     ]
     if not _blank(apt.get("property_type")):
         lines.append(f"<b>Type:</b> {_html_value(apt['property_type'])}")
-    if not _blank(apt.get("rooms")):
-        lines.append(f"<b>Rooms:</b> {_html_value(apt['rooms'])}")
-    if not _blank(apt.get("size")):
-        lines.append(f"<b>Size:</b> {_html_value(apt['size'])} sqm")
-    if not _blank(apt.get("floor")):
-        lines.append(f"<b>Floor:</b> {_html_value(apt['floor'])}")
-    # Show only features known to be present: the ones filtered server-side.
-    chips = []
-    for key in apt.get("features") or []:
-        spec = FEATURES.get(key)
-        if spec:
-            chips.append(f"{spec[3]} {spec[2]}")
+    for key, field, label, unit in (("rooms", "rooms", "Rooms", ""), ("size", "sqm", "Size", " sqm"),
+                                    ("floor", "floor", "Floor", "")):
+        if not _blank(apt.get(key)):
+            lines.append(f"<b>{label}:</b> {_html_value(apt[key])}{unit}")
+        elif _has_range(s, field):
+            lines.append(f"<b>{label}:</b> ❔ not listed")
+    have = set(apt.get("features") or [])
+    wanted = list(s.features or []) if s is not None else []
+    # Wanted features: ✅ ticked on Yad2, ❔ not ticked (could be "no" or "didn't say").
+    # Without a monitor, show the features known to be present.
+    chips = [f"{'✅' if k in have else '❔'} {FEATURES[k][2]}" for k in wanted if k in FEATURES]
+    if not wanted:
+        chips = [f"{FEATURES[k][3]} {FEATURES[k][2]}" for k in apt.get("features") or [] if k in FEATURES]
     if chips:
-        lines.append(f"<b>Features:</b> {', '.join(chips)}")
+        lines.append(f"<b>Features:</b> {' · '.join(chips) if wanted else ', '.join(chips)}")
     lines.append(f"<b>URL:</b> <a href='{url}'>Link</a>")
     return "\n".join(lines)
 
@@ -173,8 +182,25 @@ def _entry(v: str) -> str:
     return "/".join(reversed(parts)) if all(p.isdigit() for p in parts) else v
 
 
-def format_fb_summary(facts) -> str:
-    """Compact Hebrew summary of a post's Listing Facts (only fields that are not null)."""
+def _unknown_wanted(facts, s) -> list:
+    """Labels of the monitor's filters this post doesn't answer (it was kept anyway)."""
+    if s is None:
+        return []
+    out = []
+    for field, fact, label in (("price", "price_ils", "מחיר"), ("rooms", "rooms_count", "חדרים"),
+                               ("sqm", "square_meters", "גודל"), ("floor", "floor", "קומה")):
+        if _has_range(s, field) and getattr(facts, fact, None) is None:
+            out.append(label)
+    for key in s.features or []:
+        fact = FEATURE_FACT_FIELD.get(key)
+        if key in FEATURES and (fact is None or getattr(facts, fact, None) is None):
+            out.append(FEATURES[key][1])
+    return out
+
+
+def format_fb_summary(facts, s=None) -> str:
+    """Compact Hebrew summary of a post's Listing Facts (only fields that are not null).
+    With the monitor ``s``, a last ❔ line names its filters the post doesn't answer."""
     kind = getattr(facts.post_kind, "value", facts.post_kind)
     head = _KIND_LABELS.get(kind, str(kind))
     if kind in ("seeking", "not_listing"):
@@ -226,6 +252,9 @@ def format_fb_summary(facts) -> str:
         feats.append("❌ " + " · ".join(no))
     if feats:
         lines.append("  ".join(feats))
+    unknown = _unknown_wanted(facts, s)
+    if unknown:
+        lines.append("❔ לא צוין: " + " · ".join(unknown))
     return "\n".join(lines)
 
 

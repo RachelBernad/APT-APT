@@ -1,14 +1,17 @@
 """Scrape-once-per-location, match-per-user, route pipeline.
 
 A saved search holds many area targets + one filter set. We collect the distinct
-(scrape-scope, feature-set) signatures across every target of every active search,
-scrape each once with the loosest union of its members' filters, then match each
-listing against every watcher's exact filters/targets locally and route with
-per-search dedup, capped backfill, only-new and price-change semantics.
+scrape scopes across every target of every active search, scrape each once
+UNFILTERED, then match each listing against every watcher's filters/targets locally
+and route with per-search dedup, capped backfill, only-new and price-change semantics.
 
-Boolean features (elevator, ממ״ד, balcony, ...) are the only filters markers can't
-carry, so they are part of the scrape signature (pushed server-side); everything
-else is matched locally.
+Filters are lenient: a listing is dropped only for a value it REPORTS outside the
+filter; a missing value always passes (and is shown as ❔). Server-side ranges would
+silently drop listings with no price, so none are sent on the main fetch.
+
+Boolean features (elevator, ממ״ד, balcony, ...) aren't on markers. They never drop a
+Yad2 listing: one extra ticked-only fetch per wanted feature tags the listings that
+have it (✅); the rest are unknown (❔), because an unticked box can mean "didn't say".
 """
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ import asyncio
 import logging
 import random
 from collections import defaultdict
+from dataclasses import replace
 from typing import Awaitable, Callable, Dict, FrozenSet, List, Optional, Tuple
 
 import aiohttp
@@ -33,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 Sender = Callable[..., Awaitable[bool]]   # (chat_id, text, photo=None) -> bool
 
-# group key = (scrape signature, required-feature set)
+# group key = (scrape signature, union of the members' wanted features to tag)
 GroupKey = Tuple[LocationSignature, FrozenSet[str]]
 # a member of a group: the search + which of its targets fall in this signature
 Member = Tuple[SavedSearch, List[LocationTarget]]
@@ -58,18 +62,22 @@ def scrape_sig(t: LocationTarget) -> LocationSignature:
 
 
 def group_searches(searches: List[SavedSearch]) -> Dict[GroupKey, List[Member]]:
-    """Group (search, target) pairs by (scrape signature, feature set)."""
-    groups: Dict[GroupKey, Dict[int, Member]] = defaultdict(dict)
+    """Group (search, target) pairs by scrape signature. The key also carries the
+    union of the members' wanted features (what the tagging fetches must cover)."""
+    by_sig: Dict[LocationSignature, Dict[int, Member]] = defaultdict(dict)
     for s in searches:
-        feats = frozenset(s.features or [])
         for t in s.locations:
-            key = (scrape_sig(t), feats)
-            member = groups[key].get(s.id)
+            members = by_sig[scrape_sig(t)]
+            member = members.get(s.id)
             if member is None:
-                groups[key][s.id] = (s, [t])
+                members[s.id] = (s, [t])
             else:
                 member[1].append(t)
-    return {k: list(v.values()) for k, v in groups.items()}
+    out: Dict[GroupKey, List[Member]] = {}
+    for sig, members in by_sig.items():
+        feats = frozenset(f for s, _ in members.values() for f in (s.features or []))
+        out[(sig, feats)] = list(members.values())
+    return out
 
 
 def _loosest_min(values: List[Optional[float]]) -> Optional[float]:
@@ -81,6 +89,12 @@ def _loosest_max(values: List[Optional[float]]) -> Optional[float]:
 
 
 def union_filters(members: List[Member], features: FrozenSet[str]) -> GatewayFilters:
+    """The loosest union of the group's filters, with the group's features to tag.
+
+    Used only to narrow the per-feature TAGGING fetches (the main fetch is unfiltered):
+    a listing outside every member's range is dropped anyway, and one missing a value
+    simply stays ❔.
+    """
     searches = [s for s, _ in members]
     # property-type ids: union (server does OR) — unless any watcher wants all types.
     property_ids: Optional[List[int]] = None
@@ -99,7 +113,7 @@ def union_filters(members: List[Member], features: FrozenSet[str]) -> GatewayFil
         min_floor=_int_or_none(_loosest_min([s.min_floor for s in searches])),
         max_floor=_int_or_none(_loosest_max([s.max_floor for s in searches])),
         property_ids=property_ids,
-        features=list(features),
+        features=sorted(features),
     )
 
 
@@ -125,32 +139,23 @@ def matches_location(listing: Dict, targets: List[LocationTarget]) -> bool:
     return False
 
 
+def _outside(value: Optional[float], lo, hi) -> bool:
+    """True only for a REPORTED value outside [lo, hi]; a missing value never is."""
+    if value is None:
+        return False
+    return (lo is not None and value < lo) or (hi is not None and value > hi)
+
+
 def matches_non_amenity(listing: Dict, s: SavedSearch) -> bool:
-    price = _to_float(listing.get("price"))
-    if s.min_price is not None and (price is None or price < s.min_price):
+    """Lenient: reject only on a value the listing reports outside the filter."""
+    if _outside(_to_float(listing.get("price")), s.min_price, s.max_price):
         return False
-    if s.max_price is not None and (price is None or price > s.max_price):
+    if _outside(_to_float(listing.get("rooms")), s.min_rooms, s.max_rooms):
         return False
-
-    rooms = _to_float(listing.get("rooms"))
-    if s.min_rooms is not None and (rooms is None or rooms < s.min_rooms):
+    if _outside(_to_float(listing.get("size")), s.min_sqm, s.max_sqm):
         return False
-    if s.max_rooms is not None and (rooms is None or rooms > s.max_rooms):
+    if _outside(_to_float(listing.get("floor")), s.min_floor, s.max_floor):
         return False
-
-    # Size / floor: only reject when the listing reports them.
-    size = _to_float(listing.get("size"))
-    if s.min_sqm is not None and size is not None and size < s.min_sqm:
-        return False
-    if s.max_sqm is not None and size is not None and size > s.max_sqm:
-        return False
-
-    floor = _to_float(listing.get("floor"))
-    if s.min_floor is not None and floor is not None and floor < s.min_floor:
-        return False
-    if s.max_floor is not None and floor is not None and floor > s.max_floor:
-        return False
-
     # Property type / condition come off the marker (id); reject only when known.
     if s.property_types:
         pid = listing.get("property_type_id")
@@ -163,18 +168,9 @@ def matches_non_amenity(listing: Dict, s: SavedSearch) -> bool:
     return True
 
 
-def matches_features(listing: Dict, s: SavedSearch) -> bool:
-    # Every required feature must be present. Yad2 listings carry exactly the
-    # features filtered server-side for their group.
-    return set(s.features or []).issubset(set(listing.get("features") or []))
-
-
 def matches_full(listing: Dict, s: SavedSearch, targets: List[LocationTarget]) -> bool:
-    return (
-        matches_location(listing, targets)
-        and matches_non_amenity(listing, s)
-        and matches_features(listing, s)
-    )
+    # Features never drop a Yad2 listing (they only tag it ✅ / ❔), so they aren't here.
+    return matches_location(listing, targets) and matches_non_amenity(listing, s)
 
 
 # --- scraping ---
@@ -183,14 +179,31 @@ async def scrape_group(
     http: aiohttp.ClientSession, sig: LocationSignature, f: GatewayFilters,
     members: List[Member],
 ) -> Dict[str, Dict]:
+    """Main fetch with no filters (nothing silently dropped), then one ticked-only
+    fetch per wanted feature, narrowed by ``f``'s ranges, to tag who has it. A failed
+    tagging fetch only leaves its feature unknown (❔) on this cycle's listings."""
     listings: Dict[str, Dict] = {}
-    for marker in await yad2_gateway.fetch_map(http, sig, f):
-        listing = yad2_gateway.normalize_marker(marker, f)
+    for marker in await yad2_gateway.fetch_map(http, sig, GatewayFilters()):
+        listing = yad2_gateway.normalize_marker(marker)
         listings[listing["uid"]] = listing
+
+    if listings:
+        for feat in f.features:
+            try:
+                markers = await yad2_gateway.fetch_map(http, sig, replace(f, features=[feat]))
+            except Exception as exc:
+                logger.warning("Yad2 tagging fetch for %r failed (%s); it stays unknown.", feat, exc)
+                continue
+            for m in markers:
+                listing = listings.get(f"yad2:{m.get('token', '')}")
+                if listing is not None and feat not in listing["features"]:
+                    listing["features"].append(feat)
+                    if feat == "mamad":
+                        listing["is_mamad"] = True
 
     # Routine per-cycle bookkeeping: DEBUG, so a healthy cycle stays silent.
     logger.debug(
-        "Scraped %d listings for region=%s area=%s city=%s features=%s (watchers=%d)",
+        "Scraped %d listings for region=%s area=%s city=%s, tagged features=%s (watchers=%d)",
         len(listings), sig.region_id, sig.area_id, sig.city_id, f.features, len(members),
     )
     return listings
@@ -254,7 +267,7 @@ async def route_notifications(
                 uid = listing["uid"]
                 if uid in chat_seen:
                     continue
-                if await send(s.chat_id, format_apartment_message(listing), main_image(listing)):
+                if await send(s.chat_id, format_apartment_message(listing, s), main_image(listing)):
                     chat_seen.add(uid)
                     await _pace()
         else:
@@ -270,7 +283,7 @@ async def route_notifications(
         if uid not in seen:
             if uid in chat_seen:
                 to_insert.append((uid, price))
-            elif await send(s.chat_id, format_apartment_message(listing), main_image(listing)):
+            elif await send(s.chat_id, format_apartment_message(listing, s), main_image(listing)):
                 chat_seen.add(uid)
                 to_insert.append((uid, price))
                 await _pace()
