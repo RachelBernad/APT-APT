@@ -32,6 +32,12 @@ _CALLBACK_LABELS = {
     "home:add": "open add monitor",
     "home:list": "open my searches",
     "home:help": "open help",
+    # control menu (under every command reply)
+    "menu:monitor": "menu: start/resume",
+    "menu:stop": "menu: pause",
+    "menu:status": "menu: status",
+    "menu:help": "menu: help",
+    "menu:filters": "menu: open filters",
     # area wizard
     "az:city": "browse city neighborhoods",
     "az:whole": "watch whole city",

@@ -12,13 +12,14 @@ import signal
 import aiohttp
 from telegram import BotCommand, InputMediaPhoto, Update
 from telegram.error import Forbidden, RetryAfter, TelegramError, TimedOut
-from telegram.ext import Application, CommandHandler, TypeHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, TypeHandler
 
 from aptbot.bot import activity
 from aptbot import config
 from aptbot import engine
 from aptbot import fb_engine
 from aptbot.bot import formatting
+from aptbot.bot import menu
 from aptbot.bot.filters import FilterCommands
 from aptbot.bot.gate import ChatGate
 from aptbot.bot.simple import SimpleCommands, now_iso
@@ -201,6 +202,8 @@ class Bot:
         for name, fn in (("start", c.start), ("help", c.help), ("monitor", c.monitor),
                          ("stop", c.stop), ("status", c.status)):
             self.application.add_handler(CommandHandler(name, fn))
+        # The control menu under every reply (Filters is the card's own entry point).
+        self.application.add_handler(CallbackQueryHandler(c.menu_tap, pattern=menu.PATTERN))
 
     async def _set_commands(self):
         await self.application.bot.set_my_commands([

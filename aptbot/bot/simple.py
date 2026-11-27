@@ -3,6 +3,8 @@
 /monitor starts (or resumes) watching Tel Aviv on Yad2 and the Facebook groups,
 /stop pauses it, /status shows both sources and the filters, /help explains.
 /filters (the inline-keyboard card) lives in ``aptbot.bot.filters``.
+Every reply carries the state-aware control menu (``aptbot.bot.menu``); its taps
+land in ``menu_tap``.
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from aptbot import config
+from aptbot.bot import menu
 from aptbot.bot.filters import filters_summary, has_filters
 from aptbot.db import Database
 from aptbot.models import SavedSearch
@@ -50,6 +53,7 @@ def help_text(fb_on: bool) -> str:
         f"• <b>Yad2</b>: rentals in {area_summary()}, checked every {_interval_min()} minutes "
         "(new listings and price changes).\n"
         f"{fb}\n"
+        "Tap the buttons below, or send a command:\n"
         "/monitor: start watching (you get a short taster of what's there now)\n"
         "/filters: price, rooms, size, floor, type, condition and features like ממ״ד. "
         "A listing that doesn't mention a field is kept and marked ❔\n"
@@ -91,11 +95,26 @@ class SimpleCommands:
         searches = await self.db.list_searches(chat_id)
         return searches[0] if searches else None
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def _reply(self, update: Update, text: str) -> None:
+        """Reply with the control menu for the chat's current state underneath."""
+        s = await self._own_search(update.effective_chat.id)
         await update.effective_message.reply_text(
-            help_text(self.fb_api is not None), parse_mode=ParseMode.HTML)
+            text, parse_mode=ParseMode.HTML, reply_markup=menu.menu_markup(s))
+
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._reply(update, help_text(self.fb_api is not None))
 
     help = start
+
+    async def menu_tap(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """A control-menu button: retire that menu, then run the command (its reply
+        brings a fresh menu)."""
+        query = update.callback_query
+        await query.answer()
+        await menu.retire(query)
+        action = query.data.split(":", 1)[1]
+        await {"monitor": self.monitor, "stop": self.stop,
+               "status": self.status, "help": self.help}[action](update, context)
 
     async def monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat = update.effective_chat
@@ -107,11 +126,9 @@ class SimpleCommands:
         if s and s.is_active:
             if _loc_keys(s.locations) != _loc_keys(targets):     # the configured areas changed
                 await self.db.set_search_locations(s.id, targets)
-                await update.effective_message.reply_text(
-                    f"✅ Already watching; Yad2 areas updated to: {area_summary()}.")
+                await self._reply(update, f"✅ Already watching; Yad2 areas updated to: {area_summary()}.")
                 return
-            await update.effective_message.reply_text(
-                "✅ Already watching Tel Aviv. /status shows what's happening.")
+            await self._reply(update, "✅ Already watching Tel Aviv.")
             return
         if s:
             await self.db.set_search_locations(s.id, targets)
@@ -122,19 +139,18 @@ class SimpleCommands:
             sid = await self.db.add_search(
                 SavedSearch(id=0, chat_id=chat.id, label=MONITOR_LABEL), targets)
         sources = "Yad2 and Facebook" if self.fb_api is not None else "Yad2"
-        await update.effective_message.reply_text(
-            f"👀 Watching <b>Tel Aviv</b> on {sources}. A short taster is on its way, "
-            "then only new posts.", parse_mode=ParseMode.HTML)
+        await self._reply(update, f"👀 Watching <b>Tel Aviv</b> on {sources}. A short taster is on "
+                                  "its way, then only new posts.")
         logger.info("Monitor #%s started in chat %s", sid, chat.id)
         asyncio.create_task(self.on_started(sid))
 
     async def stop(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         s = await self._own_search(update.effective_chat.id)
         if not s or not s.is_active:
-            await update.effective_message.reply_text("Not watching anything. /monitor to start.")
+            await self._reply(update, "Not watching anything right now.")
             return
         await self.db.set_search_active(s.id, False)
-        await update.effective_message.reply_text("⏸ Paused. /monitor resumes it.")
+        await self._reply(update, "⏸ Paused. Your filters are kept.")
 
     async def status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         s = await self._own_search(update.effective_chat.id)
@@ -142,7 +158,7 @@ class SimpleCommands:
                  f"<b>Yad2 areas:</b> {area_summary()}"]
         if s is not None:
             lines.append("<b>Filters:</b> " + ("\n" + filters_summary(s) if has_filters(s)
-                                                 else "none (/filters to choose)"))
+                                                 else "none"))
         last = await self.db.get_meta("yad2_last_cycle")
         lines.append(f"<b>Yad2:</b> every {_interval_min()} min, last check "
                      f"{_when(datetime.fromisoformat(last)) if last else 'not yet'}")
@@ -157,7 +173,7 @@ class SimpleCommands:
                       f"{st.last_sent} sent")
             lines.append(f"<b>Facebook:</b> {fb}")
             lines.append(f"<b>AI summaries:</b> {_ai_status(self.analyzer)}")
-        await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+        await self._reply(update, "\n".join(lines))
 
 
 def _ai_status(analyzer) -> str:

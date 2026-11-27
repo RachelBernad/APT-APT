@@ -11,7 +11,9 @@ silently drop listings with no price, so none are sent on the main fetch.
 
 Boolean features (elevator, ממ״ד, balcony, ...) aren't on markers. They never drop a
 Yad2 listing: one extra ticked-only fetch per wanted feature tags the listings that
-have it (✅); the rest are unknown (❔), because an unticked box can mean "didn't say".
+have it (✅) and marks the rest it covered as checked (❌: the box isn't ticked, so
+most likely it doesn't have it). A listing the fetch couldn't cover (it failed, or the
+listing lacks a value the fetch was narrowed by) stays unknown (❔).
 """
 from __future__ import annotations
 
@@ -139,6 +141,22 @@ def matches_location(listing: Dict, targets: List[LocationTarget]) -> bool:
     return False
 
 
+def _in_server_range(listing: Dict, f: GatewayFilters) -> bool:
+    """Would a tagging fetch narrowed by ``f`` have returned this listing had its box been
+    ticked? Only then does "not returned" mean "not ticked". A missing value under a
+    narrowed range is not covered (the server drops it), so its feature stays ❔."""
+    for key, lo, hi in (("price", f.min_price, f.max_price), ("rooms", f.min_rooms, f.max_rooms),
+                        ("size", f.min_sqm, f.max_sqm), ("floor", f.min_floor, f.max_floor)):
+        if lo is None and hi is None:
+            continue
+        v = _to_float(listing.get(key))
+        if v is None or _outside(v, lo, hi):
+            return False
+    if f.property_ids and listing.get("property_type_id") not in f.property_ids:
+        return False
+    return True
+
+
 def _outside(value: Optional[float], lo, hi) -> bool:
     """True only for a REPORTED value outside [lo, hi]; a missing value never is."""
     if value is None:
@@ -181,13 +199,18 @@ async def scrape_group(
 ) -> Dict[str, Dict]:
     """Main fetch with no filters (nothing silently dropped), then one ticked-only
     fetch per wanted feature, narrowed by ``f``'s ranges, to tag who has it. A failed
-    tagging fetch only leaves its feature unknown (❔) on this cycle's listings."""
+    tagging fetch only leaves its feature unknown (❔) on this cycle's listings.
+
+    ``features_checked`` lists the features a listing was covered for: ticked → in
+    ``features`` (✅), else not ticked (❌)."""
     listings: Dict[str, Dict] = {}
     for marker in await yad2_gateway.fetch_map(http, sig, GatewayFilters()):
         listing = yad2_gateway.normalize_marker(marker)
+        listing["features_checked"] = []
         listings[listing["uid"]] = listing
 
     if listings:
+        covered = [l for l in listings.values() if _in_server_range(l, f)]
         for feat in f.features:
             try:
                 markers = await yad2_gateway.fetch_map(http, sig, replace(f, features=[feat]))
@@ -200,6 +223,8 @@ async def scrape_group(
                     listing["features"].append(feat)
                     if feat == "mamad":
                         listing["is_mamad"] = True
+            for listing in covered:
+                listing["features_checked"].append(feat)
 
     # Routine per-cycle bookkeeping: DEBUG, so a healthy cycle stays silent.
     logger.debug(

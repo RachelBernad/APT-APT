@@ -138,14 +138,14 @@ async def test_no_monitor_yet(db):
     cmd = fl.FilterCommands(db, on_saved=None)
     ui = Ui()
     assert await cmd.entry(ui.message(), ui.context) == ConversationHandler.END
-    assert "/monitor" in ui.shown[-1][0]
+    assert "Start watching" in ui.shown[-1][0] and ui.buttons() == ["menu:monitor", "menu:help"]
 
 
 async def test_expired_card_button(db):
     _, cmd, _ = await _setup(db)
     ui = Ui()
     assert await cmd.button(ui.tap("ft:mamad"), ui.context) == ConversationHandler.END
-    assert "/filters" in ui.shown[-1][0]
+    assert "expired" in ui.shown[-1][0] and "menu:filters" in ui.buttons()
 
 
 async def test_gate_refuses_a_strangers_button_tap():

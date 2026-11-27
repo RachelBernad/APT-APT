@@ -55,7 +55,7 @@ def _has_range(s, field: str) -> bool:
 
 def format_apartment_message(apt: Dict[str, Any], s=None) -> str:
     """``s`` (the monitor's SavedSearch) adds ❔ for filtered fields the listing doesn't
-    report, and a ✅ / ❔ line for the monitor's wanted features."""
+    report, and a ✅ / ❌ / ❔ line for the monitor's wanted features."""
     location = _html_value(
         apt.get("location")
         or ", ".join(p for p in (apt.get("street"), apt.get("city")) if p)
@@ -80,10 +80,12 @@ def format_apartment_message(apt: Dict[str, Any], s=None) -> str:
         elif _has_range(s, field):
             lines.append(f"<b>{label}:</b> ❔ not listed")
     have = set(apt.get("features") or [])
+    checked = set(apt.get("features_checked") or [])
     wanted = list(s.features or []) if s is not None else []
-    # Wanted features: ✅ ticked on Yad2, ❔ not ticked (could be "no" or "didn't say").
+    # Wanted features: ✅ ticked on Yad2, ❌ checked and not ticked, ❔ couldn't check.
     # Without a monitor, show the features known to be present.
-    chips = [f"{'✅' if k in have else '❔'} {FEATURES[k][2]}" for k in wanted if k in FEATURES]
+    chips = [f"{'✅' if k in have else '❌' if k in checked else '❔'} {FEATURES[k][2]}"
+             for k in wanted if k in FEATURES]
     if not wanted:
         chips = [f"{FEATURES[k][3]} {FEATURES[k][2]}" for k in apt.get("features") or [] if k in FEATURES]
     if chips:

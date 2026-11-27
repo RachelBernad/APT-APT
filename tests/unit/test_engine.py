@@ -198,6 +198,10 @@ async def test_main_fetch_is_unfiltered_and_tagging_fetches_mark_features(monkey
     assert listings["yad2:b"]["features"] == ["elevator"] and listings["yad2:b"]["is_mamad"] is None
     assert "yad2:zz" not in listings             # tagging never adds listings
     assert listings["yad2:np"]["features"] == []  # no price: still here, untagged
+    # b was covered by both fetches: mamad not ticked → checked (❌); np has no price, so
+    # the price-narrowed fetches couldn't cover it → unknown (❔).
+    assert listings["yad2:b"]["features_checked"] == ["elevator", "mamad"]
+    assert listings["yad2:np"]["features_checked"] == []
     assert all(engine.matches_full(l, s, s.locations) for l in listings.values())
 
 
@@ -212,6 +216,7 @@ async def test_failed_tagging_fetch_keeps_listings_untagged(monkeypatch):
     f = engine.union_filters([(s, s.locations)], frozenset(s.features))
     listings = await engine.scrape_group(None, engine.scrape_sig(s.locations[0]), f, [(s, s.locations)])
     assert set(listings) == {"yad2:a"} and listings["yad2:a"]["features"] == []
+    assert listings["yad2:a"]["features_checked"] == []          # failed → ❔, not ❌
 
 
 # --- routing: backfill / only-new / price-change --------------------------
@@ -437,6 +442,9 @@ def test_listing_message_marks_wanted_features_and_unknown_filtered_fields():
     assert "<b>Price:</b> ❔ not listed" in text
     assert "<b>Rooms:</b> ❔ not listed" in text
     assert "<b>Features:</b> ✅ Safe room · ❔ Elevator" in text
+    checked = format_apartment_message(
+        make_listing("y:3", features=["mamad"], features_checked=["mamad", "elevator"]), s)
+    assert "<b>Features:</b> ✅ Safe room · ❌ Elevator" in checked
     assert "Size" not in text                     # no size filter, no size: nothing shown
     plain = format_apartment_message(make_listing("y:2", features=["mamad"]))
     assert "🛡 Safe room" in plain and "❔" not in plain

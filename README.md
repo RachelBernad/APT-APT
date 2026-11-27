@@ -29,7 +29,7 @@ aptbot/                     the bot (run: python -m aptbot)
   fb_engine.py              Facebook: poll the groups → dedup by content hash → AI facts → route
   listing_ai/               AI Listing Facts for posts over ChatGPT OAuth (SPEC.md; login: python -m aptbot.listing_ai login)
   bot/                      Telegram-facing: simple.py (live commands), gate.py (allowlist),
-                            formatting, activity log; filters.py = /filters card
+                            formatting, activity log; filters.py = /filters card; menu.py = control menu
   scrapers/
     yad2/                   the Yad2 source, self-contained:
       gateway.py              listings map feed (200-cap price bisection)
@@ -78,11 +78,18 @@ Domain terms are in [`GLOSSARY.md`](GLOSSARY.md) and decisions in [`docs/adr/`](
 `/filters`, `/stop`, `/status` (last check of each source, the AI summaries' state, the filters) and `/help`.
 In a group, use them as commands (`/monitor@YourBot` also works), since bots in groups only see commands.
 
+Every reply carries a **control menu** of inline buttons that follows the monitor's state: no monitor →
+▶️ Start watching · ❓ Help; watching → 🎛 Filters · 📊 Status · ⏸ Pause · ❓ Help; paused → ▶️ Resume · 🎛 Filters ·
+📊 Status · ❓ Help. The Filters button says "Set filters" until some are chosen, then how many. A tapped menu goes
+inert and the reply brings a fresh one, so only the newest menu in the chat is live.
+
 `/filters` opens an inline-keyboard card for the chat's monitor: price, rooms, size and floor ranges (quick picks
 or Custom…, typed as a reply), property type, condition, and features (ממ״ד, ממ״ק, building shelter, elevator,
 parking, balcony, A/C, renovated, furnished, bars, storage, accessibility, pets). Save sends a fresh taster under
 the new filters. Either allowed person can tap the card. Filters are **lenient**: a listing or post is dropped
 only for a value it states outside the filter (price above the max, a post saying "אין ממ״ד"). A missing value
 always passes and is marked ❔. Yad2 features never drop a listing: Yad2 posters often leave the boxes unticked,
-so one extra request per chosen feature per cycle tags the ticked ones ✅ and the rest ❔. On Facebook, features
+so one extra request per chosen feature per cycle tags the ticked ones ✅ and the unticked ones ❌ (most likely
+doesn't have it, but still sent). ❔ only when that request failed, or the listing lacks a value (say, a price) the
+request was narrowed by. On Facebook, features
 are checked through the AI facts (ממ״ד, ממ״ק, shelter, elevator, balcony, renovated); the others are always ❔.

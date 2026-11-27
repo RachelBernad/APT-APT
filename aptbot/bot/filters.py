@@ -25,6 +25,7 @@ from telegram.constants import ParseMode
 from telegram.ext import (CallbackQueryHandler, CommandHandler, ContextTypes,
                           ConversationHandler, MessageHandler, TypeHandler, filters)
 
+from aptbot.bot import menu
 from aptbot.db import Database
 from aptbot.models import (FEATURES, FILTER_FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
                            SavedSearch)
@@ -210,9 +211,14 @@ class FilterCommands:
         return searches[0] if searches else None
 
     async def entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """/filters, or the menu's Filters button (which retires that menu)."""
+        if update.callback_query is not None:
+            await update.callback_query.answer()
+            await menu.retire(update.callback_query)
         s = await self._own_search(update.effective_chat.id)
         if s is None:
-            await update.effective_message.reply_text("No monitor yet. Send /monitor first.")
+            await update.effective_message.reply_text(
+                "No monitor yet. Start watching first.", reply_markup=menu.menu_markup(None))
             return ConversationHandler.END
         context.chat_data[DRAFT_KEY] = replace(s, features=list(s.features or []),
                                                property_types=list(s.property_types or []) or None)
@@ -226,7 +232,9 @@ class FilterCommands:
         await query.answer()
         draft: Optional[SavedSearch] = context.chat_data.get(DRAFT_KEY)
         if draft is None:
-            await query.edit_message_text("This card expired. Send /filters again.")
+            await query.edit_message_text(
+                "This card expired.",
+                reply_markup=menu.menu_markup(await self._own_search(update.effective_chat.id)))
             return ConversationHandler.END
         data = query.data
         parts = data.split(":")
@@ -237,7 +245,8 @@ class FilterCommands:
 
         if data == "wz:cancel":
             self._drop(context)
-            await query.edit_message_text("Cancelled. The filters didn't change.")
+            await query.edit_message_text("Cancelled. The filters didn't change.",
+                                          reply_markup=menu.menu_markup(await self._own_search(draft.chat_id)))
             return ConversationHandler.END
         if data == "wz:save":
             return await self._save(query, context, draft)
@@ -318,18 +327,22 @@ class FilterCommands:
             features=draft.features)
         await self.db.reprime_search(draft.id)
         self._drop(context)
+        fresh = await self.db.get_search(draft.id)      # /stop may have run while the card was open
         await query.edit_message_text(
             f"✅ <b>Filters saved</b>\n\n{filters_summary(draft)}\n\n"
-            "🔎 A fresh taster under these filters is on its way, then only new listings.",
-            parse_mode=ParseMode.HTML)
+            + ("🔎 A fresh taster under these filters is on its way, then only new listings."
+               if fresh.is_active else "⏸ The monitor is paused; Resume to get listings under these filters."),
+            parse_mode=ParseMode.HTML, reply_markup=menu.menu_markup(fresh))
         logger.info("Filters saved for monitor #%s in chat %s", draft.id, draft.chat_id)
-        if draft.is_active:
+        if fresh.is_active:
             asyncio.create_task(self.on_saved(draft.id))
         return ConversationHandler.END
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self._drop(context)
-        await update.effective_message.reply_text("Cancelled. The filters didn't change.")
+        await update.effective_message.reply_text(
+            "Cancelled. The filters didn't change.",
+            reply_markup=menu.menu_markup(await self._own_search(update.effective_chat.id)))
         return ConversationHandler.END
 
     async def timeout(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -342,7 +355,8 @@ class FilterCommands:
 
     def conversation(self) -> ConversationHandler:
         return ConversationHandler(
-            entry_points=[CommandHandler("filters", self.entry)],
+            entry_points=[CommandHandler("filters", self.entry),
+                          CallbackQueryHandler(self.entry, pattern=menu.FILTERS_PATTERN)],
             states={
                 FORM: [CallbackQueryHandler(self.button, pattern=r"^(wz|rng|pt|ft|cond):")],
                 AWAIT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.typed_value),

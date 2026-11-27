@@ -12,7 +12,7 @@ _Avoid_: saved search (in user-facing text), subscription, alert
 **Filter**:
 A Monitor's conditions (price, rooms, size, floor, type, condition, features), chosen with `/filters`. Lenient: an
 item is dropped only for a value it states outside the Filter; a missing value passes and is shown as ❔. Yad2
-features never drop a Listing, they only tag it (✅ ticked / ❔ not ticked).
+features never drop a Listing, they only tag it (✅ ticked / ❌ not ticked / ❔ couldn't check).
 _Avoid_: criteria, rule
 
 **Listing**:
