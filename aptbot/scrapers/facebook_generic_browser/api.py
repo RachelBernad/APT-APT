@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import os
 import contextlib
+import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,8 @@ from aptbot.scrapers.facebook_generic_browser.errors import (AccountAtRisk, FBGB
 from aptbot.scrapers.facebook_generic_browser.models import Group, GroupHit, Post, State, Status
 from aptbot.scrapers.facebook_generic_browser.store import Store
 from aptbot.scrapers.facebook_generic_browser.tabs import TabPool
+
+log = logging.getLogger(__name__)
 
 _END = object()
 
@@ -314,12 +317,25 @@ class FacebookAPI:
                 with contextlib.suppress(BaseException):
                     await runner
 
+    async def commit_watermarks(self) -> None:
+        """Store the watermarks held back by `new_posts(commit=False)` (call once the posts were delivered)."""
+        pending, self._pending_watermarks = getattr(self, "_pending_watermarks", {}), {}
+        for gid, ts in pending.items():
+            await self.store.set_watermark(gid, ts)
+
     async def new_posts(self, group_ids: Iterable[str] | None = None, *, per_group_limit: int = 50,
-                        first_run_limit: int = 10, timeout: float | None = None) -> list[Post]:
+                        first_run_limit: int = 10, timeout: float | None = None,
+                        commit: bool = True) -> list[Post]:
         """Posts created since the previous new_posts() call, across groups (default: all MEMBER groups).
         Cheapest polling: groups whose last_post_time didn't move are skipped without being opened.
         Groups are read concurrently (one tab each). The first call per group returns its newest
-        `first_run_limit` posts and sets the watermark."""
+        `first_run_limit` posts and sets the watermark.
+
+        `commit=False` holds the new watermarks back until `commit_watermarks()`, so a caller that
+        fails to deliver the posts gets them again on the next call (at-least-once).
+        A group that fails (timeout, not a member, schema drift) is logged and counted in
+        `self.last_group_errors`; `Halted` (incl. `NotLoggedIn`) is raised after the finished
+        groups' watermarks are kept."""
         groups = await self.list_groups(max_age=0, timeout=timeout)
         wanted = set(group_ids) if group_ids else None
         todo: list[tuple[Group, float | None]] = []
@@ -335,11 +351,14 @@ class FacebookAPI:
             limit = per_group_limit if wm is not None else first_run_limit
             posts = await self.latest_posts(g.id, limit=limit, since=wm, max_age=0, priority=Priority.POLL,
                                             timeout=timeout)
-            if posts:
-                await self.store.set_watermark(g.id, max(p.created_at.timestamp() for p in posts if p.created_at))
+            stamps = [p.created_at.timestamp() for p in posts if p.created_at]
+            if stamps:
+                pending[g.id] = max(stamps)
             elif wm is None:
-                await self.store.set_watermark(g.id, time.time())
+                pending[g.id] = time.time()
             return posts
+
+        pending: dict[str, float] = {}
 
         try:
             results = await asyncio.gather(*(one(g, wm) for g, wm in todo), return_exceptions=True)
@@ -347,11 +366,21 @@ class FacebookAPI:
             if self._oxide:            # a fresh worker per cycle: nothing leaks into the next one
                 await self._oxide.close()
         out: list[Post] = []
-        for r in results:
+        halted: Halted | None = None
+        self.last_group_errors = 0
+        for (g, _), r in zip(todo, results):
             if isinstance(r, Halted):
-                raise r
-            if isinstance(r, list):
+                halted = halted or r
+            elif isinstance(r, BaseException):
+                self.last_group_errors += 1
+                log.warning("new_posts: group %s failed: %s: %s", g.id, type(r).__name__, r)
+            else:
                 out += r
+        self._pending_watermarks = pending
+        if commit or halted is not None:
+            await self.commit_watermarks()
+        if halted is not None:
+            raise halted
         return sorted(out, key=lambda p: p.created_at.timestamp() if p.created_at else 0, reverse=True)
 
     async def search_groups(self, query: str, *, limit: int = 20, timeout: float | None = None) -> list[GroupHit]:

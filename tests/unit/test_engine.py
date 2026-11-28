@@ -448,3 +448,35 @@ def test_listing_message_marks_wanted_features_and_unknown_filtered_fields():
     assert "Size" not in text                     # no size filter, no size: nothing shown
     plain = format_apartment_message(make_listing("y:2", features=["mamad"]))
     assert "🛡 ממ״ד" in plain and "❔" not in plain
+
+
+async def test_price_appearing_is_not_a_price_change(db):
+    from tests.conftest import FakeSender, make_listing
+    from aptbot.models import SavedSearch
+    await db.upsert_user(5, "u")
+    sid = await db.add_search(SavedSearch(id=0, chat_id=5, label="x"), [])
+    await db.mark_primed(sid)
+    await db.bulk_upsert_seen(sid, [("yad2:a", None)])
+    sender = FakeSender()
+    await engine.route_notifications(sender, db, await db.get_search(sid),
+                                     [make_listing("yad2:a", price=6000)], {})
+    assert sender.sent == [] and (await db.get_seen_map(sid))["yad2:a"] == 6000
+
+
+async def test_concurrent_routes_of_one_search_send_once(db, monkeypatch):
+    import asyncio
+    from tests.conftest import FakeSender, make_listing
+    from aptbot.models import SavedSearch
+
+    async def no_pace():
+        await asyncio.sleep(0)
+    monkeypatch.setattr(engine, "_pace", no_pace)
+    await db.upsert_user(6, "u")
+    sid = await db.add_search(SavedSearch(id=0, chat_id=6, label="x"), [])
+    await db.mark_primed(sid)
+    s = await db.get_search(sid)
+    sender = FakeSender()
+    finals = [make_listing("yad2:n", price=5000)]
+    await asyncio.gather(engine.route_notifications(sender, db, s, finals, {}),
+                         engine.route_notifications(sender, db, s, finals, {}))
+    assert sender.apartments == 1

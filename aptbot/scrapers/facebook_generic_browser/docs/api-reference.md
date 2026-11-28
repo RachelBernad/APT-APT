@@ -82,11 +82,18 @@ async for post in fb.stream_posts(gid, since=last_seen):
     handle(post)
 ```
 
-## `new_posts(group_ids=None, *, per_group_limit=50, first_run_limit=10) -> list[Post]`
+## `new_posts(group_ids=None, *, per_group_limit=50, first_run_limit=10, commit=True) -> list[Post]`
 Incremental polling across groups (default: every `MEMBER` group). Each call returns only posts created after
 the previous call (per-group watermark in the cache). Groups whose `last_post_time` hasn't moved past their
 watermark are **skipped without being opened**. The changed groups are read **concurrently**. The first call for a
 group returns its newest `first_run_limit` posts. Cost: 1 (`list_groups`) + 1 per changed group.
+- `commit=False` holds the new watermarks back until **`commit_watermarks()`**: call it once the posts were delivered,
+  and a failed delivery gets the same posts again next call (at-least-once; dedup downstream).
+- A group that fails (timeout, `NotMember`, `SchemaDrift`) is logged and counted in `fb.last_group_errors`; the
+  others still return. `Halted`/`NotLoggedIn` is raised after the finished groups' watermarks are stored.
+
+## `commit_watermarks() -> None`
+Stores the watermarks held back by the last `new_posts(commit=False)`.
 
 ## `search_groups(query, *, limit=20) -> list[GroupHit]`
 Facebook search → Groups filter, typed like a person (top search box, Enter, "Groups"). `GroupHit{id, name, url,

@@ -35,7 +35,7 @@ ENGINE_ENV = {
 }
 _NEVER_FORWARD = ("BO_DEBUG_HEAP", "BO_NET_LOG", "BROWSER_OXIDE_DUMP_POST_DIR")
 _CRASH = re.compile(r"panicked|Fatal|FATAL|Traceback|Error:", re.I)
-_SECRET = re.compile(r"(cookie|c_user|xs|datr|fr|sb|fb_dtsg|lsd|jazoest|token)[\"']?\s*[:=]\s*[^\s;,&]+", re.I)
+_SECRET = re.compile(r"\b(cookie|c_user|xs|datr|fr|sb|fb_dtsg|lsd|jazoest|token)[\"']?\s*[:=]\s*[^\s;,&]+", re.I)
 
 
 def native_lib() -> str | None:

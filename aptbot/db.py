@@ -120,7 +120,7 @@ _FILTER_FIELDS = (
 
 
 def _now() -> str:
-    return datetime.datetime.utcnow().isoformat(timespec="seconds")
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _opt_bool(value) -> Optional[bool]:
@@ -539,6 +539,26 @@ class Database:
         cur = await self._conn.execute("SELECT value FROM meta WHERE key=?", (key,))
         row = await cur.fetchone()
         return row["value"] if row else None
+
+    async def migrate_chat(self, old: int, new: int) -> int:
+        """A group became a supergroup (new id): move its monitors and user row over.
+        Returns how many monitors moved. saved_searches.chat_id references users, so the
+        new user row must exist before the monitors move."""
+        async with self._write_lock:
+            try:
+                await self._conn.execute(
+                    "INSERT OR IGNORE INTO users (chat_id, username, first_name, last_name, is_active, created_at) "
+                    "SELECT ?, username, first_name, last_name, is_active, created_at FROM users WHERE chat_id=?",
+                    (new, old))
+                cur = await self._conn.execute(
+                    "UPDATE saved_searches SET chat_id=? WHERE chat_id=?", (new, old))
+                moved = cur.rowcount
+                await self._conn.execute("DELETE FROM users WHERE chat_id=?", (old,))
+                await self._conn.commit()
+            except Exception:
+                await self._conn.rollback()
+                raise
+        return moved
 
     async def set_meta(self, key: str, value: str) -> None:
         async with self._write_lock:

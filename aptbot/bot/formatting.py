@@ -301,6 +301,11 @@ def format_fb_backfill_intro(sample: int, groups: int) -> str:
     )
 
 
+def format_fb_taster_empty() -> str:
+    return ("📘 <b>Facebook:</b> no recent post matches your filters right now. "
+            "I'll send new ones as they're posted.")
+
+
 def format_fb_stopped(reason: str) -> str:
     return (
         "⚠️ <b>Facebook reading stopped</b> to keep the account safe.\n"

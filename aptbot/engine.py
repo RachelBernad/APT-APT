@@ -246,7 +246,21 @@ def _newest_first(listings: List[Dict]) -> List[Dict]:
     return sorted(listings, key=lambda l: (l.get("order_id") or 0), reverse=True)
 
 
+# One router per search at a time: the immediate scan (scan_now) and the periodic cycle
+# can reach the same search together; without this both pass the "primed?" / "seen?"
+# checks before either writes, and the chat gets a double taster or double sends.
+_route_locks: Dict[int, asyncio.Lock] = {}
+
+
 async def route_notifications(
+    send: Sender, db: Database, s: SavedSearch, finals: List[Dict],
+    notified: Dict[int, set],
+) -> None:
+    async with _route_locks.setdefault(s.id, asyncio.Lock()):
+        await _route_notifications(send, db, s, finals, notified)
+
+
+async def _route_notifications(
     send: Sender, db: Database, s: SavedSearch, finals: List[Dict],
     notified: Dict[int, set],
 ) -> None:
@@ -313,6 +327,8 @@ async def route_notifications(
                 to_insert.append((uid, price))
                 await _pace()
             # send failed -> do NOT record, retry next cycle
+        elif seen[uid] is None and price is not None:
+            await db.update_seen_price(s.id, uid, price)      # a price appeared: not a "change"
         elif seen[uid] != price and price is not None:
             if uid in chat_seen:
                 await db.update_seen_price(s.id, uid, price)
@@ -322,38 +338,6 @@ async def route_notifications(
                 await _pace()
     if to_insert:
         await db.bulk_upsert_seen(s.id, to_insert)
-
-
-async def collect_user_matches(
-    db: Database, http: aiohttp.ClientSession, chat_id: int
-) -> List[Dict]:
-    """Scrape all of one user's active monitors and return the union of their
-    current matches (deduped by uid). Used by the on-demand daily report."""
-    searches = [s for s in await db.list_searches(chat_id) if s.is_active]
-    if not searches:
-        return []
-    groups = group_searches(searches)
-    sem = asyncio.Semaphore(max(1, config.SCRAPE_CONCURRENCY))
-
-    async def one(key, members):
-        sig, feats = key
-        async with sem:
-            try:
-                return members, await scrape_group(http, sig, union_filters(members, feats), members)
-            except Exception as exc:
-                logger.error("Report scrape failed for %s: %s", sig, exc)
-                return members, None
-
-    results = await asyncio.gather(*(one(k, m) for k, m in groups.items()))
-    union: Dict[str, Dict] = {}
-    for members, listings in results:
-        if not listings:
-            continue
-        for s, targets in members:
-            for l in listings.values():
-                if l["uid"] not in union and matches_full(l, s, targets):
-                    union[l["uid"]] = l
-    return list(union.values())
 
 
 async def scan_search(send: Sender, db: Database, http: aiohttp.ClientSession,
@@ -380,9 +364,10 @@ async def scan_search(send: Sender, db: Database, http: aiohttp.ClientSession,
             for l in listings.values():
                 if l["uid"] not in finals and matches_full(l, s2, targets):
                     finals[l["uid"]] = l
-    if failed and not finals:
-        logger.warning("Immediate scan for #%s got nothing (scrape failed?) — leaving for next cycle.",
-                      search_id)
+    if failed:
+        # A partial view must not prime (the missing areas would arrive later as "new").
+        logger.warning("Immediate scan for #%s: a scrape failed or came back empty — leaving it "
+                       "for the next cycle.", search_id)
         return
     await route_notifications(send, db, s, list(finals.values()), {})
 
