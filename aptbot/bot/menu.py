@@ -61,16 +61,21 @@ async def retire(query) -> None:
 
 
 # --- the bottom button panel (Telegram reply keyboard, next to "/") ---
-# Static, so it never needs re-sending when the monitor's state changes; each
-# command already answers a tap in the wrong state ("Already watching" etc).
+# Each button's text STARTS WITH ITS COMMAND ("/status 📊"): in a group the bot runs in
+# privacy mode and Telegram only delivers messages that start with "/", so a plain
+# "📊 Status" tap never reached the bot. The CommandHandlers take these as-is (the
+# trailing emoji is just an ignored argument). Static, so it never needs re-sending
+# when the monitor's state changes; each command already answers a wrong-state tap.
+PANEL = [["/filters 🎛", "/status 📊"], ["/monitor ▶️", "/stop ⏸", "/help ❓"]]
+# Old plain-text labels (v1 panel, still on clients until replaced; they arrive only
+# in private chats / with privacy mode off).
 KEYS = {"🎛 Filters": "filters", "📊 Status": "status",
         "▶️ Start": "monitor", "⏸ Pause": "stop", "❓ Help": "help"}
 KEY_REGEX = "^(" + "|".join(re.escape(k) for k in KEYS) + ")$"
 FILTERS_KEY_REGEX = "^" + re.escape("🎛 Filters") + "$"
-KEYBOARD_META = "keyboard_v1:{}"
+KEYBOARD_META = "keyboard_v2:{}"
 
 
 def keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        [["🎛 Filters", "📊 Status"], ["▶️ Start", "⏸ Pause", "❓ Help"]],
-        resize_keyboard=True, is_persistent=True, input_field_placeholder="Tap a button or type /")
+    return ReplyKeyboardMarkup(PANEL, resize_keyboard=True, is_persistent=True,
+                               input_field_placeholder="Tap a button or type /")
