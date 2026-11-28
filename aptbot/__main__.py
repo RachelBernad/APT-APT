@@ -211,7 +211,6 @@ class Bot:
         self.application.add_handler(MessageHandler(tg_filters.Regex(menu.ANY_COMMAND_REGEX), c.key_tap))
 
     async def _set_commands(self):
-        menu.set_username(self.application.bot.username)   # the panel addresses us by name
         await self.application.bot.set_my_commands([
             BotCommand("monitor", "Start watching Tel Aviv (Yad2 + Facebook)"),
             BotCommand("filters", "Choose price, rooms, ממ״ד and other filters"),
@@ -219,6 +218,23 @@ class Bot:
             BotCommand("status", "What each source did last"),
             BotCommand("help", "How the bot works"),
         ])
+
+    async def _check_panel_delivery(self):
+        """The bottom panel's taps are plain text: in a group they reach the bot only with
+        privacy mode off or as a group admin. Say so in the log when neither holds."""
+        bot = self.application.bot
+        if bot.can_read_all_group_messages:
+            return
+        for chat_id in sorted(c for c in self.gate.allowed if c < 0):
+            try:
+                member = await bot.get_chat_member(chat_id, bot.id)
+            except TelegramError as exc:
+                logger.warning("Could not check the bot's role in chat %s: %s", chat_id, exc)
+                continue
+            if member.status not in ("administrator", "creator"):
+                logger.warning("Chat %s: the button panel can't reach the bot (privacy mode on, not "
+                               "an admin). Make the bot a group admin, or BotFather /setprivacy → Disable "
+                               "and re-add it.", chat_id)
 
     async def _announce_keyboard(self):
         """Once per chat: show the bottom button panel to chats that already use the bot."""
@@ -308,6 +324,7 @@ class Bot:
             await self.application.start()
             await self._set_commands()
             await self._check_membership()
+            await self._check_panel_delivery()
             await self._announce_keyboard()
             await self.application.updater.start_polling()
             logger.info("Bot polling started; scrape interval = %ss", config.CHECK_INTERVAL_SECONDS)

@@ -61,31 +61,23 @@ async def retire(query) -> None:
 
 
 # --- the bottom button panel (Telegram reply keyboard, next to "/") ---
-# In a group the bot runs in privacy mode: Telegram delivers a bare "/status" only if
-# this was the last bot to post there, but always delivers "/status@<this bot>". So each
-# button is the command addressed to this bot by name (set at startup, see set_username).
+# Short labels; a tap arrives as that plain text. In a group Telegram delivers plain
+# text only if the bot may read the group: privacy mode off (BotFather /setprivacy) or
+# the bot is a group admin. ``__main__`` logs a warning at startup when it can't.
 # Static, so it never needs re-sending when the monitor's state changes; each command
 # already answers a wrong-state tap.
-PANEL = [[("filters", "🎛"), ("status", "📊")], [("monitor", "▶️"), ("stop", "⏸"), ("help", "❓")]]
+PANEL = [["🎛 Filters", "📊 Status"], ["▶️ Start", "⏸ Pause", "❓ Help"]]
+KEYS = {"🎛 Filters": "filters", "📊 Status": "status",
+        "▶️ Start": "monitor", "⏸ Pause": "stop", "❓ Help": "help"}
+KEY_REGEX = "^(" + "|".join(re.escape(k) for k in KEYS) + ")$"
+FILTERS_KEY_REGEX = "^" + re.escape("🎛 Filters") + "$"
 COMMANDS = ("start", "help", "monitor", "stop", "status", "filters")
 # Any supported "/cmd", addressed to us, to another name, or to nobody; the gate (group -2)
 # already limits who gets this far. Group 0's CommandHandlers take the plain/our-name
 # forms first; this catches what they don't (e.g. "/status@other_bot").
 ANY_COMMAND_REGEX = r"^/(" + "|".join(c for c in COMMANDS if c != "filters") + r")(@\w+)?(\s|$)"
 FILTERS_COMMAND_REGEX = r"^/filters(@\w+)?(\s|$)"
-# Old plain-text labels (v1 panel, still on clients until replaced).
-KEYS = {"🎛 Filters": "filters", "📊 Status": "status",
-        "▶️ Start": "monitor", "⏸ Pause": "stop", "❓ Help": "help"}
-KEY_REGEX = "^(" + "|".join(re.escape(k) for k in KEYS) + ")$"
-FILTERS_KEY_REGEX = "^" + re.escape("🎛 Filters") + "$"
-KEYBOARD_META = "keyboard_v3:{}"
-
-_username: Optional[str] = None
-
-
-def set_username(name: Optional[str]) -> None:
-    global _username
-    _username = name
+KEYBOARD_META = "keyboard_v4:{}"
 
 
 def command_of(text: Optional[str]) -> Optional[str]:
@@ -95,7 +87,5 @@ def command_of(text: Optional[str]) -> Optional[str]:
 
 
 def keyboard() -> ReplyKeyboardMarkup:
-    at = f"@{_username}" if _username else ""
-    return ReplyKeyboardMarkup([[f"/{cmd}{at} {emoji}" for cmd, emoji in row] for row in PANEL],
-                               resize_keyboard=True, is_persistent=True,
+    return ReplyKeyboardMarkup(PANEL, resize_keyboard=True, is_persistent=True,
                                input_field_placeholder="Tap a button or type /")

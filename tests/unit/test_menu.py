@@ -122,14 +122,8 @@ def _keys(markup):
 
 def test_bottom_panel_layout():
     kb = menu.keyboard()
-    assert _keys(kb) == ["/filters 🎛", "/status 📊", "/monitor ▶️", "/stop ⏸", "/help ❓"]
+    assert _keys(kb) == ["🎛 Filters", "📊 Status", "▶️ Start", "⏸ Pause", "❓ Help"]
     assert kb.is_persistent and kb.resize_keyboard
-    menu.set_username("test_finder_bot")
-    try:
-        # privacy mode only reliably delivers commands addressed to this bot by name
-        assert _keys(menu.keyboard())[1] == "/status@test_finder_bot 📊"
-    finally:
-        menu.set_username(None)
 
 
 def test_any_supported_command_form_is_recognised():
