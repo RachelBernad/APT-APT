@@ -12,9 +12,10 @@ of its ConversationHandler); the rest go to ``SimpleCommands.menu_tap``.
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 from aptbot.models import SavedSearch
 
@@ -57,3 +58,19 @@ async def retire(query) -> None:
         await query.edit_message_reply_markup(reply_markup=None)
     except Exception:          # message too old / already edited: harmless
         pass
+
+
+# --- the bottom button panel (Telegram reply keyboard, next to "/") ---
+# Static, so it never needs re-sending when the monitor's state changes; each
+# command already answers a tap in the wrong state ("Already watching" etc).
+KEYS = {"🎛 Filters": "filters", "📊 Status": "status",
+        "▶️ Start": "monitor", "⏸ Pause": "stop", "❓ Help": "help"}
+KEY_REGEX = "^(" + "|".join(re.escape(k) for k in KEYS) + ")$"
+FILTERS_KEY_REGEX = "^" + re.escape("🎛 Filters") + "$"
+KEYBOARD_META = "keyboard_v1:{}"
+
+
+def keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [["🎛 Filters", "📊 Status"], ["▶️ Start", "⏸ Pause", "❓ Help"]],
+        resize_keyboard=True, is_persistent=True, input_field_placeholder="Tap a button or type /")

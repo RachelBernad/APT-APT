@@ -79,6 +79,8 @@ async def test_tapping_start_pause_resume_updates_the_menu(db):
     cmds = SimpleCommands(db, on_started=on_started)
     chat = Chat()
     await cmds.help(chat.command(), chat.context)
+    assert chat.replies[-1][1] is menu.keyboard() or _keys(chat.replies[-1][1]) == list(menu.KEYS)
+    await cmds.stop(chat.command(), chat.context)
     assert chat.last_menu() == ["menu:monitor", "menu:help"]          # nothing to pause yet
 
     await cmds.menu_tap(chat.tap("menu:monitor"), chat.context)
@@ -112,6 +114,53 @@ async def test_filters_button_opens_the_card_and_save_brings_the_menu_back(db):
     await card.button(chat.tap("wz:save"), chat.context)
     text, markup = chat.replies[-1]
     assert "Filters saved" in text and "🎛 Filters · 1" in _labels(markup)
+
+
+def _keys(markup):
+    return [b.text if hasattr(b, "text") else b for row in markup.keyboard for b in row]
+
+
+def test_bottom_panel_layout():
+    kb = menu.keyboard()
+    assert _keys(kb) == ["🎛 Filters", "📊 Status", "▶️ Start", "⏸ Pause", "❓ Help"]
+    assert kb.is_persistent and kb.resize_keyboard
+    import re
+    assert all(re.match(menu.KEY_REGEX, k) for k in menu.KEYS)
+    assert not re.match(menu.KEY_REGEX, "7000") and not re.match(menu.KEY_REGEX, "📊 Status please")
+
+
+async def test_panel_keys_run_the_commands(db):
+    async def noop(sid):
+        return None
+    cmds = SimpleCommands(db, on_started=noop)
+    card = fl.FilterCommands(db, on_saved=noop)
+    chat = Chat()
+
+    def key(label):
+        u = chat.command()
+        u.effective_message.text = label
+        return u
+    await cmds.key_tap(key("▶️ Start"), chat.context)
+    assert "Watching" in chat.replies[-1][0]
+    await cmds.key_tap(key("📊 Status"), chat.context)
+    assert "Monitor:</b> on" in chat.replies[-1][0]
+    assert await card.entry(key("🎛 Filters"), chat.context) == fl.FORM
+    assert "wz:save" in chat.last_menu()
+    await cmds.key_tap(key("⏸ Pause"), chat.context)
+    assert "Paused" in chat.replies[-1][0]
+    await cmds.key_tap(key("❓ Help"), chat.context)
+    assert "button panel" in chat.replies[-1][0]
+
+
+def test_filter_names_are_english():
+    s = SavedSearch(id=1, chat_id=CHAT, label="x", property_types=[1, 4], property_condition=2)
+    text = fl.filters_summary(s)
+    assert "Apartment" in text and "Studio/Loft" in text and "Renovated" in text
+    import re
+    labels = [t for t, _ in [(x, 0) for x in str(fl.types_screen(s)) + str(fl.cond_screen(s))]]
+    assert not re.search("[\u0590-\u05FF]", "".join(labels))
+    from aptbot.bot.simple import area_summary, help_text
+    assert not re.search("[\u0590-\u05FF]", help_text(True).replace(area_summary(), ""))  # place names stay
 
 
 def test_menu_taps_have_log_labels():

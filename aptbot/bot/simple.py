@@ -27,7 +27,7 @@ from aptbot.scrapers.yad2 import locations
 
 logger = logging.getLogger(__name__)
 
-MONITOR_LABEL = "תל אביב"
+MONITOR_LABEL = "Tel Aviv"
 
 
 def monitor_targets():
@@ -53,9 +53,9 @@ def help_text(fb_on: bool) -> str:
         f"• <b>Yad2</b>: rentals in {area_summary()}, checked every {_interval_min()} minutes "
         "(new listings and price changes).\n"
         f"{fb}\n"
-        "Tap the buttons below, or send a command:\n"
+        "Use the button panel (the ⌨️ icon next to the text box), or send a command:\n"
         "/monitor: start watching (you get a short taster of what's there now)\n"
-        "/filters: price, rooms, size, floor, type, condition and features like ממ״ד. "
+        "/filters: price, rooms, size, floor, type, condition and features like a safe room. "
         "A listing that doesn't mention a field is kept and marked ❔\n"
         "/stop: pause\n"
         "/status: what each source did last\n"
@@ -102,7 +102,9 @@ class SimpleCommands:
             text, parse_mode=ParseMode.HTML, reply_markup=menu.menu_markup(s))
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await self._reply(update, help_text(self.fb_api is not None))
+        """/start and /help bring up the persistent button panel."""
+        await update.effective_message.reply_text(
+            help_text(self.fb_api is not None), parse_mode=ParseMode.HTML, reply_markup=menu.keyboard())
 
     help = start
 
@@ -115,6 +117,14 @@ class SimpleCommands:
         action = query.data.split(":", 1)[1]
         await {"monitor": self.monitor, "stop": self.stop,
                "status": self.status, "help": self.help}[action](update, context)
+
+    async def key_tap(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """A button on the bottom panel (its text arrives as a message)."""
+        action = menu.KEYS.get((update.effective_message.text or "").strip())
+        fn = {"monitor": self.monitor, "stop": self.stop,
+              "status": self.status, "help": self.help}.get(action)
+        if fn is not None:
+            await fn(update, context)
 
     async def monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat = update.effective_chat
