@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 class ChatGate:
-    def __init__(self, allowed=None, users=None):
+    def __init__(self, allowed=None, users=None, on_migrate=None):
         self.allowed = set(config.ALLOWED_CHAT_IDS if allowed is None else allowed)
+        self.on_migrate = on_migrate     # async (old_id, new_id): move the DB rows over
+        self._left: set = set()
         self.users = frozenset(config.ALLOWED_USER_IDS if users is None else users)
         self._refused_logged: set = set()
         if not self.allowed:
@@ -49,6 +51,11 @@ class ChatGate:
             self.allowed.add(new_id)
             logger.warning("Allowed chat %s became supergroup %s; set ALLOWED_CHAT_IDS=%s in .env.",
                            chat.id, new_id, new_id)
+            if self.on_migrate is not None:
+                try:
+                    await self.on_migrate(chat.id, new_id)
+                except Exception as exc:                   # never let this block the update
+                    logger.error("Moving chat %s to %s failed: %s", chat.id, new_id, exc)
         if chat is not None and chat.id in self.allowed:
             user = update.effective_user
             if not self.users or (user is not None and user.id in self.users):
@@ -56,16 +63,20 @@ class ChatGate:
             key = ("user", user.id if user else None)
             if key not in self._refused_logged:
                 self._refused_logged.add(key)
-                logger.warning("Ignored user %s (%r, @%s) in allowed chat %s: not in ALLOWED_USER_IDS.",
-                               user.id if user else None,
-                               " ".join(p for p in (getattr(user, "first_name", None),
-                                                    getattr(user, "last_name", None)) if p),
-                               getattr(user, "username", None), chat.id)
+                logger.warning("Ignored user %s in allowed chat %s: not in ALLOWED_USER_IDS.",
+                               user.id if user else None, chat.id)
             raise ApplicationHandlerStop
         if chat is None:
             raise ApplicationHandlerStop
         if chat.id not in self._refused_logged:
             self._refused_logged.add(chat.id)
-            logger.info("Ignored chat %s (%s %r): not in ALLOWED_CHAT_IDS.",
-                        chat.id, chat.type, chat.title or chat.username or chat.first_name)
+            logger.info("Ignored chat %s (%s): not in ALLOWED_CHAT_IDS.", chat.id, chat.type)
+        if chat.type in ("group", "supergroup") and chat.id not in self._left:
+            # Someone added the bot to a group that isn't ours: leave, so nothing more arrives.
+            self._left.add(chat.id)
+            try:
+                await context.bot.leave_chat(chat.id)
+                logger.info("Left chat %s.", chat.id)
+            except Exception as exc:
+                logger.warning("Could not leave chat %s: %s", chat.id, exc)
         raise ApplicationHandlerStop

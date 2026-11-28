@@ -198,8 +198,13 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
     return sent
 
 
+# The chats the bot may send to. ``__main__`` points this at the gate's live set, so a
+# group that became a supergroup (new id) keeps getting Facebook posts.
+allowed_chats = set(config.ALLOWED_CHAT_IDS)
+
+
 def _allowed(searches: List[SavedSearch]) -> List[SavedSearch]:
-    return [s for s in searches if s.chat_id in config.ALLOWED_CHAT_IDS]
+    return [s for s in searches if s.chat_id in allowed_chats or s.chat_id in config.ALLOWED_CHAT_IDS]
 
 
 async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextSender,

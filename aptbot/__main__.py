@@ -54,7 +54,8 @@ class Bot:
         )
         self.db: Database = Database(config.DB_PATH)
         self.http: aiohttp.ClientSession | None = None
-        self.gate = ChatGate()
+        self.gate = ChatGate(on_migrate=self._migrate_chat)
+        fb_engine.allowed_chats = self.gate.allowed       # the live set (follows supergroup moves)
         self.fb = None                       # FacebookAPI when FB_ENABLED
         self.fb_state = fb_engine.FbState()
         self.analyzer = None                 # listing_ai.ListingAnalyzer when AI_ENABLED
@@ -218,6 +219,10 @@ class Bot:
             BotCommand("status", "What each source did last"),
             BotCommand("help", "How the bot works"),
         ])
+
+    async def _migrate_chat(self, old: int, new: int) -> None:
+        moved = await self.db.migrate_chat(old, new)
+        logger.warning("Chat %s → %s: %d monitor(s) moved.", old, new, moved)
 
     async def _check_panel_delivery(self):
         """The bottom panel's taps are plain text: in a group they reach the bot only with

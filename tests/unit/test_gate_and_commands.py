@@ -235,3 +235,39 @@ async def test_startup_sync_moves_an_old_whole_city_monitor_to_the_areas(db, mon
     assert await cmds.sync_areas() == 1
     assert [t.level for t in (await db.get_search(sid)).locations] == ["hood"]
     assert await cmds.sync_areas() == 0
+
+
+async def test_migration_moves_the_monitor_to_the_new_id(db):
+    from aptbot.models import SavedSearch
+    await db.upsert_user(ALLOWED, "group")
+    sid = await db.add_search(SavedSearch(id=0, chat_id=ALLOWED, label="x"), [])
+    moved = []
+
+    async def on_migrate(old, new):
+        moved.append(await db.migrate_chat(old, new))
+    gate = ChatGate({ALLOWED}, users=set(), on_migrate=on_migrate)
+    upd, _ = _update(ALLOWED, migrate_to=-1009999999999)
+    await gate(upd, None)
+    assert moved == [1]
+    assert (await db.get_search(sid)).chat_id == -1009999999999
+    assert await db.list_searches(ALLOWED) == []
+
+
+async def test_foreign_group_is_left_and_logged_by_id_only(caplog):
+    left = []
+
+    async def leave_chat(cid):
+        left.append(cid)
+    ctx = SimpleNamespace(bot=SimpleNamespace(leave_chat=leave_chat))
+    gate = ChatGate({ALLOWED}, users={ALICE})
+    for _ in range(2):
+        upd, _ = _update(-1001234, chat_type="supergroup", title="Secret Title", user_id=STRANGER)
+        with pytest.raises(ApplicationHandlerStop):
+            await gate(upd, ctx)
+    assert left == [-1001234]                          # left once
+    assert "Secret Title" not in caplog.text and "alice_test" not in caplog.text
+    # a stranger's private chat isn't "left" (nothing to leave), just dropped
+    upd, _ = _update(STRANGER, chat_type="private", user_id=STRANGER)
+    with pytest.raises(ApplicationHandlerStop):
+        await gate(upd, ctx)
+    assert left == [-1001234]
