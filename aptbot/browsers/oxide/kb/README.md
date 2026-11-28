@@ -49,6 +49,7 @@ aptbot/browsers/oxide/            ($OXIDE, in the repo: vendored fork, see VENDO
 
 The production scraper that uses oxide lives in `aptbot/scrapers/facebook_generic_browser/oxide/`
 ([aptbot-integration](aptbot-integration.md)).
+Security validation (deps, unsafe, secrets, how to rerun): [security](security.md).
 
 `research/`:
 - `fb_deep_session.py`: long group session. It scrolls, opens every post (See more + comments dialog), recycles the

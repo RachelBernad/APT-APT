@@ -58,6 +58,10 @@ def _error(e: BaseException) -> dict:
 
 
 def main() -> int:
+    os.umask(0o077)                                 # the engine rewrites the cookie jar: keep it (and any file) 600
+    jar = os.environ.get("BROWSER_OXIDE_COOKIE_JAR")
+    if jar and os.path.exists(jar):
+        os.chmod(jar, 0o600)
     proto = os.fdopen(os.dup(1), "w", buffering=1)
     os.dup2(2, 1)                                   # stray prints → stderr
     sys.stdout = sys.stderr

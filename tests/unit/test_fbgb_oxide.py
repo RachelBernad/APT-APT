@@ -178,3 +178,16 @@ def test_fill_albums_appends_missing_photos(monkeypatch):
     assert jobs.fill_albums(d, posts) == 1
     assert [x.id for x in p.photos] == ["p1", "p2", "p3"] and p.photos[2].width == 720
     assert jobs.fill_albums(d, posts) == 0          # already complete: no page load
+
+
+def test_worker_env_is_an_allowlist_and_errors_are_redacted(monkeypatch):
+    from aptbot.scrapers.facebook_generic_browser.oxide.client import redact
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:fake")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-fake")
+    monkeypatch.setenv("FBGB_HOME", "/h")
+    env = worker_env(None)
+    assert "TELEGRAM_BOT_TOKEN" not in env and "OPENAI_API_KEY" not in env and env["FBGB_HOME"] == "/h"
+    r = redact("Error: GET https://www.facebook.com/x?fb_dtsg=AAA&lsd=BBB failed; cookie: c_user=111")
+    assert "AAA" not in r and "BBB" not in r and "111" not in r and "facebook.com/x" in r
+    e = error_from({"error": "engine", "message": "xs=secret1 at https://h.example/p?token=t2"})
+    assert "secret1" not in str(e) and "t2" not in str(e)

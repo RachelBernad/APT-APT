@@ -1,33 +1,56 @@
-# Security and account safety
+# Security validation (2026-11-28)
 
-[← index](README.md) · related: [facebook](facebook.md#rules), [env-vars](env-vars.md)
+Rerun this before any release, and after every dependency or engine bump.
+- **Tools:** cargo-audit, gitleaks, pip-audit, bandit.
+- **Shortcut:** the commands below, run from the repo root.
 
-## Session files {#session}
+```sh
+(cd aptbot/browsers/oxide && cargo audit) ; (cd aptbot/browsers/oxide/crates/browser_oxide_py && cargo audit)
+gitleaks git --redact .                       # all history; the repo is PUBLIC
+pip-audit --disable-pip --no-deps -r <(docker run --rm aptbot-oxide pip freeze | grep -v browser.oxide)
+bandit -q -r aptbot -x aptbot/browsers/oxide/crates -ll
+```
 
-- `profiles/fbtest_state.json` (Playwright storageState) and `profiles/fbtest_jar.json` (oxide jar) hold the test
-  account's **live session**. Treat them like a password: chmod 600, local only, never commit, never print.
-- How they were made: one oxide login attempt reached FB's Arkose check (the same one Chrome gets). A human logged in
-  in the Playwright Chrome, and its cookies were converted to oxide's jar format:
-  `{cookies:{domain:{name:{name,value,path,creation,domain|null,secure,http_only,expires}}},seq}`.
-- Runs use a **copy** (`/tmp/fbjar_run.json`, chmod 600) because oxide persists the jar it loads.
-- Credentials: only through stdin (`type @stdin:N`). Never in argv, env, files or logs. Ask the user before every
-  live login attempt; never retry automatically.
+## Rust dependencies
+- **Found:** 20 vulnerabilities in the workspace lock, and 22 in the wheel's lock (`crates/browser_oxide_py/Cargo.lock`, the one maturin builds with).
+- **Affected crates:** quinn-proto/udp (QUIC), rustls, rustls-webpki, webpki-roots and root-certs (distrusted intermediates), url, zstd/zstd-safe/zstd-sys, pyo3 and anyhow.
+- **Fixed:** semver-compatible `cargo update` of each crate. rustls is pinned `--precise 0.23.46`. pyo3 0.28 → 0.29 (RUSTSEC-2026-0176/0177) needed no code change.
+- **Left (no fix exists):** unmaintained-only warnings for bincode, chrono, paste, rustybuzz, ttf-parser and unsafe-libyaml. They are transitive, via deno_core/v8, the fonts and the yaml profiles. Re-check on the next deno_core bump.
 
-## Logs {#logs}
+## `unsafe` in the engine
+- **64 sites in total.** 52 are in `canvas/webgl_render.rs`, which sits behind the `webgl-render` feature, off and not compiled.
+- **Compiled: 12.** All have SAFETY notes:
+  - `html_parser/tree_sink.rs` ×5: UnsafeCell, single-threaded parser.
+  - `net/tls.rs` ×2: BoringSSL FFI, read-only buffers.
+  - `js_runtime/mod.rs` ×2: isolate enter/exit guard.
+  - `page.rs` ×1: `ptr::read` under ManuallyDrop.
+  - `frames.rs` ×2: our iframe change. It had no SAFETY note; one is now added.
+- **The pyo3 binding has 0.**
 
-- Before 2026-11-27 oxide printed **every POST's full headers, cookies included, to stderr**
-  (`[net] sending H2 request ...`; the URL filter `contains("/r")` matched nearly everything). Fixed: it now only logs with
-  `BO_NET_LOG=1`, and redacts `cookie`/`authorization`/`x-fb-*`/token values. A 403/429 reload response dump
-  now redacts `set-cookie`.
-- Still assume stderr can contain URLs with ids. Read stdout (`## ` lines in drive.py), and grep stderr only for
-  specific markers (`panicked`, `fatal`).
-- `BROWSER_OXIDE_DUMP_POST_DIR` writes requests **with cookies** to disk. Debug only; delete the files afterwards.
-- The live view PNG (`/tmp/oxlive`), heap snapshots (`/tmp/*.heapsnapshot`) and CSV/log outputs contain private
-  page content or tokens (snapshots contain cookies and `fb_dtsg`). Keep them local and delete them when done.
+## Script injection (engine-built JS)
+- **The bug:** the engine interpolated URLs, selectors and typed text into scripts, and escaped only `\` and `'` or `"`. A newline or U+2028 in a URL or selector could break out of the string.
+- **The fix:** every site now uses `crate::js_string_literal` (JSON encoding).
+- **Sites fixed:** `location.href` ×7, `has_element`, `text_of`, `human_click`, `human_type`.
+- **Rule:** never `format!` raw text into a script.
 
-## Account
+## Secrets and personal data
+- **gitleaks, full history:** 55 hits, all FB `deduplication_key`/`mediaset_token` in the anonymized test fixtures. They aren't credentials. The fixture authors are "Person NN", and they hold no signed CDN URLs.
+- **Never committed:** `.env`, `codedb.snapshot`, `.playwright-mcp/` (all git-ignored).
+- **No personal paths or emails** in tracked files.
+- **Worker env is an allowlist** (`oxide/client.py` `worker_env`). The page-JS process never gets the bot's Telegram/AI tokens.
+- **Debug switches never forwarded:** `BO_DEBUG_HEAP`, `BO_NET_LOG`, `BROWSER_OXIDE_DUMP_POST_DIR`.
+- **Error and crash text is redacted** (`redact`): cookie/token pairs and URL query strings.
+- **Worker umask 077:** the engine rewrites the cookie jar, which was found at 644 on the Pi, now 600. `~/.fbgb` is set to 700.
+- **Pi bot log:** 0 token-like strings.
 
-- Stop on any checkpoint or block page, and tell the user (fb_deep_session's `blocked()`).
-- Don't automate the Arkose check.
-- Keep volume low. A 200-post deep session is a research exception that the user asked for.
-- The public GitHub repo (`APT-APT`) must never receive any of these files. Scan before any push.
+## Python
+- **pip-audit, image packages:** Brotli 1.1.0 had 4 advisories, so it's bumped to 1.2.1. fbgb requirements: clean.
+- **bandit (medium and up):** 12 hits, all reviewed, none real:
+  - SQL: placeholders, plus column names from an allowlist.
+  - sha1/md5: cache keys.
+  - urlopen: only in research tools, on https URLs.
+  - /tmp: a research tool, dir 700.
+
+## Open
+- The builder stage installs rustup via `curl | sh`, and the rusty_v8 static lib is downloaded at build time. Both come over TLS from the official hosts and run only in the build stage. Pin a rustup checksum if this matters.
+- The upstream engine has no fuzzing. It parses hostile HTML/CSS/JS from facebook.com only, inside a worker process that holds no secrets other than the FB session.

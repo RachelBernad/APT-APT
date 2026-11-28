@@ -28,7 +28,7 @@ crate-type = ["cdylib"]
 browser_oxide = { path = "../browser_oxide" }
 # extension-module: resolve CPython symbols at runtime (no libpython link), so a
 # plain `cargo build` of the cdylib works and maturin produces a portable wheel.
-pyo3 = { version = "0.28", features = ["abi3-py38", "extension-module"] }
+pyo3 = { version = "0.29", features = ["abi3-py38", "extension-module"] }
 # Rust-side allocator. The system malloc fragmented badly under the engine's churn (FB:
 # 188 MB dirty in the default zone for 85 MB allocated, 55% fragmentation; peaks of +100-270 MB
 # per post dialog). mimalloc returns freed pages to the OS. See kb/memory.md.

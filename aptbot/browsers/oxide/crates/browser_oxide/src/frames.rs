@@ -106,6 +106,9 @@ impl Drop for NoService {
 /// order (which happens whenever an outer iframe is removed).
 fn dispose(mut frame: DynFrame) {
     let iso: *mut deno_core::v8::OwnedIsolate = frame.event_loop.runtime_mut().inner().v8_isolate();
+    // SAFETY: `iso` points into `frame`, which is alive until the `drop` below. OwnedIsolate's Drop exits and
+    // disposes the isolate and requires it to be the thread's current (entered) isolate, so this `enter` is
+    // what that `exit` pairs with. Frames live in a thread-local, so only this thread touches the isolate.
     unsafe { (**iso).enter() };
     drop(frame);
 }
@@ -463,12 +466,15 @@ async fn build_frame(
     // a frame must not stay entered (it would sit on the thread's entry
     // stack above the page's isolate). Every later use enters/exits through
     // IsolateEnterGuard; dispose() re-enters before the drop.
+    // SAFETY: JsRuntime::new left this new isolate entered on this thread. Exiting balances that `enter`, and
+    // the isolate is alive (owned by `runtime`). Every later use enters/exits via IsolateEnterGuard.
     unsafe { runtime.inner().v8_isolate().exit() };
     let mut event_loop = BrowserEventLoop::new(runtime);
     if dbg() { eprintln!("[frames] #{id} runtime up, {} scripts", scripts.len()); }
     crate::js_runtime::extensions::fetch_ext::set_fetch_client(client.clone());
-    let url_js = final_url.replace('\\', "\\\\").replace('\'', "\\'");
-    let _ = event_loop.execute_script(&format!("location.href = '{url_js}';"));
+    // JSON-encode: a JS string literal that is safe for any URL text (quotes, newlines, U+2028/9).
+    let url_js = crate::js_string_literal(&final_url.to_string());
+    let _ = event_loop.execute_script(&format!("location.href = {url_js};"));
     event_loop.reset_nav_pending();
     let _ = event_loop.execute_script(&init);
     let _ = event_loop.execute_script("globalThis._browser_oxide.__documentReadyState = 'loading';");

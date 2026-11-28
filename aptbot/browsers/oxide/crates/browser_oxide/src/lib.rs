@@ -35,3 +35,9 @@ pub use classify::{engine_classify, EngineClass};
 pub use page::{ChallengeVerdict, Page};
 pub use parallel::{NavigateResult, ParallelPager};
 pub use pool::PagePool;
+
+/// A JS string literal (with quotes) holding `s`, for building engine-side scripts. JSON encoding is valid JS
+/// (ES2019+) and escapes quotes, backslashes and control characters. Never interpolate raw text into scripts.
+pub(crate) fn js_string_literal(s: &str) -> String {
+    serde_json::to_string(s).unwrap_or_else(|_| "\"\"".into())
+}

@@ -185,9 +185,9 @@ impl ChildIframe {
         let mut event_loop = BrowserEventLoop::new(runtime);
 
         // Set location
-        let url_js = url.replace('\\', "\\\\").replace('\'', "\\'");
+        let url_js = crate::js_string_literal(&url);
         event_loop
-            .execute_script(&format!("location.href = '{}';", url_js))
+            .execute_script(&format!("location.href = {};", url_js))
             .ok();
 
         // Execute scripts, fetching external ones

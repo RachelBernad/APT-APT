@@ -127,3 +127,8 @@ graphql while scrolling, then visit `/groups/<gid>/posts/<id>/` one at a time af
 - **Fix:** start the process that uses the engine with `LD_PRELOAD=<site-packages>/browser_oxide/_native.abi3.so`, and set it on that process only. A global `ENV LD_PRELOAD` breaks `sh`, which lacks the `Py*` symbols.
 - **What doesn't work:** `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=…`. The module loads, but V8 then crashes with `Check failed: IsOnCentralStack()` or SIGSEGV on the first navigate.
 - **In the bot:** `oxide/client.py` `worker_env` sets the preload for the worker automatically. Verified in `deploy/aptbot-oxide` (linux/arm64, 2026-11-28).
+
+## h2-enhance-your-calm
+- **Seen on the Pi, 2026-11-28, ~25 min FB session:** the worker logged `HTTP/2 connection error: connection error detected: detected excessive load generating behavior`.
+- **Cause:** the http2 crate's local DoS guard. After 1024 resets on one connection that the library itself issues (oxide cancels aborted XHR/fetch and superseded long-polls), it sends GOAWAY ENHANCE_YOUR_CALM and drops the connection. Chrome never does that, so it's a wire tell, and in-flight requests are lost.
+- **Fix:** `net/h2_client.rs` sets `max_local_error_reset_streams(Some(1 << 20))`.

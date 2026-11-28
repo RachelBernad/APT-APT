@@ -632,9 +632,9 @@ impl Page {
         // Set location.href (URL-state setup, not a real navigation —
         // reset the nav-pending signal afterward so subsequent
         // run_until_idle calls don't short-circuit).
-        let url_js = url.replace('\\', "\\\\").replace('\'', "\\'");
+        let url_js = crate::js_string_literal(&url);
         event_loop
-            .execute_script(&format!("location.href = '{}';", url_js))
+            .execute_script(&format!("location.href = {};", url_js))
             .ok();
         event_loop.reset_nav_pending();
 
@@ -689,9 +689,9 @@ impl Page {
 
         // Update URL (URL-state setup, not a real navigation).
         self.url = url.to_string();
-        let url_js = url.replace('\\', "\\\\").replace('\'', "\\'");
+        let url_js = crate::js_string_literal(&url);
         self.event_loop
-            .execute_script(&format!("location.href = '{}';", url_js))
+            .execute_script(&format!("location.href = {};", url_js))
             .ok();
         self.event_loop.reset_nav_pending();
 
@@ -772,9 +772,9 @@ impl Page {
         let mut event_loop = BrowserEventLoop::new(runtime);
 
         // Set location.href (URL-state setup, not a real navigation).
-        let url_js = url.replace('\\', "\\\\").replace('\'', "\\'");
+        let url_js = crate::js_string_literal(&url);
         event_loop
-            .execute_script(&format!("location.href = '{}';", url_js))
+            .execute_script(&format!("location.href = {};", url_js))
             .ok();
         event_loop.reset_nav_pending();
 
@@ -1098,10 +1098,10 @@ impl Page {
 
     /// Get text content of an element matching a selector.
     pub fn text_of(&mut self, selector: &str) -> Option<String> {
-        let sel = selector.replace('\\', "\\\\").replace('"', "\\\"");
+        let sel = crate::js_string_literal(selector);
         let result = self
             .evaluate(&format!(
-                r#"(() => {{ const el = document.querySelector("{}"); return el ? el.textContent : ""; }})()"#,
+                r#"(() => {{ const el = document.querySelector({}); return el ? el.textContent : ""; }})()"#,
                 sel
             ))
             .ok()?;
@@ -1114,8 +1114,8 @@ impl Page {
 
     /// Check if an element exists.
     pub fn has_element(&mut self, selector: &str) -> bool {
-        let sel = selector.replace('\\', "\\\\").replace('"', "\\\"");
-        self.evaluate(&format!(r#"document.querySelector("{}") !== null"#, sel))
+        let sel = crate::js_string_literal(selector);
+        self.evaluate(&format!(r#"document.querySelector({}) !== null"#, sel))
             .map(|r| r == "true")
             .unwrap_or(false)
     }
@@ -1124,10 +1124,10 @@ impl Page {
     /// Generates a Bezier curve mouse path, dispatches mousemove events along
     /// the path, then mousedown+mouseup+click at the target.
     pub fn human_click(&mut self, selector: &str) -> Result<String, deno_core::error::AnyError> {
-        let sel = selector.replace('\\', "\\\\").replace('"', "\\\"");
+        let sel = crate::js_string_literal(selector);
         self.evaluate(&format!(r#"
             (() => {{
-                const el = document.querySelector("{}");
+                const el = document.querySelector({});
                 if (!el) return "element not found";
                 const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {{x:0,y:0,width:100,height:30}};
                 const tx = rect.x + rect.width / 2;
@@ -1152,15 +1152,15 @@ impl Page {
         selector: &str,
         text: &str,
     ) -> Result<String, deno_core::error::AnyError> {
-        let sel = selector.replace('\\', "\\\\").replace('"', "\\\"");
-        let text_escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+        let sel = crate::js_string_literal(selector);
+        let text_escaped = crate::js_string_literal(text);
         self.evaluate(&format!(
             r#"
             (() => {{
-                const el = document.querySelector("{}");
+                const el = document.querySelector({});
                 if (!el) return "element not found";
                 el.focus && el.focus();
-                const text = "{}";
+                const text = {};
                 const delays = __browserOxide.humanTypingDelays(text, 65);
                 for (let i = 0; i < text.length; i++) {{
                     const ch = text[i];
@@ -2086,10 +2086,10 @@ impl Page {
         // Seed `location` for this navigation. The `reset_nav_pending` now
         // scrubs the spurious `__pendingNavigation` the setter writes, so
         // downstream `PENDING_NAV_JS` reads see a clean empty value.
-        let url_js = resp_url.replace('\\', "\\\\").replace('\'', "\\'");
+        let url_js = crate::js_string_literal(&resp_url);
         let _ = self
             .event_loop
-            .execute_script(&format!("location.href = '{}';", url_js));
+            .execute_script(&format!("location.href = {};", url_js));
         self.event_loop.reset_nav_pending();
 
         // Refresh `document.cookie` for the new origin. Fast op call,
@@ -3903,8 +3903,8 @@ impl Page {
         // Set location (URL-state setup, not a real navigation —
         // reset the nav-pending signal so subsequent run_until_idle calls
         // don't short-circuit immediately, see crates/event_loop).
-        let url_js = url.replace('\\', "\\\\").replace('\'', "\\'");
-        if let Err(e) = event_loop.execute_script(&format!("location.href = '{}';", url_js)) {
+        let url_js = crate::js_string_literal(&url);
+        if let Err(e) = event_loop.execute_script(&format!("location.href = {};", url_js)) {
             tracing::error!(error = %e, "Failed to set location");
         }
         event_loop.reset_nav_pending();

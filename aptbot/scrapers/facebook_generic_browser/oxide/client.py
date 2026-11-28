@@ -50,8 +50,22 @@ def native_lib() -> str | None:
     return None
 
 
+# Least privilege: the worker runs untrusted page JS, so it gets only what it needs. Never the bot's Telegram/AI
+# tokens or anything else from .env.
+_FORWARD = ("PATH", "HOME", "USER", "LANG", "LC_ALL", "TZ", "TMPDIR", "PYTHONPATH", "PYTHONUNBUFFERED",
+            "PYTHONDONTWRITEBYTECODE", "VIRTUAL_ENV", "LD_LIBRARY_PATH", "SSL_CERT_FILE")
+_FORWARD_PREFIX = ("BROWSER_OXIDE_", "FBGB_", "MALLOC_", "RUST_")
+
+
+def redact(text: str) -> str:
+    """Cookie/token-like `name=value` pairs and full URLs' query strings → redacted."""
+    text = _SECRET.sub(r"\1=<redacted>", text)
+    return re.sub(r"(https?://[^\s?#]+)\?[^\s]*", r"\1?<redacted>", text)
+
+
 def worker_env(jar: str | None) -> dict:
-    env = {k: v for k, v in os.environ.items() if k not in _NEVER_FORWARD}
+    env = {k: v for k, v in os.environ.items()
+           if (k in _FORWARD or k.startswith(_FORWARD_PREFIX)) and k not in _NEVER_FORWARD}
     for k, v in ENGINE_ENV.items():
         env.setdefault(k, v)
     # glibc: V8 inside a dlopen'd module needs more static TLS than glibc reserves ("cannot allocate memory in
@@ -67,7 +81,7 @@ def worker_env(jar: str | None) -> dict:
 
 
 def error_from(reply: dict) -> Exception:
-    code, msg = reply.get("error"), reply.get("message", "")
+    code, msg = reply.get("error"), redact(str(reply.get("message", "")))
     if code == "account_at_risk":
         return AccountAtRisk(msg)
     if code == "not_member":
@@ -116,7 +130,7 @@ class OxideBackend:
             async for raw in proc.stderr:
                 line = raw.decode("utf-8", "replace").rstrip()
                 if _CRASH.search(line):
-                    logger.warning("oxide worker: %s", _SECRET.sub(r"\1=<redacted>", line)[:300])
+                    logger.warning("oxide worker: %s", redact(line)[:300])
 
     async def _watch(self, proc) -> None:
         from aptbot.scrapers.facebook_generic_browser.oxide.driver import rss_mb

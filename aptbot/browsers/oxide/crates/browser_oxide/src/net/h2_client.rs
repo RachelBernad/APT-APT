@@ -159,6 +159,11 @@ where
     };
 
     let mut builder = Builder::new();
+    // Chrome cancels streams freely (aborted XHR/fetch, superseded long-polls) and never sends GOAWAY for it.
+    // http2's default closes the connection with GOAWAY ENHANCE_YOUR_CALM after 1024 library-initiated resets,
+    // which a long FB session reaches (seen on the Pi, 2026-11-28): a non-Chrome wire behavior plus a dropped
+    // connection. Keep a bound (DoS guard against a hostile server), just far above a browsing session.
+    builder.max_local_error_reset_streams(Some(1 << 20));
     if is_safari_ios {
         // Safari 18.4 advertises 4 SETTINGS on the wire (2, 3, 4, 9) — see
         // SETTINGS order above. The http2 builder accepts additional setting
