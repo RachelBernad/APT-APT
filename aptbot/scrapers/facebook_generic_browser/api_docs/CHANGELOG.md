@@ -1,5 +1,11 @@
 # api_docs changelog
 
+## 2026-11-28: full albums via /media/set
+- **Observed (BrowserOxide, test account):** the feed and the permalink both stop at 5 photos per post. `/media/set/?set=pcb.<post_id>&type=1`
+  embeds the whole album in its document (`data.album.media.edges[].node`).
+- **Impact:** the oxide backend completes up to 6 cut-short albums per group read (`oxide/jobs.py` `fill_albums`,
+  `FBGB_OXIDE_ALBUMS=0` turns it off). The Chrome backend is unchanged. Doc: posts/media.md.
+
 ## 2026-11-24 (host-neutral wording)
 - `stealth/pi-headless.md` renamed `stealth/no-gui-container.md`. Docs, comments and `deploy/fbgb-headless/` no longer
   target a specific device: the image is for any host without a GUI. No behavior or measured result changed.

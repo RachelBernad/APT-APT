@@ -12,7 +12,8 @@ import signal
 import aiohttp
 from telegram import BotCommand, InputMediaPhoto, Update
 from telegram.error import Forbidden, RetryAfter, TelegramError, TimedOut
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, TypeHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, TypeHandler
+from telegram.ext import filters as tg_filters
 
 from aptbot.bot import activity
 from aptbot import config
@@ -204,15 +205,32 @@ class Bot:
             self.application.add_handler(CommandHandler(name, fn))
         # The control menu under every reply (Filters is the card's own entry point).
         self.application.add_handler(CallbackQueryHandler(c.menu_tap, pattern=menu.PATTERN))
+        # The bottom button panel (Filters is the card's own entry point).
+        self.application.add_handler(MessageHandler(tg_filters.Regex(menu.KEY_REGEX), c.key_tap))
 
     async def _set_commands(self):
         await self.application.bot.set_my_commands([
             BotCommand("monitor", "Start watching Tel Aviv (Yad2 + Facebook)"),
-            BotCommand("filters", "Choose price, rooms, ממ״ד and other filters"),
+            BotCommand("filters", "Choose price, rooms, safe room and other filters"),
             BotCommand("stop", "Pause"),
             BotCommand("status", "What each source did last"),
             BotCommand("help", "How the bot works"),
         ])
+
+    async def _announce_keyboard(self):
+        """Once per chat: show the bottom button panel to chats that already use the bot."""
+        chats = {x.chat_id for x in await self.db.get_active_searches()}
+        for chat_id in sorted(chats):
+            key = menu.KEYBOARD_META.format(chat_id)
+            if await self.db.get_meta(key):
+                continue
+            try:
+                await self.application.bot.send_message(
+                    chat_id, "🎛 The bot's buttons are now in the panel next to the text box.",
+                    reply_markup=menu.keyboard())
+                await self.db.set_meta(key, "1")
+            except TelegramError as exc:
+                logger.warning("Could not show the button panel in chat %s: %s", chat_id, exc)
 
     async def _check_membership(self):
         """Warn when an allowed group has more members than the allowed people + this bot.
@@ -239,7 +257,8 @@ class Bot:
             logger.info("Facebook source disabled (FB_ENABLED=0).")
             return None
         from aptbot.scrapers.facebook_generic_browser import FacebookAPI
-        fb = FacebookAPI(max_tabs=config.FB_MAX_TABS, default_timeout=config.FB_REQUEST_TIMEOUT)
+        fb = FacebookAPI(max_tabs=config.FB_MAX_TABS, default_timeout=config.FB_REQUEST_TIMEOUT,
+                         browser=config.FB_BROWSER, oxide_jar=config.FB_OXIDE_JAR)
         await fb.__aenter__()
         st = await fb.status()
         if st.halt_reason:
@@ -286,6 +305,7 @@ class Bot:
             await self.application.start()
             await self._set_commands()
             await self._check_membership()
+            await self._announce_keyboard()
             await self.application.updater.start_polling()
             logger.info("Bot polling started; scrape interval = %ss", config.CHECK_INTERVAL_SECONDS)
 

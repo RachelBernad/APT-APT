@@ -223,3 +223,8 @@ aptbot/scrapers/facebook_generic_browser/profile/
 .aptbot/
 chatgpt-auth.json
 chatgpt-auth.json.lock
+
+# BrowserOxide (aptbot/browsers/oxide): build output, heap snapshots and session jars never go in the repo
+aptbot/browsers/oxide/target/
+*.heapsnapshot
+*jar*.json

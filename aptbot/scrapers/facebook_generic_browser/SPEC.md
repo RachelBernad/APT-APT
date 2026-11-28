@@ -94,6 +94,14 @@ comment_count, reaction_count, comments[Comment]|None, hints{prices, rooms, phon
   (unavoidable on Linux ARM). Login: assisted `login --stdin` (verified) or by hand over VNC on 127.0.0.1. Details: `api_docs/stealth/no-gui-container.md`.
   Still to do on each new host: same checks, `max_tabs=2` on a low-CPU host, optional GPU renderer.
 
+## 11b. Second backend: BrowserOxide (built 2026-11-28)
+`FacebookAPI(browser="oxide")` runs every job in a BrowserOxide worker subprocess (`oxide/`) instead of Chrome tabs.
+The data comes from the engine's network tap, with no page script. parse/store/models are shared unchanged.
+- **Why:** the Chrome+Xvfb image doesn't fit a 1 GB host. The oxide worker peaks at ~490-585 MB.
+- **Account-safety rules:** the same `health.py` patterns are checked after every navigation and every 6 bursts. A hit gives `AccountAtRisk` → HALTED.
+- **Session:** a cookie jar converted once from the Chrome profile (`aptbot/browsers/oxide/tools/chrome_to_jar.py`). Never run both browsers on one session.
+- **Details, measurements and limits:** `aptbot/browsers/oxide/kb/aptbot-integration.md`, `docs/api-reference.md`.
+
 ## 12. Integration with the bot (future phase, designed, NOT built)
 The library runs as **its own process inside the bot's Docker container**, behind an authenticated local service:
 ```

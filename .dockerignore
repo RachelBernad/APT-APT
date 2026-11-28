@@ -28,3 +28,6 @@ aptbot/scrapers/facebook_generic_browser/out/
 # ChatGPT OAuth token store (aptbot/listing_ai); it lives outside the repo, never in an image
 **/.aptbot/
 **/chatgpt-auth.json*
+# BrowserOxide build output (the builder stage compiles from source)
+**/target/
+*.heapsnapshot

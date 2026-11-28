@@ -56,9 +56,16 @@ FB_GROUP_IDS = _id_list(os.getenv("FB_GROUP_IDS", ",".join([
 FB_MAX_TABS = int(os.getenv("FB_MAX_TABS", "2"))
 # Per-request limit (seconds) for one Facebook job, e.g. one group feed. Slow hosts (a Pi 3) need ~600.
 FB_REQUEST_TIMEOUT = float(os.getenv("FB_REQUEST_TIMEOUT", "240"))
-# Poll every 20-35 min, jittered (the library's account-safety guidance, SPEC §7).
-FB_POLL_MIN_SECONDS = int(os.getenv("FB_POLL_MIN_SECONDS", str(20 * 60)))
-FB_POLL_MAX_SECONDS = int(os.getenv("FB_POLL_MAX_SECONDS", str(35 * 60)))
+# Browser engine for Facebook: "chrome" (Patchright + Chromium under Xvfb) or "oxide" (BrowserOxide worker
+# subprocess, ~450-560 MB; aptbot/browsers/oxide/kb/aptbot-integration.md).
+FB_BROWSER = os.getenv("FB_BROWSER", "chrome").strip().lower()
+# oxide's cookie jar (the logged-in session; chmod 600, in the fbgb-home volume). Empty = <FBGB_HOME>/oxide_jar.json.
+FB_OXIDE_JAR = os.getenv("FB_OXIDE_JAR", "").strip() or None
+# Poll every 8-12 min, jittered; a cycle passes over every watched group and diffs with the DB.
+FB_POLL_MIN_SECONDS = int(os.getenv("FB_POLL_MIN_SECONDS", str(8 * 60)))
+FB_POLL_MAX_SECONDS = int(os.getenv("FB_POLL_MAX_SECONDS", str(12 * 60)))
+# No polling between these local (Israel) hours, "HH-HH"; empty = poll around the clock.
+FB_QUIET_HOURS = os.getenv("FB_QUIET_HOURS", "01-07").strip()
 # Newest posts sent as a taster when a monitor starts; the rest are recorded as seen.
 FB_BACKFILL_CAP = int(os.getenv("FB_BACKFILL_CAP", "5"))
 # Photos per post album (Telegram allows 2-10 per media group).

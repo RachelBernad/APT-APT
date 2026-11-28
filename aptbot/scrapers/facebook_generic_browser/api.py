@@ -11,6 +11,7 @@ browser. Full reference: docs/api-reference.md. Errors: docs/errors-and-safety.m
 from __future__ import annotations
 
 import asyncio
+import os
 import contextlib
 import time
 from datetime import datetime, timezone
@@ -37,7 +38,8 @@ def _unix(v: datetime | float | int | None) -> float | None:
 class FacebookAPI:
     def __init__(self, *, home: Path | None = None, profile_dir: Path | None = None, max_tabs: int = 3,
                  idle_close_after: float | None = 600,
-                 default_timeout: float = 240, debug_dump: bool = False):
+                 default_timeout: float = 240, debug_dump: bool = False,
+                 browser: str | None = None, oxide_jar: Path | str | None = None):
         """
         home:             state dir (cache db, halt marker). Default $FBGB_HOME or ~/.fbgb.
         profile_dir:      Chrome profile with the logged-in session. Default $FBGB_PROFILE_DIR or <home>/profile.
@@ -45,7 +47,14 @@ class FacebookAPI:
         idle_close_after: close Chrome after this many idle seconds (None = keep it open). It reopens on demand.
         default_timeout:  per-call timeout in seconds for browser-backed calls.
         debug_dump:       write raw captured payloads to <home>/captures/ (contain real posts; debugging only).
+        browser:          "chrome" (Patchright, default) or "oxide" (BrowserOxide worker subprocess, oxide/).
+                          Default $FBGB_BROWSER or "chrome".
+        oxide_jar:        oxide's cookie jar (the session). Default $FBGB_OXIDE_JAR or <home>/oxide_jar.json.
         """
+        import os
+        self.browser = (browser or os.environ.get("FBGB_BROWSER") or "chrome").lower()
+        if self.browser not in ("chrome", "oxide"):
+            raise ValueError(f"browser must be 'chrome' or 'oxide', not {self.browser!r}")
         self.home = Path(home) if home else HOME
         self.profile_dir = Path(profile_dir) if profile_dir else (self.home / "profile" if home else PROFILE_DIR)
         self.max_tabs = max_tabs
@@ -64,6 +73,11 @@ class FacebookAPI:
         self._last_activity = time.monotonic()
         self._idle_task: asyncio.Task | None = None
         self._logged_in: bool | None = None
+        self._oxide = None
+        if self.browser == "oxide":
+            from aptbot.scrapers.facebook_generic_browser.oxide.client import OxideBackend
+            jar = oxide_jar or os.environ.get("FBGB_OXIDE_JAR") or (self.home / "oxide_jar.json")
+            self._oxide = OxideBackend(jar=str(jar), rss_limit_mb=int(os.environ.get("FBGB_OXIDE_RSS_LIMIT_MB", "650")))
 
     # ------------------------------------------------------------------ lifecycle
     async def __aenter__(self) -> "FacebookAPI":
@@ -76,6 +90,8 @@ class FacebookAPI:
     async def close(self) -> None:
         """Close Chrome (cleanly, so cookies are flushed) and the cache."""
         await self._close_browser()
+        if self._oxide:
+            await self._oxide.close()
         await self.store.close()
 
     async def _ensure_browser(self) -> Dispatcher:
@@ -159,12 +175,33 @@ class FacebookAPI:
         finally:
             self._last_activity = time.monotonic()
 
+    async def _ox(self, op: str, args: dict, *, timeout: float | None = None):
+        """Run one job on the oxide worker (calls are serialized). Same halt rule as the Chrome path."""
+        if self._halt_file.exists():
+            raise Halted(self._halt_file.read_text().strip() or "halted")
+        self._last_activity = time.monotonic()
+        try:
+            res = await self._oxide.call(op, args, timeout=timeout if timeout is not None else self.default_timeout)
+            self._logged_in = True
+            return res
+        except NotLoggedIn:
+            self._logged_in = False
+            raise
+        except AccountAtRisk as e:
+            self._halt(str(e))
+            await self._oxide.close()
+            raise Halted(str(e)) from e
+
+    def _no_oxide(self, what: str):
+        raise FBGBError(f"{what} isn't implemented on the oxide backend yet (use browser='chrome')")
+
     # ------------------------------------------------------------------ public API
     async def status(self) -> Status:
         """Current state. Never touches Facebook and never starts Chrome."""
         halted = self._halt_file.read_text().strip() if self._halt_file.exists() else None
         d = self._dispatcher
-        return Status(state=State.HALTED if halted else (State.OK if d else State.STOPPED),
+        running = bool(d) or bool(self._oxide and self._oxide.running)
+        return Status(state=State.HALTED if halted else (State.OK if running else State.STOPPED),
                       logged_in=self._logged_in, halt_reason=halted, tabs_busy=d.busy if d else 0,
                       max_tabs=self.max_tabs, queued=d.queued if d else 0,
                       started_at=self._started_at)
@@ -179,7 +216,11 @@ class FacebookAPI:
         """Groups of the account: members AND pending requests (check `join_state`). 1 navigation when stale."""
         if await self.store.is_fresh("groups", max_age):
             return await self.store.groups()
-        groups = await self._run(lambda env, page: jobs.list_groups(env, page), key="groups", timeout=timeout)
+        if self._oxide:
+            from aptbot.scrapers.facebook_generic_browser.store import group_from_dict
+            groups = [group_from_dict(g) for g in await self._ox("list_groups", {}, timeout=timeout)]
+        else:
+            groups = await self._run(lambda env, page: jobs.list_groups(env, page), key="groups", timeout=timeout)
         await self.store.upsert_groups(groups)
         await self.store.mark_fetched("groups")
         cached = {g.id: g for g in await self.store.groups()}
@@ -190,8 +231,12 @@ class FacebookAPI:
         cached = await self.store.group(group_id)
         if cached and cached.privacy and await self.store.is_fresh(f"group:{group_id}", max_age):
             return cached
-        g = await self._run(lambda env, page: jobs.get_group(env, page, group_id),
-                            key=f"group:{group_id}", group=group_id, timeout=timeout)
+        if self._oxide:
+            from aptbot.scrapers.facebook_generic_browser.store import group_from_dict
+            g = group_from_dict(await self._ox("get_group", {"group_id": group_id}, timeout=timeout))
+        else:
+            g = await self._run(lambda env, page: jobs.get_group(env, page, group_id),
+                                key=f"group:{group_id}", group=group_id, timeout=timeout)
         await self.store.upsert_groups([g])
         await self.store.mark_fetched(f"group:{group_id}")
         return await self.store.group(group_id) or g
@@ -205,9 +250,17 @@ class FacebookAPI:
         if max_age and await self.store.is_fresh(f"feed:{group_id}", max_age):
             return await self.store.posts([group_id], since=datetime.fromtimestamp(since_ts, timezone.utc)
                                           if since_ts else None, limit=limit)
-        meta, posts = await self._run(
-            lambda env, page: jobs.group_feed(env, page, group_id, limit=limit, since=since_ts),
-            key=f"feed:{group_id}:{limit}:{since_ts}", group=group_id, priority=priority, timeout=timeout)
+        if self._oxide:
+            from aptbot.scrapers.facebook_generic_browser.store import group_from_dict, post_from_dict
+            # albums: complete the newest cut-short albums via their album page (oxide/jobs.py fill_albums)
+            albums = os.environ.get("FBGB_OXIDE_ALBUMS", "1") != "0"
+            r = await self._ox("group_feed", {"group_id": group_id, "limit": limit, "since": since_ts,
+                                              "albums": albums}, timeout=timeout)
+            meta, posts = group_from_dict(r["group"]), [post_from_dict(p) for p in r["posts"]]
+        else:
+            meta, posts = await self._run(
+                lambda env, page: jobs.group_feed(env, page, group_id, limit=limit, since=since_ts),
+                key=f"feed:{group_id}:{limit}:{since_ts}", group=group_id, priority=priority, timeout=timeout)
         await self.store.upsert_groups([meta])
         await self.store.upsert_posts(posts)
         await self.store.mark_fetched(f"feed:{group_id}")
@@ -217,6 +270,10 @@ class FacebookAPI:
                            timeout: float | None = None) -> AsyncIterator[Post]:
         """Like latest_posts, but yields each post as soon as Facebook delivers it (3 per pagination).
         Breaking out of the loop cancels the scrolling and frees the tab."""
+        if self._oxide:   # no streaming on oxide: one call, then yield
+            for p in await self.latest_posts(group_id, limit=limit, since=since, max_age=0, timeout=timeout):
+                yield p
+            return
         since_ts = _unix(since)
         q: asyncio.Queue = asyncio.Queue()
 
@@ -284,7 +341,11 @@ class FacebookAPI:
                 await self.store.set_watermark(g.id, time.time())
             return posts
 
-        results = await asyncio.gather(*(one(g, wm) for g, wm in todo), return_exceptions=True)
+        try:
+            results = await asyncio.gather(*(one(g, wm) for g, wm in todo), return_exceptions=True)
+        finally:
+            if self._oxide:            # a fresh worker per cycle: nothing leaks into the next one
+                await self._oxide.close()
         out: list[Post] = []
         for r in results:
             if isinstance(r, Halted):
@@ -295,12 +356,16 @@ class FacebookAPI:
 
     async def search_groups(self, query: str, *, limit: int = 20, timeout: float | None = None) -> list[GroupHit]:
         """Find groups by keyword (Facebook search → Groups). Each hit says privacy, size and activity."""
+        if self._oxide:
+            self._no_oxide("search_groups")
         return await self._run(lambda env, page: jobs.search_groups(env, page, query, limit=limit),
                                key=f"search_groups:{query}:{limit}", timeout=timeout)
 
     async def search_group(self, group_id: str, query: str, *, limit: int = 30,
                            timeout: float | None = None) -> list[Post]:
         """Keyword search inside one group (Facebook's in-group search; relevance order, not by date)."""
+        if self._oxide:
+            self._no_oxide("search_group")
         posts = await self._run(lambda env, page: jobs.search_in_group(env, page, group_id, query, limit=limit),
                                 key=f"search_group:{group_id}:{query}:{limit}", group=group_id, timeout=timeout)
         await self.store.upsert_posts(posts)
@@ -310,9 +375,14 @@ class FacebookAPI:
                        timeout: float | None = None) -> Post:
         """One post from its permalink page (1 navigation), optionally with its comments (comment loading beyond
         the embedded ones is still marked Unverified in docs/api-reference.md)."""
-        post = await self._run(lambda env, page: jobs.get_post(env, page, group_id, post_id,
-                                                                with_comments=with_comments),
-                               key=f"post:{group_id}:{post_id}:{with_comments}", timeout=timeout)
+        if self._oxide:
+            from aptbot.scrapers.facebook_generic_browser.store import post_from_dict
+            post = post_from_dict(await self._ox("get_post", {"group_id": group_id, "post_id": post_id,
+                                                              "with_comments": with_comments}, timeout=timeout))
+        else:
+            post = await self._run(lambda env, page: jobs.get_post(env, page, group_id, post_id,
+                                                                    with_comments=with_comments),
+                                   key=f"post:{group_id}:{post_id}:{with_comments}", timeout=timeout)
         await self.store.upsert_posts([post])
         return post
 
@@ -322,6 +392,8 @@ class FacebookAPI:
 
     async def cross_group_feed(self, *, limit: int = 30, timeout: float | None = None) -> list[Post]:
         """"Your feed": recent posts across all joined groups (Facebook's ranking, not chronological)."""
+        if self._oxide:
+            self._no_oxide("cross_group_feed")
         posts = await self._run(lambda env, page: jobs.cross_group_feed(env, page, limit=limit),
                                 key=f"cross_feed:{limit}", timeout=timeout)
         await self.store.upsert_posts(posts)

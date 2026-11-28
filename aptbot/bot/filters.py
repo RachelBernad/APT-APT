@@ -27,7 +27,8 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler, ContextTypes,
 
 from aptbot.bot import menu
 from aptbot.db import Database
-from aptbot.models import (FEATURES, FILTER_FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
+from aptbot.models import (FEATURES, FILTER_FEATURES, PROPERTY_CONDITION_LABELS as PROPERTY_CONDITIONS,
+                            PROPERTY_TYPE_LABELS as PROPERTY_TYPES,
                            SavedSearch)
 
 logger = logging.getLogger(__name__)
@@ -356,10 +357,12 @@ class FilterCommands:
     def conversation(self) -> ConversationHandler:
         return ConversationHandler(
             entry_points=[CommandHandler("filters", self.entry),
-                          CallbackQueryHandler(self.entry, pattern=menu.FILTERS_PATTERN)],
+                          CallbackQueryHandler(self.entry, pattern=menu.FILTERS_PATTERN),
+                          MessageHandler(filters.Regex(menu.FILTERS_KEY_REGEX), self.entry)],
             states={
                 FORM: [CallbackQueryHandler(self.button, pattern=r"^(wz|rng|pt|ft|cond):")],
-                AWAIT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.typed_value),
+                AWAIT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(menu.KEY_REGEX),
+                                             self.typed_value),
                               CallbackQueryHandler(self.button, pattern=r"^(wz|rng|pt|ft|cond):")],
                 ConversationHandler.TIMEOUT: [TypeHandler(Update, self.timeout)],
             },
