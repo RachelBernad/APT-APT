@@ -119,8 +119,10 @@ class SimpleCommands:
                "status": self.status, "help": self.help}[action](update, context)
 
     async def key_tap(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """A button on the bottom panel (its text arrives as a message)."""
-        action = menu.KEYS.get((update.effective_message.text or "").strip())
+        """A bottom-panel button, or any supported "/cmd[@name]" the CommandHandlers didn't take."""
+        text = (update.effective_message.text or "").strip()
+        action = menu.KEYS.get(text) or menu.command_of(text)
+        action = {"start": "help"}.get(action, action)
         fn = {"monitor": self.monitor, "stop": self.stop,
               "status": self.status, "help": self.help}.get(action)
         if fn is not None:

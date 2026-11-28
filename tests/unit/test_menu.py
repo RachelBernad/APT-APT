@@ -123,10 +123,23 @@ def _keys(markup):
 def test_bottom_panel_layout():
     kb = menu.keyboard()
     assert _keys(kb) == ["/filters 🎛", "/status 📊", "/monitor ▶️", "/stop ⏸", "/help ❓"]
-    # privacy-mode groups only deliver "/..." messages: every button must start with a command
-    assert all(k.split()[0] in ("/filters", "/status", "/monitor", "/stop", "/help") for k in _keys(kb))
     assert kb.is_persistent and kb.resize_keyboard
+    menu.set_username("test_finder_bot")
+    try:
+        # privacy mode only reliably delivers commands addressed to this bot by name
+        assert _keys(menu.keyboard())[1] == "/status@test_finder_bot 📊"
+    finally:
+        menu.set_username(None)
+
+
+def test_any_supported_command_form_is_recognised():
     import re
+    for t in ("/status", "/status@test_finder_bot", "/status@other_bot 📊", "/help ❓", "/stop@x_bot"):
+        assert re.match(menu.ANY_COMMAND_REGEX, t), t
+    for t in ("/statusx", "/unknown", "status", "/filters"):
+        assert not re.match(menu.ANY_COMMAND_REGEX, t), t
+    assert re.match(menu.FILTERS_COMMAND_REGEX, "/filters@other_bot 🎛")
+    assert menu.command_of("/stop@other_bot ⏸") == "stop" and menu.command_of("/nope") is None
     assert all(re.match(menu.KEY_REGEX, k) for k in menu.KEYS)
     assert not re.match(menu.KEY_REGEX, "7000") and not re.match(menu.KEY_REGEX, "📊 Status please")
 
@@ -148,6 +161,8 @@ async def test_panel_keys_run_the_commands(db):
     assert "Monitor:</b> on" in chat.replies[-1][0]
     assert await card.entry(key("🎛 Filters"), chat.context) == fl.FORM
     assert "wz:save" in chat.last_menu()
+    await cmds.key_tap(key("/status@other_bot 📊"), chat.context)
+    assert "Monitor:</b> on" in chat.replies[-1][0]
     await cmds.key_tap(key("⏸ Pause"), chat.context)
     assert "Paused" in chat.replies[-1][0]
     await cmds.key_tap(key("❓ Help"), chat.context)
