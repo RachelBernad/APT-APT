@@ -113,7 +113,7 @@ async def test_filters_button_opens_the_card_and_save_brings_the_menu_back(db):
     await card.button(chat.tap("rng:price:max:7000"), chat.context)
     await card.button(chat.tap("wz:save"), chat.context)
     text, markup = chat.replies[-1]
-    assert "Filters saved" in text and "🎛 Filters · 1" in _labels(markup)
+    assert "הסינון נשמר" in text and "🎛 Filters · 1" in _labels(markup)
 
 
 def _keys(markup):
@@ -152,15 +152,15 @@ async def test_panel_keys_run_the_commands(db):
     assert "button panel" in chat.replies[-1][0]
 
 
-def test_filter_names_are_english():
-    s = SavedSearch(id=1, chat_id=CHAT, label="x", property_types=[1, 4], property_condition=2)
+def test_filter_names_are_hebrew():
+    s = SavedSearch(id=1, chat_id=CHAT, label="x", property_types=[1, 4], property_condition=2,
+                    features=["mamad"])
     text = fl.filters_summary(s)
-    assert "Apartment" in text and "Studio/Loft" in text and "Renovated" in text
-    import re
-    labels = [t for t, _ in [(x, 0) for x in str(fl.types_screen(s)) + str(fl.cond_screen(s))]]
-    assert not re.search("[\u0590-\u05FF]", "".join(labels))
-    from aptbot.bot.simple import area_summary, help_text
-    assert not re.search("[\u0590-\u05FF]", help_text(True).replace(area_summary(), ""))  # place names stay
+    assert "דירה" in text and "סטודיו/לופט" in text and "משופץ" in text and "ממ״ד" in text
+    assert "מחיר" in text and "Price" not in text
+    labels = [b.text for screen in (fl.card_screen(s), fl.types_screen(s), fl.features_screen(s))
+              for row in screen[1].inline_keyboard for b in row]
+    assert "💰 מחיר" in labels and "✅ שמירה" in labels and "✅ 🛡 ממ״ד" in labels
 
 
 def test_menu_taps_have_log_labels():

@@ -55,7 +55,7 @@ def help_text(fb_on: bool) -> str:
         f"{fb}\n"
         "Use the button panel (the ⌨️ icon next to the text box), or send a command:\n"
         "/monitor: start watching (you get a short taster of what's there now)\n"
-        "/filters: price, rooms, size, floor, type, condition and features like a safe room. "
+        "/filters: price, rooms, size, floor, type, condition and features like ממ״ד. "
         "A listing that doesn't mention a field is kept and marked ❔\n"
         "/stop: pause\n"
         "/status: what each source did last\n"
