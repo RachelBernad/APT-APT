@@ -27,26 +27,25 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler, ContextTypes,
 
 from aptbot.bot import menu
 from aptbot.db import Database
-from aptbot.models import (FEATURES, FILTER_FEATURES, PROPERTY_CONDITION_LABELS as PROPERTY_CONDITIONS,
-                            PROPERTY_TYPE_LABELS as PROPERTY_TYPES,
+from aptbot.models import (FEATURES, FILTER_FEATURES, PROPERTY_CONDITIONS, PROPERTY_TYPES,
                            SavedSearch)
 
 logger = logging.getLogger(__name__)
 
 FORM, AWAIT_VALUE = range(2)
 TIMEOUT_SECONDS = 600
-LENIENT_NOTE = "ℹ️ A listing that doesn't mention a field is never filtered out by it; it's marked ❔."
+LENIENT_NOTE = "ℹ️ מודעה שלא מציינת שדה לא תסונן לפיו; היא תסומן ❔."
 
 # field -> SavedSearch attrs + quick picks (Tel Aviv rent).
 FIELD_SPECS = {
-    "price": {"min": "min_price", "max": "max_price", "float": False, "title": "Price", "emoji": "💰",
+    "price": {"min": "min_price", "max": "max_price", "float": False, "title": "מחיר", "emoji": "💰",
               "min_opts": [3000, 4000, 5000, 6000],
               "max_opts": [5000, 6000, 7000, 8000, 9000, 10000, 12000], "example": "7500"},
-    "rooms": {"min": "min_rooms", "max": "max_rooms", "float": True, "title": "Rooms", "emoji": "🛏",
+    "rooms": {"min": "min_rooms", "max": "max_rooms", "float": True, "title": "חדרים", "emoji": "🛏",
               "min_opts": [1, 1.5, 2, 2.5, 3, 3.5, 4], "max_opts": [2, 2.5, 3, 3.5, 4, 5], "example": "2.5"},
-    "sqm": {"min": "min_sqm", "max": "max_sqm", "float": False, "title": "Size", "emoji": "📐",
+    "sqm": {"min": "min_sqm", "max": "max_sqm", "float": False, "title": "גודל", "emoji": "📐",
             "min_opts": [40, 50, 60, 70], "max_opts": [80, 100, 120, 150], "example": "55"},
-    "floor": {"min": "min_floor", "max": "max_floor", "float": False, "title": "Floor", "emoji": "🏢",
+    "floor": {"min": "min_floor", "max": "max_floor", "float": False, "title": "קומה", "emoji": "🏢",
               "min_opts": [0, 1, 2, 3], "max_opts": [3, 5, 10, 20], "example": "4"},
 }
 
@@ -58,11 +57,11 @@ EDITING_KEY = "filters_editing"
 
 def fmt_val(v, field: str) -> str:
     if v is None:
-        return "Any"
+        return "הכל"
     if field == "price":
         return f"₪{int(v):,}"
     if field == "sqm":
-        return f"{int(v)} m²"
+        return f"{int(v)} מ״ר"
     if field == "rooms":
         return f"{float(v):g}"
     return str(int(v))
@@ -72,7 +71,7 @@ def fmt_range(s: SavedSearch, field: str) -> str:
     spec = FIELD_SPECS[field]
     lo, hi = getattr(s, spec["min"]), getattr(s, spec["max"])
     if lo is None and hi is None:
-        return "Any"
+        return "הכל"
     if lo is not None and hi is not None:
         return f"{fmt_val(lo, field)}–{fmt_val(hi, field)}"
     return f"≥ {fmt_val(lo, field)}" if lo is not None else f"≤ {fmt_val(hi, field)}"
@@ -80,17 +79,17 @@ def fmt_range(s: SavedSearch, field: str) -> str:
 
 def filters_summary(s: SavedSearch) -> str:
     """Multi-line HTML summary of a monitor's filters (the card and /status)."""
-    types = ", ".join(PROPERTY_TYPES.get(t, str(t)) for t in s.property_types or []) or "Any"
-    cond = PROPERTY_CONDITIONS.get(s.property_condition, "Any") if s.property_condition else "Any"
-    feats = ", ".join(f"{FEATURES[k][3]} {FEATURES[k][2]}" for k in s.features or [] if k in FEATURES)
+    types = ", ".join(PROPERTY_TYPES.get(t, str(t)) for t in s.property_types or []) or "הכל"
+    cond = PROPERTY_CONDITIONS.get(s.property_condition, "הכל") if s.property_condition else "הכל"
+    feats = ", ".join(f"{FEATURES[k][3]} {FEATURES[k][1]}" for k in s.features or [] if k in FEATURES)
     return "\n".join([
-        f"💰 Price: <b>{fmt_range(s, 'price')}</b>",
-        f"🛏 Rooms: <b>{fmt_range(s, 'rooms')}</b>",
-        f"📐 Size: <b>{fmt_range(s, 'sqm')}</b>",
-        f"🏢 Floor: <b>{fmt_range(s, 'floor')}</b>",
-        f"🏠 Type: <b>{types}</b>",
-        f"🛠 Condition: <b>{cond}</b>",
-        f"✨ Features: <b>{feats or 'Any'}</b>",
+        f"💰 מחיר: <b>{fmt_range(s, 'price')}</b>",
+        f"🛏 חדרים: <b>{fmt_range(s, 'rooms')}</b>",
+        f"📐 גודל: <b>{fmt_range(s, 'sqm')}</b>",
+        f"🏢 קומה: <b>{fmt_range(s, 'floor')}</b>",
+        f"🏠 סוג נכס: <b>{types}</b>",
+        f"🛠 מצב הנכס: <b>{cond}</b>",
+        f"✨ מאפיינים: <b>{feats or 'הכל'}</b>",
     ])
 
 
@@ -102,18 +101,18 @@ def has_filters(s: SavedSearch) -> bool:
 # --- screens: (text, markup) ---
 
 def card_screen(s: SavedSearch) -> tuple:
-    text = f"<b>🎛 Monitor filters</b>\n\n{filters_summary(s)}\n\n{LENIENT_NOTE}\nAdjust anything, then <b>Save</b>."
+    text = f"<b>🎛 סינון המעקב</b>\n\n{filters_summary(s)}\n\n{LENIENT_NOTE}\nשנו מה שתרצו ולחצו <b>שמירה</b>."
     rows = [
-        [InlineKeyboardButton("💰 Price", callback_data="wz:field:price"),
-         InlineKeyboardButton("🛏 Rooms", callback_data="wz:field:rooms")],
-        [InlineKeyboardButton("📐 Size", callback_data="wz:field:sqm"),
-         InlineKeyboardButton("🏢 Floor", callback_data="wz:field:floor")],
-        [InlineKeyboardButton("🏠 Type", callback_data="wz:types"),
-         InlineKeyboardButton("🛠 Condition", callback_data="wz:cond")],
-        [InlineKeyboardButton("✨ Features", callback_data="wz:feats"),
-         InlineKeyboardButton("🧹 Clear all", callback_data="wz:clear")],
-        [InlineKeyboardButton("✅ Save", callback_data="wz:save"),
-         InlineKeyboardButton("✖ Cancel", callback_data="wz:cancel")],
+        [InlineKeyboardButton("💰 מחיר", callback_data="wz:field:price"),
+         InlineKeyboardButton("🛏 חדרים", callback_data="wz:field:rooms")],
+        [InlineKeyboardButton("📐 גודל", callback_data="wz:field:sqm"),
+         InlineKeyboardButton("🏢 קומה", callback_data="wz:field:floor")],
+        [InlineKeyboardButton("🏠 סוג נכס", callback_data="wz:types"),
+         InlineKeyboardButton("🛠 מצב הנכס", callback_data="wz:cond")],
+        [InlineKeyboardButton("✨ מאפיינים", callback_data="wz:feats"),
+         InlineKeyboardButton("🧹 נקה הכל", callback_data="wz:clear")],
+        [InlineKeyboardButton("✅ שמירה", callback_data="wz:save"),
+         InlineKeyboardButton("✖ ביטול", callback_data="wz:cancel")],
     ]
     return text, InlineKeyboardMarkup(rows)
 
@@ -121,23 +120,23 @@ def card_screen(s: SavedSearch) -> tuple:
 def range_screen(field: str, bound: str, s: SavedSearch) -> tuple:
     spec = FIELD_SPECS[field]
     is_min = bound == "min"
-    lines = [f"{spec['emoji']} <b>{spec['title']}: {'minimum' if is_min else 'maximum'}</b>"]
+    lines = [f"{spec['emoji']} <b>{spec['title']}: {'מינימום' if is_min else 'מקסימום'}</b>"]
     if is_min:
-        lines.append("Step 1 of 2: pick a lower bound (or none).")
+        lines.append("שלב 1 מתוך 2: בחרו גבול תחתון (או ללא).")
     else:
         if getattr(s, spec["min"]) is not None:
-            lines.append(f"Minimum: <b>{fmt_val(getattr(s, spec['min']), field)}</b>.")
-        lines.append("Step 2 of 2: pick an upper bound (or none).")
-    buttons = [InlineKeyboardButton(f"🚫 No {'minimum' if is_min else 'maximum'}",
+            lines.append(f"מינימום: <b>{fmt_val(getattr(s, spec['min']), field)}</b>.")
+        lines.append("שלב 2 מתוך 2: בחרו גבול עליון (או ללא).")
+    buttons = [InlineKeyboardButton(f"🚫 ללא {'מינימום' if is_min else 'מקסימום'}",
                                     callback_data=f"rng:{field}:{bound}:none")]
     lo = getattr(s, spec["min"])
     for v in spec[f"{bound}_opts"]:
         if not is_min and lo is not None and v < lo:
             continue                                   # a max below the chosen min makes no sense
         buttons.append(InlineKeyboardButton(fmt_val(v, field), callback_data=f"rng:{field}:{bound}:{v}"))
-    buttons.append(InlineKeyboardButton("✏ Custom…", callback_data=f"rng:{field}:{bound}:custom"))
+    buttons.append(InlineKeyboardButton("✏ ערך אחר…", callback_data=f"rng:{field}:{bound}:custom"))
     rows = [buttons[i:i + 3] for i in range(0, len(buttons), 3)]
-    rows.append([InlineKeyboardButton("↩ Back", callback_data="wz:card")])
+    rows.append([InlineKeyboardButton("↩ חזרה", callback_data="wz:card")])
     return "\n".join(lines), InlineKeyboardMarkup(rows)
 
 
@@ -152,21 +151,20 @@ def toggle_screen(title: str, options: List[tuple], chosen: set, prefix: str) ->
             row = []
     if row:
         rows.append(row)
-    rows.append([InlineKeyboardButton("✔ Done", callback_data="wz:card")])
+    rows.append([InlineKeyboardButton("✔ סיום", callback_data="wz:card")])
     return title, InlineKeyboardMarkup(rows)
 
 
 def types_screen(s: SavedSearch) -> tuple:
-    return toggle_screen("🏠 <b>Property type</b> (none selected = all):",
+    return toggle_screen("🏠 <b>סוג נכס</b> (בלי בחירה = הכל):",
                          list(PROPERTY_TYPES.items()), set(s.property_types or []), "pt")
 
 
 def features_screen(s: SavedSearch) -> tuple:
     return toggle_screen(
-        "✨ <b>Features</b>\nYad2 posters often leave these boxes unticked, so a feature never "
-        "hides a listing: ✅ means it's ticked, ❔ that it isn't. A Facebook post that says "
-        "it does NOT have one is skipped.",
-        [(k, f"{FEATURES[k][3]} {FEATURES[k][2]}") for k in FILTER_FEATURES],
+        "✨ <b>מאפיינים</b>\nביד2 מפרסמים רבים לא מסמנים את התיבות, ולכן מאפיין אף פעם לא "
+        "מסתיר מודעה: ✅ מסומן, ❔ לא מסומן. פוסט בפייסבוק שכתוב בו במפורש שאין את המאפיין לא יישלח.",
+        [(k, f"{FEATURES[k][3]} {FEATURES[k][1]}") for k in FILTER_FEATURES],
         set(s.features or []), "ft")
 
 
@@ -180,8 +178,8 @@ def cond_screen(s: SavedSearch) -> tuple:
             row = []
     if row:
         rows.append(row)
-    rows.append([InlineKeyboardButton("Any condition", callback_data="cond:any")])
-    return "🛠 <b>Condition</b>:", InlineKeyboardMarkup(rows)
+    rows.append([InlineKeyboardButton("כל מצב", callback_data="cond:any")])
+    return "🛠 <b>מצב הנכס</b>:", InlineKeyboardMarkup(rows)
 
 
 def parse_number(text: str, allow_float: bool):
@@ -219,7 +217,7 @@ class FilterCommands:
         s = await self._own_search(update.effective_chat.id)
         if s is None:
             await update.effective_message.reply_text(
-                "No monitor yet. Start watching first.", reply_markup=menu.menu_markup(None))
+                "אין עדיין מעקב. התחילו מעקב קודם.", reply_markup=menu.menu_markup(None))
             return ConversationHandler.END
         context.chat_data[DRAFT_KEY] = replace(s, features=list(s.features or []),
                                                property_types=list(s.property_types or []) or None)
@@ -234,7 +232,7 @@ class FilterCommands:
         draft: Optional[SavedSearch] = context.chat_data.get(DRAFT_KEY)
         if draft is None:
             await query.edit_message_text(
-                "This card expired.",
+                "הכרטיס פג תוקף.",
                 reply_markup=menu.menu_markup(await self._own_search(update.effective_chat.id)))
             return ConversationHandler.END
         data = query.data
@@ -246,7 +244,7 @@ class FilterCommands:
 
         if data == "wz:cancel":
             self._drop(context)
-            await query.edit_message_text("Cancelled. The filters didn't change.",
+            await query.edit_message_text("בוטל. הסינון לא השתנה.",
                                           reply_markup=menu.menu_markup(await self._own_search(draft.chat_id)))
             return ConversationHandler.END
         if data == "wz:save":
@@ -283,10 +281,10 @@ class FilterCommands:
             spec = FIELD_SPECS[field]
             if value == "custom":
                 context.chat_data[EDITING_KEY] = (field, bound)
-                await query.edit_message_text(f"✏ Waiting for the {'minimum' if bound == 'min' else 'maximum'} "
-                                              f"{spec['title'].lower()}…")
+                await query.edit_message_text(f"✏ ממתין ל{'מינימום' if bound == 'min' else 'מקסימום'} "
+                                              f"של {spec['title']}…")
                 await query.message.reply_text(
-                    f"Reply with a number, e.g. <code>{spec['example']}</code>:",
+                    f"השיבו עם מספר, למשל <code>{spec['example']}</code>:",
                     reply_markup=ForceReply(input_field_placeholder=spec["example"]),
                     parse_mode=ParseMode.HTML)
                 return AWAIT_VALUE
@@ -305,7 +303,7 @@ class FilterCommands:
         v = parse_number(update.effective_message.text, spec["float"])
         if v is None:
             await update.effective_message.reply_text(
-                f"That's not a number. Reply with one, e.g. <code>{spec['example']}</code>:",
+                f"זה לא מספר. השיבו עם מספר, למשל <code>{spec['example']}</code>:",
                 reply_markup=ForceReply(input_field_placeholder=spec["example"]), parse_mode=ParseMode.HTML)
             return AWAIT_VALUE
         setattr(draft, spec[bound], v)
@@ -317,7 +315,7 @@ class FilterCommands:
     async def _save(self, query, context, draft: SavedSearch):
         lo_hi = [(getattr(draft, spec["min"]), getattr(draft, spec["max"])) for spec in FIELD_SPECS.values()]
         if any(lo is not None and hi is not None and lo > hi for lo, hi in lo_hi):
-            await query.answer("A minimum is above its maximum; fix it first.", show_alert=True)
+            await query.answer("מינימום גבוה מהמקסימום; תקנו קודם.", show_alert=True)
             return FORM
         await self.db.update_search_filters(
             draft.id, min_price=draft.min_price, max_price=draft.max_price,
@@ -330,9 +328,9 @@ class FilterCommands:
         self._drop(context)
         fresh = await self.db.get_search(draft.id)      # /stop may have run while the card was open
         await query.edit_message_text(
-            f"✅ <b>Filters saved</b>\n\n{filters_summary(draft)}\n\n"
-            + ("🔎 A fresh taster under these filters is on its way, then only new listings."
-               if fresh.is_active else "⏸ The monitor is paused; Resume to get listings under these filters."),
+            f"✅ <b>הסינון נשמר</b>\n\n{filters_summary(draft)}\n\n"
+            + ("🔎 טעימה חדשה לפי הסינון בדרך, ואחר כך רק מודעות חדשות."
+               if fresh.is_active else "⏸ המעקב מושהה; המשיכו את המעקב כדי לקבל מודעות לפי הסינון."),
             parse_mode=ParseMode.HTML, reply_markup=menu.menu_markup(fresh))
         logger.info("Filters saved for monitor #%s in chat %s", draft.id, draft.chat_id)
         if fresh.is_active:
@@ -342,7 +340,7 @@ class FilterCommands:
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self._drop(context)
         await update.effective_message.reply_text(
-            "Cancelled. The filters didn't change.",
+            "בוטל. הסינון לא השתנה.",
             reply_markup=menu.menu_markup(await self._own_search(update.effective_chat.id)))
         return ConversationHandler.END
 

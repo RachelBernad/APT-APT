@@ -211,7 +211,7 @@ class Bot:
     async def _set_commands(self):
         await self.application.bot.set_my_commands([
             BotCommand("monitor", "Start watching Tel Aviv (Yad2 + Facebook)"),
-            BotCommand("filters", "Choose price, rooms, safe room and other filters"),
+            BotCommand("filters", "Choose price, rooms, ממ״ד and other filters"),
             BotCommand("stop", "Pause"),
             BotCommand("status", "What each source did last"),
             BotCommand("help", "How the bot works"),

@@ -249,7 +249,7 @@ async def test_backfill_caps_and_records_all_as_seen(db, monkeypatch):
     # primed now
     assert (await db.get_search(s.id)).is_primed is True
     # the 10 sent are the highest order_ids (14..5)
-    sent_urls = [t for t in sender.texts() if "Apartment Found" in t]
+    sent_urls = [t for t in sender.texts() if "נמצאה דירה" in t]
     assert any("/yad2:14" in t for t in sent_urls)
     assert all("/yad2:4" not in t for t in sent_urls)   # #4 was below the cap
 
@@ -439,12 +439,12 @@ def test_listing_message_marks_wanted_features_and_unknown_filtered_fields():
     from aptbot.bot.formatting import format_apartment_message
     s = _search(max_price=7000, min_rooms=2, features=["mamad", "elevator"])
     text = format_apartment_message(make_listing("y:1", price=None, rooms="", features=["mamad"]), s)
-    assert "<b>Price:</b> ❔ not listed" in text
-    assert "<b>Rooms:</b> ❔ not listed" in text
-    assert "<b>Features:</b> ✅ Safe room · ❔ Elevator" in text
+    assert "<b>מחיר:</b> ❔ לא צוין" in text
+    assert "<b>חדרים:</b> ❔ לא צוין" in text
+    assert "<b>מאפיינים:</b> ✅ ממ״ד · ❔ מעלית" in text
     checked = format_apartment_message(
         make_listing("y:3", features=["mamad"], features_checked=["mamad", "elevator"]), s)
-    assert "<b>Features:</b> ✅ Safe room · ❌ Elevator" in checked
+    assert "<b>מאפיינים:</b> ✅ ממ״ד · ❌ מעלית" in checked
     assert "Size" not in text                     # no size filter, no size: nothing shown
     plain = format_apartment_message(make_listing("y:2", features=["mamad"]))
-    assert "🛡 Safe room" in plain and "❔" not in plain
+    assert "🛡 ממ״ד" in plain and "❔" not in plain

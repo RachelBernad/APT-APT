@@ -187,12 +187,6 @@ PROPERTY_TYPES: Dict[int, str] = {
     51: "טריפלקס",
 }
 
-# English labels for the bot UI (the Hebrew tables above match Yad2's own text).
-PROPERTY_TYPE_LABELS: Dict[int, str] = {
-    1: "Apartment", 3: "Garden apartment", 4: "Studio/Loft", 5: "House/Cottage",
-    6: "Rooftop/Penthouse", 7: "Duplex", 11: "Housing unit", 39: "Semi-detached",
-    49: "Basement/Parterre", 51: "Triplex",
-}
 
 # Verified Yad2 property-condition ids -> Hebrew label (from the filters panel;
 # ids observed on markers are 1,2,3,5,6).
@@ -204,9 +198,4 @@ PROPERTY_CONDITIONS: Dict[int, str] = {
     2: "משופץ",
     3: "במצב שמור",
     5: "דרוש שיפוץ",
-}
-
-PROPERTY_CONDITION_LABELS: Dict[int, str] = {
-    1: "New from developer", 6: "New (up to 10 years)", 2: "Renovated",
-    3: "Well kept", 5: "Needs renovation",
 }

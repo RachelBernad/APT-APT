@@ -127,7 +127,7 @@ async def test_clear_all_and_existing_filters_load_into_the_card(db):
     await db.update_search_filters(sid, max_price=8000, features=["elevator"], property_condition=2)
     ui = Ui()
     await cmd.entry(ui.message(), ui.context)
-    assert "≤ ₪8,000" in ui.shown[-1][0] and "Elevator" in ui.shown[-1][0]
+    assert "≤ ₪8,000" in ui.shown[-1][0] and "מעלית" in ui.shown[-1][0]
     await cmd.button(ui.tap("wz:clear"), ui.context)
     await cmd.button(ui.tap("wz:save"), ui.context)
     s = await db.get_search(sid)
@@ -138,14 +138,14 @@ async def test_no_monitor_yet(db):
     cmd = fl.FilterCommands(db, on_saved=None)
     ui = Ui()
     assert await cmd.entry(ui.message(), ui.context) == ConversationHandler.END
-    assert "Start watching" in ui.shown[-1][0] and ui.buttons() == ["menu:monitor", "menu:help"]
+    assert "התחילו מעקב" in ui.shown[-1][0] and ui.buttons() == ["menu:monitor", "menu:help"]
 
 
 async def test_expired_card_button(db):
     _, cmd, _ = await _setup(db)
     ui = Ui()
     assert await cmd.button(ui.tap("ft:mamad"), ui.context) == ConversationHandler.END
-    assert "expired" in ui.shown[-1][0] and "menu:filters" in ui.buttons()
+    assert "פג תוקף" in ui.shown[-1][0] and "menu:filters" in ui.buttons()
 
 
 async def test_gate_refuses_a_strangers_button_tap():

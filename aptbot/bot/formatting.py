@@ -67,30 +67,30 @@ def format_apartment_message(apt: Dict[str, Any], s=None) -> str:
     # broken). The source is intentionally NOT shown to the user.
     price = apt.get("price")
     lines = [
-        "<b>🏠 Apartment Found!</b>",
-        f"<b>Price:</b> {_format_price(price) if not _blank(price) else '❔ not listed'}",
-        f"<b>Location:</b> {location}",
+        "<b>🏠 נמצאה דירה!</b>",
+        f"<b>מחיר:</b> {_format_price(price) if not _blank(price) else '❔ לא צוין'}",
+        f"<b>מיקום:</b> {location}",
     ]
     if not _blank(apt.get("property_type")):
-        lines.append(f"<b>Type:</b> {_html_value(apt['property_type'])}")
-    for key, field, label, unit in (("rooms", "rooms", "Rooms", ""), ("size", "sqm", "Size", " sqm"),
-                                    ("floor", "floor", "Floor", "")):
+        lines.append(f"<b>סוג נכס:</b> {_html_value(apt['property_type'])}")
+    for key, field, label, unit in (("rooms", "rooms", "חדרים", ""), ("size", "sqm", "גודל", " מ״ר"),
+                                    ("floor", "floor", "קומה", "")):
         if not _blank(apt.get(key)):
             lines.append(f"<b>{label}:</b> {_html_value(apt[key])}{unit}")
         elif _has_range(s, field):
-            lines.append(f"<b>{label}:</b> ❔ not listed")
+            lines.append(f"<b>{label}:</b> ❔ לא צוין")
     have = set(apt.get("features") or [])
     checked = set(apt.get("features_checked") or [])
     wanted = list(s.features or []) if s is not None else []
     # Wanted features: ✅ ticked on Yad2, ❌ checked and not ticked, ❔ couldn't check.
     # Without a monitor, show the features known to be present.
-    chips = [f"{'✅' if k in have else '❌' if k in checked else '❔'} {FEATURES[k][2]}"
+    chips = [f"{'✅' if k in have else '❌' if k in checked else '❔'} {FEATURES[k][1]}"
              for k in wanted if k in FEATURES]
     if not wanted:
-        chips = [f"{FEATURES[k][3]} {FEATURES[k][2]}" for k in apt.get("features") or [] if k in FEATURES]
+        chips = [f"{FEATURES[k][3]} {FEATURES[k][1]}" for k in apt.get("features") or [] if k in FEATURES]
     if chips:
-        lines.append(f"<b>Features:</b> {' · '.join(chips) if wanted else ', '.join(chips)}")
-    lines.append(f"<b>URL:</b> <a href='{url}'>Link</a>")
+        lines.append(f"<b>מאפיינים:</b> {' · '.join(chips) if wanted else ', '.join(chips)}")
+    lines.append(f"<a href='{url}'>למודעה ↗</a>")
     return "\n".join(lines)
 
 
@@ -123,10 +123,10 @@ def format_price_change(apt: Dict[str, Any], old_price: Optional[int]) -> str:
     url = html.escape(str(apt.get("apartment_page_url", "N/A")), quote=True)
     location = _html_value(apt.get("location") or apt.get("city", ""))
     return (
-        f"<b>🔄 Price Changed!</b>\n"
-        f"<b>Location:</b> {location}\n"
-        f"<b>Was:</b> {_format_price(old_price)}  →  <b>Now:</b> {_format_price(apt.get('price'))}\n"
-        f"<b>URL:</b> <a href='{url}'>Link</a>"
+        f"<b>🔄 המחיר השתנה!</b>\n"
+        f"<b>מיקום:</b> {location}\n"
+        f"<b>היה:</b> {_format_price(old_price)}  →  <b>עכשיו:</b> {_format_price(apt.get('price'))}\n"
+        f"<a href='{url}'>למודעה ↗</a>"
     )
 
 

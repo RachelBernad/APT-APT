@@ -83,11 +83,11 @@ class FakeSender:
 
     @property
     def apartments(self) -> int:
-        return self.count("Apartment Found")
+        return self.count("נמצאה דירה")
 
     @property
     def price_changes(self) -> int:
-        return self.count("Price Changed")
+        return self.count("המחיר השתנה")
 
 
 # --- database fixture ------------------------------------------------------
