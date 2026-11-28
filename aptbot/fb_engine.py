@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Awaitable, Callable, Dict, Iterable, List, Optional
 
 from aptbot import config
-from aptbot.bot.formatting import format_fb_backfill_intro, format_fb_stopped
+from aptbot.bot.formatting import format_fb_backfill_intro, format_fb_stopped, format_fb_taster_empty
 from aptbot.db import Database
 from aptbot.engine import _pace
 from aptbot.models import FEATURE_FACT_FIELD, SavedSearch
@@ -96,6 +96,7 @@ def make_analyze(analyzer) -> Optional[Analyze]:
         except Exception as exc:                       # the AI must never block delivery
             logger.error("AI analysis failed: %s: %s", type(exc).__name__, exc)
             return {}
+    analyze.is_paused = lambda: bool(getattr(analyzer, "paused", False))
     return analyze
 
 
@@ -134,7 +135,7 @@ def matches_facts(facts, s: SavedSearch) -> bool:
 
 async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Database,
                          s: SavedSearch, posts: List[Post], taster: List[Post],
-                         analyze: Optional[Analyze] = None) -> int:
+                         analyze: Optional[Analyze] = None, failed: Optional[list] = None) -> int:
     """Deliver posts to one monitor. Returns how many were sent.
 
     - **not FB-primed**: record every post (this poll + the taster pool) as seen and
@@ -174,6 +175,8 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
                 if await send_post(s.chat_id, p, facts.get(content_hash(p)), search=s):
                     sent += 1
                     await _pace()
+        else:
+            await send_text(s.chat_id, format_fb_taster_empty())
         logger.info("FB primed search #%s: taster %d of %d known posts", s.id, sent, len(pool))
         return sent
 
@@ -195,6 +198,8 @@ async def route_fb_posts(send_post: PostSender, send_text: TextSender, db: Datab
             seen.add(h)
             sent += 1
             await _pace()
+        elif failed is not None:
+            failed.append(h)
     return sent
 
 
@@ -215,8 +220,15 @@ async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextS
     if not searches:
         logger.debug("FB: no active monitors; not touching Facebook.")
         return None
+    if analyze is not None and getattr(analyze, "is_paused", lambda: False)():
+        # Without AI facts every post would pass the filters (sale, seeking...). Don't read
+        # Facebook now: the watermarks stay put, so these posts come next cycle with facts.
+        logger.info("FB: AI analysis paused (usage limit); skipping this poll.")
+        return None
+    deferred = hasattr(fb, "commit_watermarks")
     try:
-        posts = await fb.new_posts(config.FB_GROUP_IDS)
+        posts = await fb.new_posts(config.FB_GROUP_IDS, **({"commit": False} if deferred else {}))
+        state.errors += getattr(fb, "last_group_errors", 0) or 0
         taster: List[Post] = []
         if any(not s.fb_primed for s in searches):
             since = datetime.now(timezone.utc) - TASTER_MAX_AGE
@@ -233,12 +245,20 @@ async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextS
     state.last_cycle_at = datetime.now(timezone.utc)
     state.last_new = len(posts)
     sent = 0
+    failed: list = []
     for s in searches:
         try:
-            sent += await route_fb_posts(send_post, send_text, db, s, posts, taster, analyze)
+            sent += await route_fb_posts(send_post, send_text, db, s, posts, taster, analyze, failed)
         except Exception as exc:
             state.errors += 1
+            failed.append(s.id)
             logger.error("FB routing failed for search #%s: %s", s.id, exc)
+    if deferred:
+        if failed:
+            # Watermarks stay: the same posts come back next poll (fb_seen skips the delivered ones).
+            logger.warning("FB: %d delivery failure(s); these posts will be retried next poll.", len(failed))
+        else:
+            await fb.commit_watermarks()
     state.last_sent = sent
     if sent or posts:
         logger.info("FB cycle: %d new post(s) from the groups, %d message(s) sent.", len(posts), sent)
@@ -279,6 +299,10 @@ async def fb_loop(fb, db: Database, send_post: PostSender, send_text: TextSender
         except asyncio.TimeoutError:
             pass
         state.wake.clear()
+        quiet = quiet_delay()
+        if quiet:                             # a /monitor or /filters wake inside the quiet hours
+            logger.info("FB: woken inside the quiet hours; waiting %.0f min.", quiet / 60)
+            await asyncio.sleep(quiet)
         started = time.monotonic()
         try:
             await run_fb_cycle(fb, db, send_post, send_text, state, analyze)

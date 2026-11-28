@@ -120,7 +120,7 @@ _FILTER_FIELDS = (
 
 
 def _now() -> str:
-    return datetime.datetime.utcnow().isoformat(timespec="seconds")
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _opt_bool(value) -> Optional[bool]:

@@ -180,3 +180,16 @@ async def test_store_detects_edits(tmp_path):
     await s.set_watermark("1", 50)                             # never moves backwards
     assert await s.watermark("1") == 100
     await s.close()
+
+
+async def test_new_posts_commit_false_returns_the_same_posts_until_committed(fb, monkeypatch):
+    data = {"1": [post("1", 5, 5)]}
+    fake_feed(monkeypatch, fb, data)
+    groups = [Group("1", "a", "", last_post_time=NOW, join_state="MEMBER")]
+    fake_groups(monkeypatch, fb, groups)
+    first = await fb.new_posts(commit=False)
+    assert [p.post_id for p in first] == ["5"]
+    again = await fb.new_posts(commit=False)                  # not delivered → same posts again
+    assert [p.post_id for p in again] == ["5"]
+    await fb.commit_watermarks()
+    assert await fb.new_posts() == []

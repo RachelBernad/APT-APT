@@ -191,3 +191,14 @@ def test_worker_env_is_an_allowlist_and_errors_are_redacted(monkeypatch):
     assert "AAA" not in r and "BBB" not in r and "111" not in r and "facebook.com/x" in r
     e = error_from({"error": "engine", "message": "xs=secret1 at https://h.example/p?token=t2"})
     assert "secret1" not in str(e) and "t2" not in str(e)
+
+
+def test_fill_albums_cap_counts_every_attempt(monkeypatch):
+    monkeypatch.setattr(jobs, "think", lambda *a: None)
+    _, posts = jobs.group_feed(FakeDriver(12), "111", limit=12, since=None)
+    for p in posts:
+        p.photo_count = 9                                  # every post looks cut short
+    loads = []
+    monkeypatch.setattr(jobs, "album_photos", lambda d, pid, want: loads.append(pid) or [])
+    assert jobs.fill_albums(FakeDriver(0), posts, max_albums=3) == 0
+    assert len(loads) == 3                                 # empty albums still count toward the cap

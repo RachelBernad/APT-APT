@@ -96,8 +96,6 @@ DB_PATH = os.getenv("DB_PATH", str(OUTPUT_DIR / "bot.db"))
 # notify about genuinely-new listings afterward.
 BACKFILL_CAP = int(os.getenv("BACKFILL_CAP", "10"))
 
-# On-demand daily HTML report: minimum hours between reports per user (anti-spam).
-REPORT_COOLDOWN_HOURS = int(os.getenv("REPORT_COOLDOWN_HOURS", "24"))
 
 # --- Locations ---
 # Tel Aviv-Yafo: the default city whose hoods harvest_locations bundles. Yad2 city
@@ -162,19 +160,6 @@ MAX_DELAY_BETWEEN_REQUESTS = float(os.getenv("MAX_DELAY_BETWEEN_REQUESTS", "3.0"
 MIN_MESSAGE_DELAY_SECONDS = float(os.getenv("MIN_MESSAGE_DELAY_SECONDS", "0.3"))
 MAX_MESSAGE_DELAY_SECONDS = float(os.getenv("MAX_MESSAGE_DELAY_SECONDS", "1.0"))
 
-# --- Default filter seeds for the add-search wizard ---
-# ``None`` means "no constraint". These are just the values a brand-new search
-# card starts with; the user edits them before saving.
-DEFAULT_MIN_PRICE = None
-DEFAULT_MAX_PRICE = None
-DEFAULT_MIN_ROOMS = None
-DEFAULT_MAX_ROOMS = None
-DEFAULT_MIN_SQM = None
-DEFAULT_MIN_FLOOR = None
-DEFAULT_MAX_FLOOR = None
-DEFAULT_PROPERTY_TYPES = None       # None = all property types
-DEFAULT_PROPERTY_CONDITION = None
-DEFAULT_FEATURES: list = []         # no required features by default
 
 USER_AGENT = os.getenv(
     "USER_AGENT",

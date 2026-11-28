@@ -143,22 +143,23 @@ def album_photos(d: Driver, post_id: str, want: int) -> list[Photo]:
 def fill_albums(d: Driver, posts: list[Post], *, max_albums: int = ALBUM_FILL_MAX) -> int:
     """Complete albums the feed cut short, newest posts first. Keeps the feed's (full-size) photos and appends the
     rest in album order. Returns how many posts were completed."""
-    done = 0
+    done = completed = 0
     for p in posts:
         if done >= max_albums:
             break
         if (p.photo_count or 0) <= len(p.photos):
             continue
         think()
+        done += 1                  # every album page load counts toward the cap, found or not
         album = album_photos(d, p.post_id, p.photo_count)
         have = {x.id for x in p.photos}
         extra = [x for x in album if x.id not in have]
         if extra:
             p.photos = p.photos + extra
-            done += 1
+            completed += 1
     if done:
         d.check_health()
-    return done
+    return completed
 
 
 def group_feed(d: Driver, group_id: str, *, limit: int, since: float | None,

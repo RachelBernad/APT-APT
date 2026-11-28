@@ -190,3 +190,75 @@ async def test_safety_stop_notifies_once_and_stops_the_loop(db, exc):
     assert fb.new_calls == 1
     assert len(out.texts) == 1 and "stopped" in out.texts[0][1]
 
+
+
+# --- code-review fixes -----------------------------------------------------
+
+class DeferringFB(FakeFB):
+    """new_posts(commit=False) + commit_watermarks(): posts come back until committed."""
+
+    def __init__(self, posts):
+        super().__init__()
+        self.pending, self.commits, self.last_group_errors = list(posts), 0, 1
+
+    async def new_posts(self, group_ids=None, commit=True, **kw):
+        self.new_calls += 1
+        return list(self.pending)
+
+    async def commit_watermarks(self):
+        self.commits += 1
+        self.pending = []
+
+
+async def _primed(db):
+    sid = await _monitor(db)
+    await db.mark_fb_primed(sid)
+    return sid
+
+
+async def test_failed_send_keeps_the_watermark_so_the_post_retries(db):
+    await _primed(db)
+    fb, state = DeferringFB([post("1", "a")]), fb_engine.FbState()
+    await fb_engine.run_fb_cycle(fb, db, Sent(fail=True).post, Sent().text, state)
+    assert fb.commits == 0 and state.errors == 1          # group error counted, nothing committed
+    good = Sent()
+    await fb_engine.run_fb_cycle(fb, db, good.post, good.text, state)
+    assert good.posts == [(CHAT, "1")] and fb.commits == 1  # retried, then committed
+
+
+async def test_ai_pause_skips_the_poll(db):
+    await _primed(db)
+
+    async def analyze(posts):
+        return {}
+    analyze.is_paused = lambda: True
+    fb = DeferringFB([post("1", "a")])
+    await fb_engine.run_fb_cycle(fb, db, Sent().post, Sent().text, fb_engine.FbState(), analyze)
+    assert fb.new_calls == 0                               # Facebook not read; posts wait
+
+
+async def test_empty_taster_says_so(db):
+    await _monitor(db)
+    out = Sent()
+    await fb_engine.run_fb_cycle(FakeFB(polls=[[]]), db, out.post, out.text, fb_engine.FbState())
+    assert out.posts == [] and any("no recent post" in t for _, t in out.texts)
+
+
+async def test_wake_inside_quiet_hours_waits(monkeypatch, db):
+    import asyncio
+    slept, ran = [], []
+    monkeypatch.setattr(fb_engine, "quiet_delay", lambda *a, **k: 3600.0)
+
+    async def fake_sleep(sec):
+        slept.append(sec)
+        raise asyncio.CancelledError
+    monkeypatch.setattr(fb_engine.asyncio, "sleep", fake_sleep)
+
+    async def run(*a, **k):
+        ran.append(1)
+    monkeypatch.setattr(fb_engine, "run_fb_cycle", run)
+    state = fb_engine.FbState()
+    state.wake.set()
+    with pytest.raises(asyncio.CancelledError):
+        await fb_engine.fb_loop(FakeFB(), db, Sent().post, Sent().text, state, first_delay=0)
+    assert slept == [3600.0] and ran == []

@@ -334,7 +334,8 @@ class FilterCommands:
             parse_mode=ParseMode.HTML, reply_markup=menu.menu_markup(fresh))
         logger.info("Filters saved for monitor #%s in chat %s", draft.id, draft.chat_id)
         if fresh.is_active:
-            asyncio.create_task(self.on_saved(draft.id))
+            from aptbot.bot.simple import spawn
+            spawn(self.on_saved(draft.id))
         return ConversationHandler.END
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

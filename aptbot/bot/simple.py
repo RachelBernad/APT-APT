@@ -29,6 +29,17 @@ logger = logging.getLogger(__name__)
 
 MONITOR_LABEL = "Tel Aviv"
 
+_monitor_locks: dict = {}
+# Background tasks keep a reference here until done (asyncio only holds weak ones).
+_tasks: set = set()
+
+
+def spawn(coro) -> "asyncio.Task":
+    task = asyncio.create_task(coro)
+    _tasks.add(task)
+    task.add_done_callback(_tasks.discard)
+    return task
+
 
 def monitor_targets():
     return locations.monitor_targets(config.TEL_AVIV_CITY_ID, config.YAD2_HOODS)
@@ -86,6 +97,7 @@ class SimpleCommands:
         for s in await self.db.get_active_searches():
             if _loc_keys(s.locations) != _loc_keys(targets):
                 await self.db.set_search_locations(s.id, targets)
+                await self.db.reprime_search(s.id)    # new areas: a taster, not a flood of "new"
                 changed += 1
         if changed:
             logger.info("Yad2 areas updated on %d monitor(s): %s", changed, area_summary())
@@ -129,6 +141,11 @@ class SimpleCommands:
             await fn(update, context)
 
     async def monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # One /monitor per chat at a time: a double tap must not create two monitors.
+        async with _monitor_locks.setdefault(update.effective_chat.id, asyncio.Lock()):
+            await self._monitor(update, context)
+
+    async def _monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat = update.effective_chat
         user = update.effective_user
         await self.db.upsert_user(chat.id, user.username if user else None)
@@ -138,6 +155,7 @@ class SimpleCommands:
         if s and s.is_active:
             if _loc_keys(s.locations) != _loc_keys(targets):     # the configured areas changed
                 await self.db.set_search_locations(s.id, targets)
+                await self.db.reprime_search(s.id)
                 await self._reply(update, f"✅ Already watching; Yad2 areas updated to: {area_summary()}.")
                 return
             await self._reply(update, "✅ Already watching Tel Aviv.")
@@ -154,7 +172,7 @@ class SimpleCommands:
         await self._reply(update, f"👀 Watching <b>Tel Aviv</b> on {sources}. A short taster is on "
                                   "its way, then only new posts.")
         logger.info("Monitor #%s started in chat %s", sid, chat.id)
-        asyncio.create_task(self.on_started(sid))
+        spawn(self.on_started(sid))
 
     async def stop(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         s = await self._own_search(update.effective_chat.id)
