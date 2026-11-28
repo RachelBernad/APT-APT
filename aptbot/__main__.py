@@ -207,8 +207,11 @@ class Bot:
         self.application.add_handler(CallbackQueryHandler(c.menu_tap, pattern=menu.PATTERN))
         # The bottom button panel (Filters is the card's own entry point).
         self.application.add_handler(MessageHandler(tg_filters.Regex(menu.KEY_REGEX), c.key_tap))
+        # Any supported "/cmd" the CommandHandlers skipped (addressed to another name).
+        self.application.add_handler(MessageHandler(tg_filters.Regex(menu.ANY_COMMAND_REGEX), c.key_tap))
 
     async def _set_commands(self):
+        menu.set_username(self.application.bot.username)   # the panel addresses us by name
         await self.application.bot.set_my_commands([
             BotCommand("monitor", "Start watching Tel Aviv (Yad2 + Facebook)"),
             BotCommand("filters", "Choose price, rooms, ממ״ד and other filters"),

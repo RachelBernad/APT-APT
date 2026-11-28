@@ -356,7 +356,8 @@ class FilterCommands:
         return ConversationHandler(
             entry_points=[CommandHandler("filters", self.entry),
                           CallbackQueryHandler(self.entry, pattern=menu.FILTERS_PATTERN),
-                          MessageHandler(filters.Regex(menu.FILTERS_KEY_REGEX), self.entry)],
+                          MessageHandler(filters.Regex(menu.FILTERS_KEY_REGEX), self.entry),
+                          MessageHandler(filters.Regex(menu.FILTERS_COMMAND_REGEX), self.entry)],
             states={
                 FORM: [CallbackQueryHandler(self.button, pattern=r"^(wz|rng|pt|ft|cond):")],
                 AWAIT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(menu.KEY_REGEX),
