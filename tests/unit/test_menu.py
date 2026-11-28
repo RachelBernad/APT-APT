@@ -79,7 +79,7 @@ async def test_tapping_start_pause_resume_updates_the_menu(db):
     cmds = SimpleCommands(db, on_started=on_started)
     chat = Chat()
     await cmds.help(chat.command(), chat.context)
-    assert chat.replies[-1][1] is menu.keyboard() or _keys(chat.replies[-1][1]) == list(menu.KEYS)
+    assert _keys(chat.replies[-1][1]) == _keys(menu.keyboard())
     await cmds.stop(chat.command(), chat.context)
     assert chat.last_menu() == ["menu:monitor", "menu:help"]          # nothing to pause yet
 
@@ -122,7 +122,9 @@ def _keys(markup):
 
 def test_bottom_panel_layout():
     kb = menu.keyboard()
-    assert _keys(kb) == ["🎛 Filters", "📊 Status", "▶️ Start", "⏸ Pause", "❓ Help"]
+    assert _keys(kb) == ["/filters 🎛", "/status 📊", "/monitor ▶️", "/stop ⏸", "/help ❓"]
+    # privacy-mode groups only deliver "/..." messages: every button must start with a command
+    assert all(k.split()[0] in ("/filters", "/status", "/monitor", "/stop", "/help") for k in _keys(kb))
     assert kb.is_persistent and kb.resize_keyboard
     import re
     assert all(re.match(menu.KEY_REGEX, k) for k in menu.KEYS)
