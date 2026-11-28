@@ -46,7 +46,8 @@ def to_jar(cookies: list[dict]) -> dict:
 
 async def _from_profile(profile: str) -> list[dict]:
     from aptbot.scrapers.facebook_generic_browser.browser import open_context
-    async with open_context(profile) as ctx:
+    from pathlib import Path
+    async with open_context(Path(profile)) as ctx:
         return await ctx.cookies("https://www.facebook.com")
 
 
