@@ -240,12 +240,34 @@ async def run_fb_cycle(fb, db: Database, send_post: PostSender, send_text: TextS
     return None
 
 
+def quiet_delay(now: Optional[datetime] = None, spec: Optional[str] = None) -> float:
+    """Seconds until polling may resume when ``now`` falls in the quiet window (``FB_QUIET_HOURS``, "HH-HH" in
+    Israel time; may wrap midnight), plus 0-15 min jitter. 0 outside it or when unset/malformed."""
+    from zoneinfo import ZoneInfo
+    spec = config.FB_QUIET_HOURS if spec is None else spec
+    try:
+        lo, hi = (int(x) for x in spec.split("-"))
+    except (ValueError, AttributeError):
+        return 0.0
+    if lo == hi:
+        return 0.0
+    tz = ZoneInfo("Asia/Jerusalem")
+    local = (now or datetime.now(timezone.utc)).astimezone(tz)
+    inside = lo <= local.hour < hi if lo < hi else (local.hour >= lo or local.hour < hi)
+    if not inside:
+        return 0.0
+    end = local.replace(hour=hi, minute=0, second=0, microsecond=0)
+    if end <= local:
+        end += timedelta(days=1)
+    return (end - local).total_seconds() + random.uniform(0, 15 * 60)
+
+
 async def fb_loop(fb, db: Database, send_post: PostSender, send_text: TextSender,
                   state: FbState, *, first_delay: float = 10.0,
                   analyze: Optional[Analyze] = None) -> None:
-    """Poll forever on a jittered 20-35 min schedule (or sooner when ``state.wake``
+    """Poll forever on a jittered FB_POLL_MIN/MAX schedule (8-12 min), paused in FB_QUIET_HOURS (or sooner when ``state.wake``
     is set by /monitor). Exits for good once Facebook reports an account-safety stop."""
-    delay = first_delay
+    delay = first_delay + quiet_delay(datetime.now(timezone.utc) + timedelta(seconds=first_delay))
     while True:
         try:
             await asyncio.wait_for(state.wake.wait(), timeout=delay)
@@ -262,4 +284,6 @@ async def fb_loop(fb, db: Database, send_post: PostSender, send_text: TextSender
             logger.error("FB polling stopped until restart: %s", state.stopped_reason)
             return
         delay = random.uniform(config.FB_POLL_MIN_SECONDS, config.FB_POLL_MAX_SECONDS)
+        # Never start a cycle inside the quiet hours: the next one waits for the window's end.
+        delay = max(delay, quiet_delay(datetime.now(timezone.utc) + timedelta(seconds=delay)) + delay)
         logger.debug("FB cycle took %.0fs; next in %.0fs", time.monotonic() - started, delay)

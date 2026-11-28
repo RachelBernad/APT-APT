@@ -72,7 +72,7 @@ async def _run(a) -> int:
         from aptbot.scrapers.facebook_generic_browser.explore import validate
         await validate.main(["patchright"])
         return 0
-    async with FacebookAPI(max_tabs=a.tabs, idle_close_after=None) as fb:
+    async with FacebookAPI(max_tabs=a.tabs, idle_close_after=None, browser=a.browser) as fb:
         c = a.cmd
         if c == "status":
             out = await fb.status()
@@ -114,6 +114,8 @@ def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="facebook_generic_browser", description=__doc__.split("\n\n")[0])
     ap.add_argument("--json", action="store_true", help="one JSON object per line")
     ap.add_argument("--tabs", type=int, default=3, help="parallel tabs (default 3; use 2 on a low-CPU host)")
+    ap.add_argument("--browser", choices=("chrome", "oxide"), default=None,
+                    help="browser backend (default $FBGB_BROWSER or chrome)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("login", help="log the profile in (by hand, or --stdin: email+password typed for you)")
     s.add_argument("--stdin", action="store_true", help="read email and password (2 lines) from stdin, or prompt")

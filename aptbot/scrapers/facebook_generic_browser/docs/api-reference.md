@@ -24,7 +24,7 @@ async with FacebookAPI(max_tabs=3) as fb:
 ## Constructor
 ```python
 FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, idle_close_after=600,
-            default_timeout=240, debug_dump=False)
+            default_timeout=240, debug_dump=False, browser=None, oxide_jar=None)
 ```
 | Param | Meaning |
 |---|---|
@@ -34,6 +34,16 @@ FacebookAPI(*, home=None, profile_dir=None, max_tabs=3, idle_close_after=600,
 | `idle_close_after` | seconds of inactivity before Chrome is closed (`None` = keep open) |
 | `default_timeout` | per-call timeout for browser-backed calls |
 | `debug_dump` | write raw payloads to `<home>/captures/` (they contain real posts; debugging only) |
+| `browser` | `"chrome"` (Patchright, default) or `"oxide"` (BrowserOxide worker subprocess). Default `$FBGB_BROWSER` or `"chrome"` |
+| `oxide_jar` | oxide's cookie jar (the session). Default `$FBGB_OXIDE_JAR` or `<home>/oxide_jar.json` |
+
+**On `browser="oxide"`** (`oxide/`, design in `aptbot/browsers/oxide/kb/aptbot-integration.md`):
+- Calls are serialized: one page, no tabs. `max_tabs` and `idle_close_after` are ignored.
+- The worker is closed after each `new_posts()`, and recycled when its RSS goes above 460 MB after a call. It's killed above `$FBGB_OXIDE_RSS_LIMIT_MB` (650), and that call raises `RequestTimeout`.
+- `latest_posts`/`new_posts` complete up to 6 cut-short albums per group from the album page (`$FBGB_OXIDE_ALBUMS=0` turns this off).
+- `get_post` completes its album.
+- `search_groups`, `search_group` and `cross_group_feed` raise `FBGBError`.
+- `stream_posts` yields only after a single read.
 
 ---
 

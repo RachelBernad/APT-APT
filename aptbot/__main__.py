@@ -239,7 +239,8 @@ class Bot:
             logger.info("Facebook source disabled (FB_ENABLED=0).")
             return None
         from aptbot.scrapers.facebook_generic_browser import FacebookAPI
-        fb = FacebookAPI(max_tabs=config.FB_MAX_TABS, default_timeout=config.FB_REQUEST_TIMEOUT)
+        fb = FacebookAPI(max_tabs=config.FB_MAX_TABS, default_timeout=config.FB_REQUEST_TIMEOUT,
+                         browser=config.FB_BROWSER, oxide_jar=config.FB_OXIDE_JAR)
         await fb.__aenter__()
         st = await fb.status()
         if st.halt_reason:
